@@ -78,6 +78,16 @@ typedef struct {
 #define LH_OPTION_VALUE_MAX 128
 #define LH_OPTION_CHOICE_MAX 64
 
+// One controller configuration the core advertised for an emulated input
+// port. This is a caller-owned snapshot, just like lh_option: labels supplied
+// by RETRO_ENVIRONMENT_SET_CONTROLLER_INFO belong to the core and may be
+// replaced immediately after the environment callback returns.
+#define LH_CONTROLLER_TYPE_LABEL_MAX 256
+typedef struct {
+  unsigned id;
+  char label[LH_CONTROLLER_TYPE_LABEL_MAX];
+} lh_controller_type;
+
 // One core option and its choices, as a caller-owned snapshot.
 //
 // These used to be borrowed pointers into the host's own allocations, which
@@ -178,6 +188,26 @@ int lh_unserialize(lh_host *host, const void *src, size_t size);
 int lh_option_count(lh_host *host);
 int lh_get_option(lh_host *host, int index, lh_option *out);
 void lh_set_option(lh_host *host, const char *id, const char *value);
+
+// Controller configurations reported through
+// RETRO_ENVIRONMENT_SET_CONTROLLER_INFO. The host logs every port and type the
+// core reports (including unsupported extras), and retains snapshots for the
+// Moonfin input ports it can route.
+// lh_get_controller_type copies one entry into caller-owned storage; it returns
+// -1 for a NULL host/out or an index outside the latest snapshot. A core may
+// publish a replacement snapshot at any time, so treat that result as the end
+// of enumeration rather than a hole.
+int lh_controller_type_count(lh_host *host, int port);
+int lh_get_controller_type(lh_host *host, int port, int index,
+                           lh_controller_type *out);
+
+// Applies a controller device on the emulation thread. RETRO_DEVICE_JOYPAD is
+// Auto/the libretro default and is always accepted, even when it is not in a
+// core's advertised list. An explicit unadvertised device safely falls back to
+// that default and returns 1; an exact or Auto application returns 0. Returns
+// -1 when the port is outside Moonfin's input range, no loaded core exports
+// retro_set_controller_port_device, or the host can no longer run a job.
+int lh_set_controller_type(lh_host *host, int port, unsigned device);
 
 // Test-only: drives one input-latch step directly, without a running core or
 // run loop, and reads the value that step produced for [port]. This is the
