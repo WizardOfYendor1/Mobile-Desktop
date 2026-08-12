@@ -93,7 +93,18 @@ jobs:
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
         with: { distribution: temurin, java-version: '17' }
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
-        with: { flutter-version: '${{ env.FLUTTER_VERSION }}' }
+        with: { flutter-version: '${{ env.FLUTTER_VERSION }}', cache: true, pub-cache: true }
+      - name: Cache Android Gradle and CMake build state
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android/.gradle
+            android/app/.cxx
+          key: amulet-android-native-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/**/CMakeLists.txt', 'android/app/src/main/cpp/**', 'native/**', 'pubspec.lock') }}
+          restore-keys: |
+            amulet-android-native-${{ runner.os }}-
       - run: |
           flutter pub get
           flutter build apk --release --flavor mobile-beta --target-platform android-arm64 --dart-define=DISTRIBUTION_CHANNEL=amulet_android_beta
@@ -113,7 +124,18 @@ jobs:
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
         with: { distribution: temurin, java-version: '17' }
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
-        with: { flutter-version: '${{ env.FLUTTER_VERSION }}' }
+        with: { flutter-version: '${{ env.FLUTTER_VERSION }}', cache: true, pub-cache: true }
+      - name: Cache Android Gradle and CMake build state
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android/.gradle
+            android/app/.cxx
+          key: amulet-androidtv-native-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/**/CMakeLists.txt', 'android/app/src/main/cpp/**', 'native/**', 'pubspec.lock') }}
+          restore-keys: |
+            amulet-androidtv-native-${{ runner.os }}-
       - run: |
           flutter pub get
           flutter build apk --release --flavor androidTv-beta --target-platform android-arm64 --dart-define=MOONFIN_FORCE_TV=true --dart-define=DISTRIBUTION_CHANNEL=amulet_androidtv_beta
@@ -130,7 +152,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: { repository: WizardOfYendor1/Moonfin-Client-Core, ref: '${{ needs.prepare.outputs.source_sha }}', persist-credentials: false }
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
-        with: { flutter-version: '${{ env.FLUTTER_VERSION }}' }
+        with: { flutter-version: '${{ env.FLUTTER_VERSION }}', cache: true, pub-cache: true }
       - run: |
           flutter pub get
           chmod +x ios/game_host/fetch_cores.sh ios/game_host/wrap_frameworks.sh
@@ -151,7 +173,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: { repository: WizardOfYendor1/Moonfin-Client-Core, ref: '${{ needs.prepare.outputs.source_sha }}', persist-credentials: false }
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
-        with: { flutter-version: '${{ env.FLUTTER_VERSION }}' }
+        with: { flutter-version: '${{ env.FLUTTER_VERSION }}', cache: true, pub-cache: true }
       - run: |
           flutter pub get
           flutter build macos --release
@@ -168,7 +190,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with: { repository: WizardOfYendor1/Moonfin-Client-Core, ref: '${{ needs.prepare.outputs.source_sha }}', persist-credentials: false }
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
-        with: { flutter-version: '${{ env.FLUTTER_VERSION }}' }
+        with: { flutter-version: '${{ env.FLUTTER_VERSION }}', cache: true, pub-cache: true }
       - shell: pwsh
         run: |
           choco install innosetup -y --no-progress
@@ -213,7 +235,7 @@ jobs:
         with: { repository: WizardOfYendor1/Moonfin-Client-Core, ref: '${{ needs.prepare.outputs.source_sha }}', persist-credentials: false }
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
         if: matrix.arch == 'x64'
-        with: { flutter-version: '${{ env.FLUTTER_VERSION }}' }
+        with: { flutter-version: '${{ env.FLUTTER_VERSION }}', cache: true, pub-cache: true }
       - if: matrix.arch == 'arm64'
         run: |
           git clone https://github.com/flutter/flutter.git --branch "$FLUTTER_VERSION" --depth 1 "$HOME/flutter"
