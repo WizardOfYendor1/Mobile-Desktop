@@ -26,6 +26,7 @@ jobs:
       publish: ${{ steps.request.outputs.publish }}
       source_ref: ${{ steps.request.outputs.source_ref }}
       source_sha: ${{ steps.source.outputs.sha }}
+      source_sha_short: ${{ steps.source.outputs.sha_short }}
       android: ${{ steps.request.outputs.android }}
       androidtv: ${{ steps.request.outputs.androidtv }}
       ios: ${{ steps.request.outputs.ios }}
@@ -81,7 +82,10 @@ jobs:
           persist-credentials: false
       - if: steps.request.outputs.publish == 'true'
         id: source
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        run: |
+          sha="$(git rev-parse HEAD)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "sha_short=${sha:0:12}" >> "$GITHUB_OUTPUT"
 
   android:
     needs: prepare
@@ -109,7 +113,7 @@ jobs:
           flutter pub get
           flutter build apk --release --flavor mobile-beta --target-platform android-arm64 --dart-define=DISTRIBUTION_CHANNEL=amulet_android_beta
           mkdir amulet-assets
-          cp build/app/outputs/flutter-apk/app-mobile-beta-release.apk "amulet-assets/Amulet_Android_Beta_${{ needs.prepare.outputs.source_sha }}.apk"
+          cp build/app/outputs/flutter-apk/app-mobile-beta-release.apk "amulet-assets/amulet-moonfin-android-beta-${{ needs.prepare.outputs.source_sha_short }}.apk"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with: { name: amulet-android, path: amulet-assets, if-no-files-found: error }
@@ -140,7 +144,7 @@ jobs:
           flutter pub get
           flutter build apk --release --flavor androidTv-beta --target-platform android-arm64 --dart-define=MOONFIN_FORCE_TV=true --dart-define=DISTRIBUTION_CHANNEL=amulet_androidtv_beta
           mkdir amulet-assets
-          cp build/app/outputs/flutter-apk/app-androidtv-beta-release.apk "amulet-assets/Moonfin_AndroidTV_Amulet_Beta_${{ needs.prepare.outputs.source_sha }}.apk"
+          cp build/app/outputs/flutter-apk/app-androidtv-beta-release.apk "amulet-assets/amulet-moonfin-androidtv-beta-${{ needs.prepare.outputs.source_sha_short }}.apk"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with: { name: amulet-androidtv, path: amulet-assets, if-no-files-found: error }
 
@@ -161,7 +165,7 @@ jobs:
           app=$(find build/ios/archive -type d -path '*/Products/Applications/*.app' | head -1)
           mkdir -p amulet-assets/Payload
           cp -R "$app" amulet-assets/Payload/
-          (cd amulet-assets && zip -qry "Amulet_iOS_Beta_${{ needs.prepare.outputs.source_sha }}_unsigned.ipa" Payload && rm -rf Payload)
+          (cd amulet-assets && zip -qry "amulet-moonfin-ios-beta-${{ needs.prepare.outputs.source_sha_short }}-unsigned.ipa" Payload && rm -rf Payload)
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with: { name: amulet-ios, path: amulet-assets, if-no-files-found: error }
 
@@ -178,7 +182,7 @@ jobs:
           flutter pub get
           flutter build macos --release
           mkdir amulet-assets
-          ditto -c -k --sequesterRsrc --keepParent build/macos/Build/Products/Release/Moonfin.app "amulet-assets/Amulet_macOS_Beta_${{ needs.prepare.outputs.source_sha }}_unsigned.zip"
+          ditto -c -k --sequesterRsrc --keepParent build/macos/Build/Products/Release/Moonfin.app "amulet-assets/amulet-moonfin-macos-beta-${{ needs.prepare.outputs.source_sha_short }}-unsigned.zip"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with: { name: amulet-macos, path: amulet-assets, if-no-files-found: error }
 
@@ -196,7 +200,7 @@ jobs:
           choco install innosetup -y --no-progress
           .\build-windows.ps1
           New-Item -ItemType Directory amulet-assets | Out-Null
-          Get-ChildItem Moonfin_Windows_v*.exe | Copy-Item -Destination "amulet-assets\Amulet_Windows_Beta_${{ needs.prepare.outputs.source_sha }}.exe"
+          Get-ChildItem Moonfin_Windows_v*.exe | Copy-Item -Destination "amulet-assets\amulet-moonfin-windows-beta-${{ needs.prepare.outputs.source_sha_short }}.exe"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with: { name: amulet-windows, path: amulet-assets, if-no-files-found: error }
 
@@ -214,7 +218,7 @@ jobs:
           choco install innosetup -y --no-progress
           .\build-windows.ps1 -Architecture arm64
           New-Item -ItemType Directory amulet-assets | Out-Null
-          Get-ChildItem Moonfin_WindowsARM64_v*.exe | Copy-Item -Destination "amulet-assets\Amulet_WindowsARM64_Beta_${{ needs.prepare.outputs.source_sha }}.exe"
+          Get-ChildItem Moonfin_WindowsARM64_v*.exe | Copy-Item -Destination "amulet-assets\amulet-moonfin-windows-arm64-beta-${{ needs.prepare.outputs.source_sha_short }}.exe"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with: { name: amulet-windows-arm64, path: amulet-assets, if-no-files-found: error }
 
@@ -252,7 +256,15 @@ jobs:
           chmod +x build-linux.sh
           ./build-linux.sh all
           mkdir amulet-assets
-          for f in Moonfin_*; do [ -f "$f" ] && cp "$f" "amulet-assets/Amulet_${f#Moonfin_}"; done
+          for f in Moonfin_*; do
+            [ -f "$f" ] || continue
+            base="${f#Moonfin_}"
+            if [[ "$base" == *.* ]]; then
+              cp "$f" "amulet-assets/amulet-moonfin-${base%.*}-${{ needs.prepare.outputs.source_sha_short }}.${base##*.}"
+            else
+              cp "$f" "amulet-assets/amulet-moonfin-${base}-${{ needs.prepare.outputs.source_sha_short }}"
+            fi
+          done
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with: { name: 'amulet-linux-${{ matrix.arch }}', path: amulet-assets, if-no-files-found: error }
 
