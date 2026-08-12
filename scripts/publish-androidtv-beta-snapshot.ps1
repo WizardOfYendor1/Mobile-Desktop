@@ -2,7 +2,7 @@
 param(
   [string]$SourceRoot = (Get-Location).Path,
   [string]$BaseRef = 'HEAD',
-  [string]$Targets = 'android',
+  [string]$Targets = 'androidtv',
   [string]$SnapshotBranch = 'beta/androidtv-snapshot',
   [string]$AutomationWorktree = (Split-Path -Parent $PSScriptRoot)
 )
@@ -22,8 +22,8 @@ function Invoke-SourceGit {
 
 $sourceRoot = (Resolve-Path -LiteralPath $SourceRoot).Path
 $automationWorktree = (Resolve-Path -LiteralPath $AutomationWorktree).Path
-if ($Targets -notmatch '^(all|android|ios|macos|windows|windows_arm64|linux|tvos)(,(all|android|ios|macos|windows|windows_arm64|linux|tvos))*$') {
-  throw 'Targets must be comma-separated android,ios,macos,windows,windows_arm64,linux,all, or tvos.'
+if ($Targets -notmatch '^(all|android|androidtv|ios|macos|windows|windows_arm64|linux|tvos)(,(all|android|androidtv|ios|macos|windows|windows_arm64|linux|tvos))*$') {
+  throw 'Targets must be comma-separated android,androidtv,ios,macos,windows,windows_arm64,linux,all, or tvos.'
 }
 $baseSha = (Invoke-SourceGit -GitArguments @('rev-parse', '--verify', "$BaseRef^{commit}")).Trim()
 $branchName = (Invoke-SourceGit -GitArguments @('branch', '--show-current')).Trim()

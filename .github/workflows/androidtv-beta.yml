@@ -1,8 +1,8 @@
 name: Publish Amulet Beta Builds
 
 # Kept only on origin/automation/androidtv-beta. Trigger with either:
-#   beta-build: feature/name | android,windows
-#   beta-snapshot | android
+#   beta-build: feature/name | androidtv,windows
+#   beta-snapshot | androidtv
 # `all` selects every supported platform. `tvos` is deliberately unavailable
 # until its signing and approval model is designed.
 on:
@@ -27,6 +27,7 @@ jobs:
       source_ref: ${{ steps.request.outputs.source_ref }}
       source_sha: ${{ steps.source.outputs.sha }}
       android: ${{ steps.request.outputs.android }}
+      androidtv: ${{ steps.request.outputs.androidtv }}
       ios: ${{ steps.request.outputs.ios }}
       macos: ${{ steps.request.outputs.macos }}
       windows: ${{ steps.request.outputs.windows }}
@@ -55,10 +56,10 @@ jobs:
             echo 'Invalid source branch name.' >&2
             exit 1
           fi
-          targets='android'
+          targets='androidtv'
           if [[ "$suffix" == ' | '* ]]; then targets="${suffix# | }"; fi
-          if ! [[ "$targets" =~ ^(all|android|ios|macos|windows|windows_arm64|linux|tvos)(,(all|android|ios|macos|windows|windows_arm64|linux|tvos))*$ ]]; then
-            echo 'Invalid targets. Use comma-separated android,ios,macos,windows,windows_arm64,linux,all.' >&2
+          if ! [[ "$targets" =~ ^(all|android|androidtv|ios|macos|windows|windows_arm64|linux|tvos)(,(all|android|androidtv|ios|macos|windows|windows_arm64|linux|tvos))*$ ]]; then
+            echo 'Invalid targets. Use comma-separated android,androidtv,ios,macos,windows,windows_arm64,linux,all.' >&2
             exit 1
           fi
           if [[ ",$targets," == *,tvos,* ]]; then
@@ -68,7 +69,7 @@ jobs:
           want() { [[ ",$targets," == *,all,* || ",$targets," == *,$1,* ]]; }
           echo 'publish=true' >> "$GITHUB_OUTPUT"
           echo "source_ref=$source_ref" >> "$GITHUB_OUTPUT"
-          for platform in android ios macos windows windows_arm64 linux; do
+          for platform in android androidtv ios macos windows windows_arm64 linux; do
             if want "$platform"; then echo "$platform=true" >> "$GITHUB_OUTPUT"; else echo "$platform=false" >> "$GITHUB_OUTPUT"; fi
           done
 
@@ -96,12 +97,30 @@ jobs:
       - run: |
           flutter pub get
           flutter build apk --release --flavor mobile-beta --target-platform android-arm64 --dart-define=DISTRIBUTION_CHANNEL=amulet_android_beta
-          flutter build apk --release --flavor androidTv-beta --target-platform android-arm64 --dart-define=MOONFIN_FORCE_TV=true --dart-define=DISTRIBUTION_CHANNEL=amulet_androidtv_beta
           mkdir amulet-assets
           cp build/app/outputs/flutter-apk/app-mobile-beta-release.apk "amulet-assets/Amulet_Android_Beta_${{ needs.prepare.outputs.source_sha }}.apk"
-          cp build/app/outputs/flutter-apk/app-androidtv-beta-release.apk "amulet-assets/Moonfin_AndroidTV_Amulet_Beta_${{ needs.prepare.outputs.source_sha }}.apk"
+
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with: { name: amulet-android, path: amulet-assets, if-no-files-found: error }
+
+  androidtv:
+    needs: prepare
+    if: needs.prepare.outputs.publish == 'true' && needs.prepare.outputs.androidtv == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with: { repository: WizardOfYendor1/Moonfin-Client-Core, ref: '${{ needs.prepare.outputs.source_sha }}', persist-credentials: false }
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with: { distribution: temurin, java-version: '17' }
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2
+        with: { flutter-version: '${{ env.FLUTTER_VERSION }}' }
+      - run: |
+          flutter pub get
+          flutter build apk --release --flavor androidTv-beta --target-platform android-arm64 --dart-define=MOONFIN_FORCE_TV=true --dart-define=DISTRIBUTION_CHANNEL=amulet_androidtv_beta
+          mkdir amulet-assets
+          cp build/app/outputs/flutter-apk/app-androidtv-beta-release.apk "amulet-assets/Moonfin_AndroidTV_Amulet_Beta_${{ needs.prepare.outputs.source_sha }}.apk"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: { name: amulet-androidtv, path: amulet-assets, if-no-files-found: error }
 
   ios:
     needs: prepare
@@ -216,10 +235,11 @@ jobs:
         with: { name: 'amulet-linux-${{ matrix.arch }}', path: amulet-assets, if-no-files-found: error }
 
   release:
-    needs: [prepare, android, ios, macos, windows, windows_arm64, linux]
+    needs: [prepare, android, androidtv, ios, macos, windows, windows_arm64, linux]
     if: >-
       always() && needs.prepare.outputs.publish == 'true' &&
       (needs.android.result == 'success' || needs.android.result == 'skipped') &&
+      (needs.androidtv.result == 'success' || needs.androidtv.result == 'skipped') &&
       (needs.ios.result == 'success' || needs.ios.result == 'skipped') &&
       (needs.macos.result == 'success' || needs.macos.result == 'skipped') &&
       (needs.windows.result == 'success' || needs.windows.result == 'skipped') &&
