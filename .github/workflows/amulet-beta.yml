@@ -357,11 +357,32 @@ jobs:
           sha256sum * > SHA256SUMS.txt
           printf 'Source: WizardOfYendor1/Moonfin-Client-Core@%s\n' "$SOURCE_SHA" > BUILD_SOURCE.txt
           tag="amulet-beta-${SOURCE_SHA:0:12}"
+          title_sha="${SOURCE_SHA: -7}"
           if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             if [[ "$SNAPSHOT" == 'true' ]]; then
-              gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" --title "Amulet Snapshot ${SOURCE_SHA:0:12}" --prerelease --notes "Amulet snapshot built from \`WizardOfYendor1/Moonfin-Client-Core@${SOURCE_SHA}\`."
+              gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" --title "Amulet Moonfin AndroidTV Snapshot $title_sha" --prerelease --notes "Amulet snapshot built from \`WizardOfYendor1/Moonfin-Client-Core@${SOURCE_SHA}\`."
             else
-              gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" --title "Amulet Beta ${SOURCE_SHA:0:12}" --notes "Amulet beta built from \`WizardOfYendor1/Moonfin-Client-Core@${SOURCE_SHA}\`."
+              gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" --title "Amulet Moonfin AndroidTV Beta $title_sha" --notes "Amulet beta built from \`WizardOfYendor1/Moonfin-Client-Core@${SOURCE_SHA}\`."
             fi
           fi
           gh release upload "$tag" ./* --repo "$GITHUB_REPOSITORY" --clobber
+          if [[ "$SNAPSHOT" == 'true' ]]; then
+            current_tag='amulet-moonfin-androidtv-snapshot-current'
+            current_assets="$RUNNER_TEMP/current-snapshot-assets"
+            mkdir "$current_assets"
+            shopt -s nullglob
+            snapshot_apk=(./*androidtv*.apk)
+            if [[ ${#snapshot_apk[@]} -ne 1 ]]; then
+              echo 'Expected exactly one Android TV APK for the current snapshot release.' >&2
+              exit 1
+            fi
+            cp "${snapshot_apk[0]}" "$current_assets/amulet-moonfin-androidtv-snapshot-current.apk"
+            sha256sum "$current_assets/amulet-moonfin-androidtv-snapshot-current.apk" > "$current_assets/SHA256SUMS.txt"
+            printf 'Source: WizardOfYendor1/Moonfin-Client-Core@%s\n' "$SOURCE_SHA" > "$current_assets/BUILD_SOURCE.txt"
+            if gh release view "$current_tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              gh release edit "$current_tag" --repo "$GITHUB_REPOSITORY" --title 'Amulet Moonfin AndroidTV Snapshot CURRENT' --prerelease --notes "Current Amulet snapshot built from \`WizardOfYendor1/Moonfin-Client-Core@${SOURCE_SHA}\`."
+            else
+              gh release create "$current_tag" --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" --title 'Amulet Moonfin AndroidTV Snapshot CURRENT' --prerelease --notes "Current Amulet snapshot built from \`WizardOfYendor1/Moonfin-Client-Core@${SOURCE_SHA}\`."
+            fi
+            gh release upload "$current_tag" "$current_assets"/* --repo "$GITHUB_REPOSITORY" --clobber
+          fi
