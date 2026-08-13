@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 
 import '../util/platform_detection.dart';
+import '../util/native_controller_mapping.dart';
 import 'appletv_game_player.dart';
 import 'native_game_player_channel.dart';
 
@@ -86,14 +87,23 @@ abstract class NativeGamePlayer {
   Future<void> setOption(String id, String value);
   Future<Map<String, String>> getCurrentOptions();
   Future<int> controllerCount();
+
+  /// Every device type the core advertised for Moonfin's routable libretro
+  /// ports. The native host separately logs capabilities on additional ports
+  /// and types that Moonfin cannot currently expose.
+  Future<List<CoreControllerType>> getControllerTypes();
+
+  /// Applies a controller type to one libretro port. [retroDeviceJoypad] is
+  /// Auto (Core default), never an inference from advertised ordering.
+  Future<void> setControllerType(int port, int deviceType);
 }
 
 /// Shared method/event channel implementation. Subclasses only supply the
 /// channel names for their platform's native runner.
 class MethodChannelGamePlayer implements NativeGamePlayer {
   MethodChannelGamePlayer(String controlChannel, String eventChannel)
-      : _control = MethodChannel(controlChannel),
-        _events = EventChannel(eventChannel);
+    : _control = MethodChannel(controlChannel),
+      _events = EventChannel(eventChannel);
 
   final MethodChannel _control;
   final EventChannel _events;
@@ -187,15 +197,20 @@ class MethodChannelGamePlayer implements NativeGamePlayer {
   @override
   Future<void> pulseButton(int index, {int durationMs = 150}) async {
     try {
-      await _control.invokeMethod<void>(
-          'pulseButton', {'index': index, 'durationMs': durationMs});
+      await _control.invokeMethod<void>('pulseButton', {
+        'index': index,
+        'durationMs': durationMs,
+      });
     } catch (_) {}
   }
 
   @override
   Future<void> setInput(int port, int mask) async {
     try {
-      await _control.invokeMethod<void>('setInput', {'port': port, 'mask': mask});
+      await _control.invokeMethod<void>('setInput', {
+        'port': port,
+        'mask': mask,
+      });
     } catch (_) {}
   }
 
@@ -225,15 +240,19 @@ class MethodChannelGamePlayer implements NativeGamePlayer {
   @override
   Future<void> setOption(String id, String value) async {
     try {
-      await _control.invokeMethod<void>('setOption', {'id': id, 'value': value});
+      await _control.invokeMethod<void>('setOption', {
+        'id': id,
+        'value': value,
+      });
     } catch (_) {}
   }
 
   @override
   Future<Map<String, String>> getCurrentOptions() async {
     try {
-      final raw = await _control
-          .invokeMethod<Map<dynamic, dynamic>>('getCurrentOptions');
+      final raw = await _control.invokeMethod<Map<dynamic, dynamic>>(
+        'getCurrentOptions',
+      );
       return (raw ?? const {}).cast<String, String>();
     } catch (_) {
       return const {};
@@ -250,9 +269,32 @@ class MethodChannelGamePlayer implements NativeGamePlayer {
     }
   }
 
-  Future<void> _invoke(String method) async {
+  @override
+  Future<List<CoreControllerType>> getControllerTypes() async {
     try {
-      await _control.invokeMethod<void>(method);
+      final raw = await _control.invokeListMethod<dynamic>(
+        'getControllerTypes',
+      );
+      return (raw ?? const [])
+          .whereType<Map>()
+          .map(
+            (value) =>
+                CoreControllerType.fromMap(value.cast<String, dynamic>()),
+          )
+          .where((type) => type.port >= 0)
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  @override
+  Future<void> setControllerType(int port, int deviceType) =>
+      _invoke('setControllerType', {'port': port, 'deviceType': deviceType});
+
+  Future<void> _invoke(String method, [Map<String, dynamic>? arguments]) async {
+    try {
+      await _control.invokeMethod<void>(method, arguments);
     } catch (_) {}
   }
 }

@@ -42,9 +42,18 @@ class LibretroBridge(
   private var audioThread: Thread? = null
   @Volatile private var audioRunning = false
 
-  private var portMask = 0
-  private var pulseMask = 0
-  private var touchMask = 0
+  // Physical native input, Dart-generated pulses, and touch/keyboard masks
+  // compose independently for each libretro port. Fixed arrays avoid any
+  // collection allocation in NativePadInput's steady-state event path.
+  private val physicalMasks = IntArray(MAX_PORTS)
+  private val pulseMasks = IntArray(MAX_PORTS)
+  private val methodMasks = IntArray(MAX_PORTS)
+  private val publishedMasks = IntArray(MAX_PORTS)
+  private var physicalControllerCount = 0
+  // Populated once nativeLoad has initialized the core. Controller metadata is
+  // control-plane state; it never participates in the per-event input path.
+  private var advertisedControllerTypes: List<NativeControllerType> = emptyList()
+  private var loadedCore: String? = null
 
   // Gates the per-edge "button" EventChannel message: during gameplay the
   // overlay is closed and Dart has nothing to do with these, so nothing
@@ -99,10 +108,18 @@ class LibretroBridge(
         result.success(null)
       }
       "pulseButton" -> {
-        pulseButton((args["index"] as? Int) ?: -1, (args["durationMs"] as? Int) ?: 150)
+        pulseButton(
+          (args["port"] as? Int) ?: 0,
+          (args["index"] as? Int) ?: -1,
+          (args["durationMs"] as? Int) ?: 150,
+        )
         result.success(null)
       }
       "getOptions" -> result.success(parseOptions())
+      "getControllerTypes" -> result.success(
+        refreshControllerTypes().map { it.channelPayload() },
+      )
+      "setControllerType" -> setControllerType(args, result)
       "setOption" -> {
         val id = args["id"] as? String
         val value = args["value"] as? String
@@ -116,10 +133,13 @@ class LibretroBridge(
         }
         result.success(current)
       }
-      "controllerCount" -> result.success(1)
+      "controllerCount" -> result.success(physicalControllerCount)
       "setInput" -> {
-        touchMask = (args["mask"] as? Int) ?: 0
-        applyMask()
+        val port = (args["port"] as? Int) ?: 0
+        if (isValidPort(port)) {
+          methodMasks[port] = (args["mask"] as? Int) ?: 0
+          applyMask(port)
+        }
         result.success(null)
       }
       else -> result.notImplemented()
@@ -170,9 +190,14 @@ class LibretroBridge(
       producer.surface
       producer.release()
       surfaceProducer = null
+      advertisedControllerTypes = emptyList()
+      loadedCore = null
       result.error("load_failed", null, null)
       return
     }
+
+    advertisedControllerTypes = parseControllerTypes(nativeControllerTypes())
+    loadedCore = core
 
     val width = av[0].toInt()
     val height = av[1].toInt()
@@ -204,10 +229,14 @@ class LibretroBridge(
   // call repeatedly - isActive/audioTrack/audioThread/surfaceProducer are all
   // null-guarded, and nativeStop()'s teardown() no-ops once g_ctx.host is NULL.
   fun stop() {
+    val hadActiveSession = isActive
     isActive = false
     userPaused = false
     lastCoreMessage = null
+    advertisedControllerTypes = emptyList()
+    loadedCore = null
     stopAudio()
+    if (hadActiveSession) resetAllMasks() else clearMaskArrays()
     nativeStop()
     // See the comment on the load() failure branch: release() NPEs inside the
     // Flutter engine if .surface was never read first. A producer can reach
@@ -216,21 +245,24 @@ class LibretroBridge(
     surfaceProducer?.surface
     surfaceProducer?.release()
     surfaceProducer = null
-    portMask = 0
-    pulseMask = 0
-    touchMask = 0
     overlayOpen = false
     onActiveChanged(false)
   }
 
-  // Zeroes just the physical-pad contribution to the mask. Called by
-  // NativePadInput on session activate/deactivate so a direction held at
-  // teardown (or a stale bit from a just-torn-down session) can never leak
-  // into the next one. Distinct from stop()'s full reset, which also owns
-  // pulseMask/touchMask.
-  fun resetPadMask() {
-    portMask = 0
-    applyMask()
+  // Zeroes just the physical-pad contribution. Touch/keyboard method input
+  // remains explicitly port-local and is reset by stop().
+  fun resetPadMasks() {
+    for (port in 0 until MAX_PORTS) {
+      physicalMasks[port] = 0
+      applyMask(port)
+    }
+  }
+
+  fun setControllerCount(count: Int, force: Boolean = false) {
+    val clamped = count.coerceIn(0, MAX_PORTS)
+    if (physicalControllerCount == clamped && !force) return
+    physicalControllerCount = clamped
+    if (isActive) eventSink?.success(mapOf("event" to "controllersChanged", "count" to clamped))
   }
 
   private fun startAudio(sampleRate: Int) {
@@ -325,11 +357,30 @@ class LibretroBridge(
     audioTrack = null
   }
 
-  private fun applyMask() {
-    // Start now reaches the core directly through portMask: NativePadInput
-    // owns the short-press-vs-hold gesture natively (see its handleStart),
-    // pulsing bit 3 itself instead of Dart stripping and re-injecting it.
-    nativeSetMask(0, portMask or pulseMask or touchMask)
+  private fun resetAllMasks() {
+    for (port in 0 until MAX_PORTS) {
+      physicalMasks[port] = 0
+      pulseMasks[port] = 0
+      methodMasks[port] = 0
+      applyMask(port)
+    }
+  }
+
+  private fun clearMaskArrays() {
+    physicalMasks.fill(0)
+    pulseMasks.fill(0)
+    methodMasks.fill(0)
+    publishedMasks.fill(0)
+  }
+
+  private fun isValidPort(port: Int): Boolean = port in 0 until MAX_PORTS
+
+  private fun applyMask(port: Int) {
+    if (!isValidPort(port)) return
+    val desired = physicalMasks[port] or pulseMasks[port] or methodMasks[port]
+    if (publishedMasks[port] == desired) return
+    publishedMasks[port] = desired
+    nativeSetMask(port, desired)
   }
 
   // Called from NativePadInput (native RetroPad path) on the UI thread. Only
@@ -346,11 +397,12 @@ class LibretroBridge(
    * below recovers the individual edges, and only when the overlay is open --
    * during gameplay nothing crosses the channel at all.
    */
-  fun onPad(mask: Int) {
-    val changed = portMask xor mask
+  fun onPad(port: Int, mask: Int) {
+    if (!isValidPort(port)) return
+    val changed = physicalMasks[port] xor mask
     if (changed == 0) return
-    portMask = mask
-    applyMask()
+    physicalMasks[port] = mask
+    applyMask(port)
     if (!overlayOpen) return
     var remaining = changed
     while (remaining != 0) {
@@ -358,13 +410,18 @@ class LibretroBridge(
       remaining = remaining and bit.inv()
       val index = Integer.numberOfTrailingZeros(bit)
       eventSink?.success(
-        mapOf("event" to "button", "index" to index, "pressed" to (mask and bit != 0)),
+        mapOf(
+          "event" to "button",
+          "index" to index,
+          "pressed" to (mask and bit != 0),
+          "port" to port,
+        ),
       )
     }
   }
 
-  fun onMenu() {
-    eventSink?.success(mapOf("event" to "menuPressed"))
+  fun onMenu(port: Int = 0) {
+    eventSink?.success(mapOf("event" to "menuPressed", "port" to port))
   }
 
   // Called from JNI on the host run-loop thread when the emulation thread is
@@ -377,14 +434,14 @@ class LibretroBridge(
     }
   }
 
-  private fun pulseButton(index: Int, durationMs: Int) {
-    if (index < 0 || index >= 16) return
+  private fun pulseButton(port: Int, index: Int, durationMs: Int) {
+    if (!isValidPort(port) || index < 0 || index >= 16) return
     val bit = 1 shl index
-    pulseMask = pulseMask or bit
-    applyMask()
+    pulseMasks[port] = pulseMasks[port] or bit
+    applyMask(port)
     mainHandler.postDelayed({
-      pulseMask = pulseMask and bit.inv()
-      applyMask()
+      pulseMasks[port] = pulseMasks[port] and bit.inv()
+      applyMask(port)
     }, durationMs.toLong())
   }
 
@@ -438,6 +495,46 @@ class LibretroBridge(
     }
   }
 
+  private fun setControllerType(args: Map<String, Any?>, result: MethodChannel.Result) {
+    val port = (args["port"] as? Number)?.toInt()
+    if (port == null || !isValidPort(port)) {
+      result.error("invalid_controller_type", "Controller port must be between 0 and 3.", null)
+      return
+    }
+
+    // Auto is represented by the libretro default RetroPad device. A null or
+    // omitted value is accepted as Auto so older Dart callers can opt in
+    // without inventing a second wire-level sentinel.
+    val deviceType = (args["deviceType"] as? Number)?.toLong() ?: RETRO_DEVICE_JOYPAD
+    val isDefault = deviceType == RETRO_DEVICE_JOYPAD
+    val isAdvertised = refreshControllerTypes().any {
+      it.port == port && it.id == deviceType
+    }
+    if (!isDefault && !isAdvertised) {
+      result.error(
+        "invalid_controller_type",
+        "Device type $deviceType is not advertised for port $port.",
+        null,
+      )
+      return
+    }
+    val status = nativeSetControllerType(port, deviceType)
+    if (status < 0) {
+      result.error("controller_type_failed", "The core rejected device type $deviceType for port $port.", null)
+    } else {
+      result.success(null)
+    }
+  }
+
+  private fun refreshControllerTypes(): List<NativeControllerType> {
+    if (!isActive || loadedCore == null) return advertisedControllerTypes
+    advertisedControllerTypes = parseControllerTypes(nativeControllerTypes())
+    return advertisedControllerTypes
+  }
+
+  private fun parseControllerTypes(entries: Array<String>): List<NativeControllerType> =
+    NativeControllerTypeParser.parse(entries)
+
   private external fun nativeLoad(
     core: String, corePath: String, romPath: String, systemDir: String,
     saveDir: String, gameId: String, optKeys: Array<String>,
@@ -455,18 +552,59 @@ class LibretroBridge(
   private external fun nativeSaveState(): ByteArray?
   private external fun nativeLoadState(data: ByteArray): Boolean
   private external fun nativeOptions(): Array<String>
+  private external fun nativeControllerTypes(): Array<String>
+  private external fun nativeSetControllerType(port: Int, deviceType: Long): Int
   private external fun nativeSetOption(id: String, value: String)
 
   companion object {
     private const val TAG = "LibretroBridge"
+    private const val MAX_PORTS = 4
 
     // Frames pulled from the native ring per write. Stereo, so the short
     // buffer is twice this.
     private const val AUDIO_CHUNK_FRAMES = 512
     private const val BYTES_PER_SAMPLE = 2
+    private const val RETRO_DEVICE_JOYPAD = 1L
 
     init {
       System.loadLibrary("moonfin_libretro")
     }
+  }
+}
+
+/** Control-plane description of one core-advertised port/device pair. */
+internal data class NativeControllerType(
+  val port: Int,
+  val id: Long,
+  val label: String,
+) {
+  fun channelPayload(): Map<String, Any> = mapOf(
+    "port" to port,
+    "id" to id,
+    "label" to label,
+  )
+}
+
+/** Parses the compact JNI payload without touching gameplay input state. */
+internal object NativeControllerTypeParser {
+  fun parse(
+    entries: Array<String>,
+    onParsed: (NativeControllerType) -> Unit = {},
+  ): List<NativeControllerType> {
+    val parsed = ArrayList<NativeControllerType>(entries.size)
+    for (entry in entries) {
+      val fields = entry.split('\t', limit = 3)
+      if (fields.size != 3) continue
+      val port = fields[0].toIntOrNull() ?: continue
+      val id = fields[1].toLongOrNull() ?: continue
+      // Preserve every non-negative advertised port for diagnostics and Dart
+      // capability inspection. setControllerType separately restricts the
+      // selectable Moonfin input ports to the four host ports.
+      if (port < 0) continue
+      val type = NativeControllerType(port, id, fields[2])
+      parsed += type
+      onParsed(type)
+    }
+    return parsed
   }
 }
