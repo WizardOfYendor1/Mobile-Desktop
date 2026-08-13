@@ -115,7 +115,9 @@ jobs:
             amulet-android-native-${{ runner.os }}-
       - run: |
           flutter pub get
-          flutter build apk --release --flavor mobile-beta --target-platform android-arm64 --build-number "${{ needs.prepare.outputs.version_code }}" --dart-define=DISTRIBUTION_CHANNEL=amulet_android_beta
+          # Do not constrain --target-platform: the universal APK must include
+          # Flutter's arm64 and 32-bit ARM runtimes for Android TV devices.
+          flutter build apk --release --flavor mobile-beta --build-number "${{ needs.prepare.outputs.version_code }}" --dart-define=DISTRIBUTION_CHANNEL=amulet_android_beta
           mkdir amulet-assets
           cp build/app/outputs/flutter-apk/app-mobile-beta-release.apk "amulet-assets/amulet-moonfin-android-beta-${{ needs.prepare.outputs.source_sha_short }}.apk"
 
@@ -151,7 +153,9 @@ jobs:
           else
             printf '\nandroid_tv_build_number: %s\n' "${{ needs.prepare.outputs.version_code }}" >> pubspec.yaml
           fi
-          flutter build apk --release --flavor androidTv-beta --target-platform android-arm64 --build-number "${{ needs.prepare.outputs.version_code }}" --dart-define=MOONFIN_FORCE_TV=true --dart-define=DISTRIBUTION_CHANNEL=amulet_androidtv_beta
+          # Do not constrain --target-platform: some Android TV devices expose
+          # only a 32-bit ARM app runtime, even when their hardware is 64-bit.
+          flutter build apk --release --flavor androidTv-beta --build-number "${{ needs.prepare.outputs.version_code }}" --dart-define=MOONFIN_FORCE_TV=true --dart-define=DISTRIBUTION_CHANNEL=amulet_androidtv_beta
           mkdir amulet-assets
           cp build/app/outputs/flutter-apk/app-androidtv-beta-release.apk "amulet-assets/amulet-moonfin-androidtv-beta-${{ needs.prepare.outputs.source_sha_short }}.apk"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -194,6 +198,10 @@ jobs:
             "$build_tools/zipalign" -p -f 4 "$apk" "$aligned"
             "$build_tools/apksigner" sign --ks "$key_file" --ks-key-alias "$AMULET_KEY_ALIAS" --ks-pass env:AMULET_KEYSTORE_PASSWORD --key-pass env:AMULET_KEY_PASSWORD --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --v4-signing-enabled false --out "$output" "$aligned"
             "$build_tools/apksigner" verify --verbose --print-certs "$output"
+            for abi in arm64-v8a armeabi-v7a; do
+              unzip -Z1 "$output" "lib/$abi/libflutter.so" "lib/$abi/libapp.so" | grep -qx "lib/$abi/libflutter.so"
+              unzip -Z1 "$output" "lib/$abi/libflutter.so" "lib/$abi/libapp.so" | grep -qx "lib/$abi/libapp.so"
+            done
           done
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with: { name: amulet-android-signed, path: signed-assets, if-no-files-found: error }
