@@ -28,6 +28,7 @@ jobs:
       source_sha: ${{ steps.source.outputs.sha }}
       source_sha_short: ${{ steps.source.outputs.sha_short }}
       version_code: ${{ steps.source.outputs.version_code }}
+      snapshot: ${{ steps.request.outputs.snapshot }}
       android: ${{ steps.request.outputs.android }}
       androidtv: ${{ steps.request.outputs.androidtv }}
       ios: ${{ steps.request.outputs.ios }}
@@ -45,11 +46,13 @@ jobs:
           if [[ "$request" == beta-snapshot* ]]; then
             source_ref='beta/androidtv-snapshot'
             suffix="${request#beta-snapshot}"
+            echo 'snapshot=true' >> "$GITHUB_OUTPUT"
           elif [[ "$request" == beta-build:\ * ]]; then
             body="${request#beta-build: }"
             raw_source_ref="${body%% | *}"
             suffix="${body#"$raw_source_ref"}"
             source_ref="${raw_source_ref#origin/}"
+            echo 'snapshot=false' >> "$GITHUB_OUTPUT"
           else
             echo 'publish=false' >> "$GITHUB_OUTPUT"
             exit 0
@@ -347,6 +350,7 @@ jobs:
       - env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+          SNAPSHOT: ${{ needs.prepare.outputs.snapshot }}
         run: |
           set -euo pipefail
           cd release-assets
@@ -354,6 +358,10 @@ jobs:
           printf 'Source: WizardOfYendor1/Moonfin-Client-Core@%s\n' "$SOURCE_SHA" > BUILD_SOURCE.txt
           tag="amulet-beta-${SOURCE_SHA:0:12}"
           if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" --title "Amulet Beta ${SOURCE_SHA:0:12}" --prerelease --notes "Amulet beta built from \`WizardOfYendor1/Moonfin-Client-Core@${SOURCE_SHA}\`."
+            if [[ "$SNAPSHOT" == 'true' ]]; then
+              gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" --title "Amulet Snapshot ${SOURCE_SHA:0:12}" --prerelease --notes "Amulet snapshot built from \`WizardOfYendor1/Moonfin-Client-Core@${SOURCE_SHA}\`."
+            else
+              gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" --title "Amulet Beta ${SOURCE_SHA:0:12}" --notes "Amulet beta built from \`WizardOfYendor1/Moonfin-Client-Core@${SOURCE_SHA}\`."
+            fi
           fi
           gh release upload "$tag" ./* --repo "$GITHUB_REPOSITORY" --clobber
