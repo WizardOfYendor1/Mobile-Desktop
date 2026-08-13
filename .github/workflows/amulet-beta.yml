@@ -87,9 +87,9 @@ jobs:
           sha="$(git rev-parse HEAD)"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "sha_short=${sha:0:12}" >> "$GITHUB_OUTPUT"
-          # Keep the Amulet beta package above the normal app's version code and
-          # monotonic across every publisher run, so Android accepts in-place updates.
-          echo "version_code=$((1000000000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_OUTPUT"
+          # UTC epoch seconds are a shared, monotonic-enough version-code scheme
+          # for GitHub and the local Shield deployer (valid through January 2038).
+          echo "version_code=$(date -u +%s)" >> "$GITHUB_OUTPUT"
 
   android:
     needs: prepare
