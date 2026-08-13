@@ -10,7 +10,7 @@ on:
     branches: [automation/androidtv-beta]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: amulet-beta-publish
@@ -27,6 +27,7 @@ jobs:
       source_ref: ${{ steps.request.outputs.source_ref }}
       source_sha: ${{ steps.source.outputs.sha }}
       source_sha_short: ${{ steps.source.outputs.sha_short }}
+      version_code: ${{ steps.source.outputs.version_code }}
       android: ${{ steps.request.outputs.android }}
       androidtv: ${{ steps.request.outputs.androidtv }}
       ios: ${{ steps.request.outputs.ios }}
@@ -86,6 +87,9 @@ jobs:
           sha="$(git rev-parse HEAD)"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "sha_short=${sha:0:12}" >> "$GITHUB_OUTPUT"
+          # Keep the Amulet beta package above the normal app's version code and
+          # monotonic across every publisher run, so Android accepts in-place updates.
+          echo "version_code=$((1000000000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_OUTPUT"
 
   android:
     needs: prepare
@@ -111,12 +115,12 @@ jobs:
             amulet-android-native-${{ runner.os }}-
       - run: |
           flutter pub get
-          flutter build apk --release --flavor mobile-beta --target-platform android-arm64 --dart-define=DISTRIBUTION_CHANNEL=amulet_android_beta
+          flutter build apk --release --flavor mobile-beta --target-platform android-arm64 --build-number "${{ needs.prepare.outputs.version_code }}" --dart-define=DISTRIBUTION_CHANNEL=amulet_android_beta
           mkdir amulet-assets
           cp build/app/outputs/flutter-apk/app-mobile-beta-release.apk "amulet-assets/amulet-moonfin-android-beta-${{ needs.prepare.outputs.source_sha_short }}.apk"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with: { name: amulet-android, path: amulet-assets, if-no-files-found: error }
+        with: { name: candidate-amulet-android, path: amulet-assets, if-no-files-found: error }
 
   androidtv:
     needs: prepare
@@ -142,11 +146,57 @@ jobs:
             amulet-androidtv-native-${{ runner.os }}-
       - run: |
           flutter pub get
-          flutter build apk --release --flavor androidTv-beta --target-platform android-arm64 --dart-define=MOONFIN_FORCE_TV=true --dart-define=DISTRIBUTION_CHANNEL=amulet_androidtv_beta
+          if grep -q '^[[:space:]]*android_tv_build_number:' pubspec.yaml; then
+            sed -i -E "s|^[[:space:]]*android_tv_build_number:.*|android_tv_build_number: ${{ needs.prepare.outputs.version_code }}|" pubspec.yaml
+          else
+            printf '\nandroid_tv_build_number: %s\n' "${{ needs.prepare.outputs.version_code }}" >> pubspec.yaml
+          fi
+          flutter build apk --release --flavor androidTv-beta --target-platform android-arm64 --build-number "${{ needs.prepare.outputs.version_code }}" --dart-define=MOONFIN_FORCE_TV=true --dart-define=DISTRIBUTION_CHANNEL=amulet_androidtv_beta
           mkdir amulet-assets
           cp build/app/outputs/flutter-apk/app-androidtv-beta-release.apk "amulet-assets/amulet-moonfin-androidtv-beta-${{ needs.prepare.outputs.source_sha_short }}.apk"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with: { name: amulet-androidtv, path: amulet-assets, if-no-files-found: error }
+        with: { name: candidate-amulet-androidtv, path: amulet-assets, if-no-files-found: error }
+
+  sign_android:
+    needs: [prepare, android, androidtv]
+    if: >-
+      always() && needs.prepare.outputs.publish == 'true' &&
+      (needs.android.result == 'success' || needs.android.result == 'skipped') &&
+      (needs.androidtv.result == 'success' || needs.androidtv.result == 'skipped') &&
+      (needs.prepare.outputs.android == 'true' || needs.prepare.outputs.androidtv == 'true')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment:
+      name: amulet-beta-signing
+    steps:
+      # Do not check out the requested source branch here. This job receives only
+      # the candidate APKs built without secrets, then applies the protected key.
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: { pattern: candidate-amulet-*, path: candidate-assets, merge-multiple: true }
+      - name: Sign and verify Android artifacts
+        env:
+          AMULET_KEYSTORE_B64: ${{ secrets.AMULET_KEYSTORE_B64 }}
+          AMULET_KEYSTORE_PASSWORD: ${{ secrets.AMULET_KEYSTORE_PASSWORD }}
+          AMULET_KEY_ALIAS: ${{ secrets.AMULET_KEY_ALIAS }}
+          AMULET_KEY_PASSWORD: ${{ secrets.AMULET_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          key_file="$RUNNER_TEMP/amulet-moonfin-beta.jks"
+          trap 'rm -f "$key_file"' EXIT
+          printf '%s' "$AMULET_KEYSTORE_B64" | base64 --decode > "$key_file"
+          build_tools="$ANDROID_HOME/build-tools/$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort -V | tail -n1)"
+          mkdir signed-assets
+          shopt -s nullglob
+          for apk in candidate-assets/*.apk; do
+            aligned="$RUNNER_TEMP/$(basename "$apk" .apk)-aligned.apk"
+            output="signed-assets/$(basename "$apk")"
+            "$build_tools/zipalign" -p -f 4 "$apk" "$aligned"
+            "$build_tools/apksigner" sign --ks "$key_file" --ks-key-alias "$AMULET_KEY_ALIAS" --ks-pass env:AMULET_KEYSTORE_PASSWORD --key-pass env:AMULET_KEY_PASSWORD --v4-signing-enabled false --out "$output" "$aligned"
+            "$build_tools/apksigner" verify --verbose --print-certs "$output"
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: { name: amulet-android-signed, path: signed-assets, if-no-files-found: error }
 
   ios:
     needs: prepare
@@ -269,17 +319,20 @@ jobs:
         with: { name: 'amulet-linux-${{ matrix.arch }}', path: amulet-assets, if-no-files-found: error }
 
   release:
-    needs: [prepare, android, androidtv, ios, macos, windows, windows_arm64, linux]
+    needs: [prepare, android, androidtv, sign_android, ios, macos, windows, windows_arm64, linux]
     if: >-
       always() && needs.prepare.outputs.publish == 'true' &&
       (needs.android.result == 'success' || needs.android.result == 'skipped') &&
       (needs.androidtv.result == 'success' || needs.androidtv.result == 'skipped') &&
+      (needs.sign_android.result == 'success' || needs.sign_android.result == 'skipped') &&
       (needs.ios.result == 'success' || needs.ios.result == 'skipped') &&
       (needs.macos.result == 'success' || needs.macos.result == 'skipped') &&
       (needs.windows.result == 'success' || needs.windows.result == 'skipped') &&
       (needs.windows_arm64.result == 'success' || needs.windows_arm64.result == 'skipped') &&
       (needs.linux.result == 'success' || needs.linux.result == 'skipped')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with: { pattern: amulet-*, path: release-assets, merge-multiple: true }
