@@ -192,7 +192,7 @@ jobs:
             aligned="$RUNNER_TEMP/$(basename "$apk" .apk)-aligned.apk"
             output="signed-assets/$(basename "$apk")"
             "$build_tools/zipalign" -p -f 4 "$apk" "$aligned"
-            "$build_tools/apksigner" sign --ks "$key_file" --ks-key-alias "$AMULET_KEY_ALIAS" --ks-pass env:AMULET_KEYSTORE_PASSWORD --key-pass env:AMULET_KEY_PASSWORD --v4-signing-enabled false --out "$output" "$aligned"
+            "$build_tools/apksigner" sign --ks "$key_file" --ks-key-alias "$AMULET_KEY_ALIAS" --ks-pass env:AMULET_KEYSTORE_PASSWORD --key-pass env:AMULET_KEY_PASSWORD --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --v4-signing-enabled false --out "$output" "$aligned"
             "$build_tools/apksigner" verify --verbose --print-certs "$output"
           done
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
