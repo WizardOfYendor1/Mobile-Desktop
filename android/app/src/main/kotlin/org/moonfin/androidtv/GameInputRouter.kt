@@ -212,29 +212,13 @@ internal class GameInputRouter(
     private fun physicalDevice(device: InputDevice?): InputDevice? =
         device?.takeIf(::isPhysicalGamepad)
 
-    private fun isPhysicalGamepad(device: InputDevice): Boolean {
-        if (device.isVirtual) return false
-        val hasGamepadSource = device.supportsSource(InputDevice.SOURCE_GAMEPAD)
-        val hasJoystickSource = device.supportsSource(InputDevice.SOURCE_JOYSTICK)
-        if (!hasGamepadSource && !hasJoystickSource) return false
-        val hasJoystickAxis = device.motionRanges.any { range ->
-            range.source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
-        }
-        // hasKeys() is a synchronous binder call to system_server. Only pay for
-        // it when hasJoystickAxis alone can't decide the result -- this method
-        // runs per key event via physicalDevice(), so evaluating it eagerly
-        // (as a val computed before the ||) meant every real gamepad, which
-        // already satisfies hasJoystickAxis, paid the IPC for a result that
-        // was then discarded by short-circuiting.
-        return hasJoystickAxis || (device.isExternal && hasFaceButtons(device))
-    }
-
-    private fun hasFaceButtons(device: InputDevice): Boolean = device.hasKeys(
-        KeyEvent.KEYCODE_BUTTON_A,
-        KeyEvent.KEYCODE_BUTTON_B,
-        KeyEvent.KEYCODE_BUTTON_X,
-        KeyEvent.KEYCODE_BUTTON_Y,
-    ).any { it }
+    // Shares NativeInputDeviceClassifier with the native libretro path so the
+    // two cannot disagree about the same physical device -- an Android TV
+    // remote was previously accepted here as a gamepad. The classifier keeps
+    // the hasKeys() binder call behind the joystick-axis check, so the per-key
+    // cost this method pays via physicalDevice() is unchanged.
+    private fun isPhysicalGamepad(device: InputDevice): Boolean =
+        NativeInputDeviceClassifier.classify(device) == NativeInputDeviceClass.GAMEPAD
 
     private fun deviceIdentity(device: InputDevice): Map<String, String> {
         deviceCache[device.descriptor]?.let { return it }

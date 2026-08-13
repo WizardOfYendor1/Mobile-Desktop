@@ -62,16 +62,27 @@ class AndroidGamepadChannel {
     });
   }
 
+  /// Applies the durable Player 1-4 assignment to the native port registry.
+  ///
+  /// Sent before a session starts and again on every edit; mid-session it
+  /// reallocates immediately, which is what the user asked for by editing it.
+  static Future<void> setControllerAssignments(String assignmentsJson) async {
+    if (!PlatformDetection.isAndroid) return;
+    await _channel.invokeMethod('setControllerAssignments', {
+      'assignments': assignmentsJson,
+    });
+  }
+
   /// Captures the next physical button from [deviceId] instead of forwarding
   /// it to libretro. Used only while the native mapping overlay is rebinding.
   static Future<void> setControllerMappingCapture(
     bool active, {
-    String? deviceId,
+    String? connectionId,
   }) async {
     if (!PlatformDetection.isAndroid) return;
     await _channel.invokeMethod('setControllerMappingCapture', {
       'active': active,
-      'deviceId': ?deviceId,
+      'connectionId': ?connectionId,
     });
   }
 
@@ -96,6 +107,21 @@ class AndroidGamepadChannel {
     if (!PlatformDetection.isAndroid) return const [];
     final result = await _channel.invokeListMethod<dynamic>(
       'getGamepadDevices',
+    );
+    return result
+            ?.whereType<Map>()
+            .map((value) => value.cast<String, dynamic>())
+            .toList(growable: false) ??
+        const [];
+  }
+
+  /// Native-libretro controller snapshot. Unlike [getEmulatorGamepads], this
+  /// route reports runtime connection/port metadata and is never used by the
+  /// EmulatorJS backend.
+  static Future<List<Map<String, dynamic>>> getNativeGamepadDevices() async {
+    if (!PlatformDetection.isAndroid) return const [];
+    final result = await _channel.invokeListMethod<dynamic>(
+      'getNativeGamepadDevices',
     );
     return result
             ?.whereType<Map>()

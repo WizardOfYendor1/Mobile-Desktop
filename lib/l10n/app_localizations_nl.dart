@@ -4165,7 +4165,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get seerrSeriesContinuing =>
-      'Series Continuing · Future Seasons Can Be Requested';
+      'Serie gaat verder - Toekomstige seizoenen kunnen aangevraagd worden';
 
   @override
   String get advancedOptions => 'Geavanceerde opties';
@@ -8786,11 +8786,12 @@ class AppLocalizationsNl extends AppLocalizations {
   String get settingsNone => 'Geen';
 
   @override
-  String get settingsSkipButtonAutoHide => 'Auto Hide Skip Button';
+  String get settingsSkipButtonAutoHide =>
+      'Verberg automatisch de overslaanknop';
 
   @override
   String get settingsSkipButtonAutoHideDescription =>
-      'Automatically dismiss the skip intro and outro button after a few seconds.';
+      'Haal automatisch de knop om het intro en outro over te slaan weg na een paar seconde.';
 
   @override
   String get settingsPromptUser => 'Vraag gebruiker';
@@ -8865,8 +8866,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get settingsEnabledOnThisDevice => 'Ingeschakeld op dit apparaat';
 
   @override
-  String get settingsDisabledPreferTranscode =>
-      'Uitgeschakeld (voorkeur voor transcoderen)';
+  String get settingsDisabledPreferTranscode => 'Uitgeschakeld';
 
   @override
   String get settingsResumeRewindDescription =>
@@ -9075,7 +9075,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get mapDolbyVisionP7Subtitle =>
-      'Speel Dolby Vision profiel 7-streams af als HDR10-compatibele HEVC op apparaten zonder Dolby Vision.';
+      'Sla de profiel 8 conversie over en haal het Dolby Vision profiel 7 op uit streams naar een HDR10-bruikbare HEVC. Gebruik deze optie als omgezette streams er vreemd uitzien.';
 
   @override
   String get subtitlesUseEmbeddedStyles =>
@@ -10557,40 +10557,40 @@ class AppLocalizationsNl extends AppLocalizations {
   String get showAlphabeticalFilters => 'Laat alfabet zien';
 
   @override
-  String get personalRatingStyle => 'Personal rating style';
+  String get personalRatingStyle => 'Persoonlijke beoordelingsstijl';
 
   @override
-  String get personalRatingThumbs => 'Like / dislike';
+  String get personalRatingThumbs => 'Vind ik (niet) leuk';
 
   @override
-  String get personalRatingStars => '5 stars';
+  String get personalRatingStars => '5 sterren';
 
   @override
-  String get personalRatingNumeric => 'Numeric score out of 10';
+  String get personalRatingNumeric => 'Getalscore tot 10';
 
   @override
-  String get rate => 'Rate';
+  String get rate => 'Beoordeel';
 
   @override
-  String get like => 'Like';
+  String get like => 'Vind ik leuk';
 
   @override
-  String get dislike => 'Dislike';
+  String get dislike => 'Vind ik niet leuk';
 
   @override
-  String get personalRatingClear => 'Clear rating';
+  String get personalRatingClear => 'Haal beoordeling weg';
 
   @override
-  String get personalRatingRated => 'Rated';
+  String get personalRatingRated => 'Beoordeeld';
 
   @override
-  String get personalRatingSaveFailed => 'Could not save rating';
+  String get personalRatingSaveFailed => 'Kon de beoordeling niet opslaan';
 
   @override
-  String get increase => 'Increase';
+  String get increase => 'Verhoog';
 
   @override
-  String get decrease => 'Decrease';
+  String get decrease => 'Verlaag';
 
   @override
   String personalRatingOutOfTen(String rating) {
