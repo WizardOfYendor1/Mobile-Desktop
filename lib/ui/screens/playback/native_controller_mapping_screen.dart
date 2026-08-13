@@ -11,15 +11,33 @@ import '../../../util/native_controller_mapping.dart';
 /// on Windows and Linux it is a namespaced gamepads-package controller id (see
 /// [desktopControllerDeviceId]).
 class NativeControllerDevice {
-  const NativeControllerDevice({required this.id, required this.name});
+  const NativeControllerDevice({
+    required this.id,
+    required this.name,
+    this.connectionId,
+    this.port,
+    this.supported = true,
+  });
 
   final String id;
   final String name;
+  final String? connectionId;
+  final int? port;
+  final bool supported;
+
+  String get runtimeId => connectionId ?? id;
+  String get portLabel {
+    if (!supported || port == null || port! < 0) return 'Unassigned';
+    return 'P${port! + 1}';
+  }
 
   factory NativeControllerDevice.fromMap(Map<String, dynamic> map) {
     return NativeControllerDevice(
       id: map['id']?.toString() ?? '',
       name: map['name']?.toString() ?? 'Android gamepad',
+      connectionId: map['connectionId']?.toString(),
+      port: (map['port'] as num?)?.toInt(),
+      supported: map['supported'] is bool ? map['supported'] as bool : true,
     );
   }
 }
@@ -35,6 +53,10 @@ class NativeControllerMappingScreen extends StatefulWidget {
     required this.devices,
     required this.mappings,
     required this.onMappingChanged,
+    this.coreId = '',
+    this.controllerTypesByPort = const {},
+    this.onControllerTypeChanged,
+    this.onCopyMapping,
     required this.onClose,
   });
 
@@ -42,6 +64,11 @@ class NativeControllerMappingScreen extends StatefulWidget {
   final Map<String, NativeControllerMapping> mappings;
   final Future<void> Function(String deviceId, NativeControllerMapping mapping)
   onMappingChanged;
+  final String coreId;
+  final Map<int, List<CoreControllerType>> controllerTypesByPort;
+  final Future<void> Function(String deviceId, int deviceType)?
+  onControllerTypeChanged;
+  final Future<void> Function(String sourceDeviceId)? onCopyMapping;
   final VoidCallback onClose;
 
   @override
@@ -56,6 +83,9 @@ class NativeControllerMappingScreenState
   final ScrollController _scroll = ScrollController();
   int _selected = 0;
   int _deviceIndex = 0;
+  bool _confirmingCopy = false;
+  bool _choosingControllerType = false;
+  int _controllerTypeSelected = 0;
   RetroPadButton? _capturing;
   late NativeControllerMapping _mapping;
   final ControllerMappingCapture? _capture =
@@ -63,7 +93,41 @@ class NativeControllerMappingScreenState
 
   NativeControllerDevice? get _device =>
       widget.devices.isEmpty ? null : widget.devices[_deviceIndex];
-  int get _rowCount => 1 + RetroPadButton.values.length + 1;
+  List<CoreControllerType> get _supportedControllerTypes {
+    final port = _device?.port;
+    if (port == null) return const [];
+    final seenIds = <int>{};
+    return (widget.controllerTypesByPort[port] ?? const [])
+        .where((type) => type.isSupportedForCore(widget.coreId))
+        .where((type) => seenIds.add(type.id))
+        .toList(growable: false);
+  }
+
+  List<CoreControllerType> get _alternateControllerTypes =>
+      _supportedControllerTypes
+          .where((type) => !type.isCoreDefault)
+          .toList(growable: false);
+
+  bool get _showsControllerTypeSelector => _alternateControllerTypes.isNotEmpty;
+  int get _controllerTypeRow => 1;
+  int get _buttonStartRow => 1 + (_showsControllerTypeSelector ? 1 : 0);
+  int get _copyRow => _buttonStartRow + RetroPadButton.values.length;
+  int get _resetRow => _copyRow + 1;
+  int get _rowCount => _resetRow + 1;
+  int get _copyConfirmRow => 0;
+  int get _copyCancelRow => 1;
+
+  List<String> get _copyTargets => widget.devices
+      .where((device) => device.supported && device.port != null)
+      .map((device) => device.id)
+      .where((id) => id != _device?.id)
+      .toSet()
+      .toList(growable: false);
+
+  bool get _canCopy =>
+      _device?.supported == true &&
+      _device?.port != null &&
+      _copyTargets.isNotEmpty;
 
   @override
   void initState() {
@@ -89,14 +153,24 @@ class NativeControllerMappingScreenState
   @override
   void didUpdateWidget(covariant NativeControllerMappingScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (identical(oldWidget.devices, widget.devices)) return;
+    if (identical(oldWidget.devices, widget.devices)) {
+      final device = _device;
+      if (_capturing == null &&
+          device != null &&
+          oldWidget.mappings[device.id] != widget.mappings[device.id]) {
+        _loadSelectedDevice();
+      }
+      return;
+    }
 
     final previousDevice = _deviceIndex < oldWidget.devices.length
         ? oldWidget.devices[_deviceIndex]
         : null;
     final matchedIndex = previousDevice == null
         ? -1
-        : widget.devices.indexWhere((d) => d.id == previousDevice.id);
+        : widget.devices.indexWhere(
+            (d) => d.runtimeId == previousDevice.runtimeId,
+          );
     if (matchedIndex != -1) {
       _deviceIndex = matchedIndex;
     } else if (widget.devices.isEmpty) {
@@ -116,6 +190,39 @@ class NativeControllerMappingScreenState
   /// Called by the native player screen for standard RetroPad overlay input.
   void handleButton(int index, bool pressed) {
     if (!pressed || _capturing != null) return;
+    if (_choosingControllerType) {
+      switch (index) {
+        case 4:
+          _moveControllerType(-1);
+        case 5:
+          _moveControllerType(1);
+        case 0:
+          _applyControllerType();
+        case 8:
+          setState(() => _choosingControllerType = false);
+      }
+      return;
+    }
+    if (_confirmingCopy) {
+      switch (index) {
+        case 4:
+        case 5:
+          setState(() {
+            _selected = _selected == _copyConfirmRow
+                ? _copyCancelRow
+                : _copyConfirmRow;
+          });
+        case 0:
+          if (_selected == _copyConfirmRow) {
+            _confirmCopy();
+          } else {
+            setState(() => _confirmingCopy = false);
+          }
+        case 8:
+          setState(() => _confirmingCopy = false);
+      }
+      return;
+    }
     switch (index) {
       case 4:
         _move(-1);
@@ -134,18 +241,24 @@ class NativeControllerMappingScreenState
 
   Future<void> _onCaptured(String deviceId, int code) async {
     final capturing = _capturing;
+    final selectedDevice = _device;
     // The device can be switched, or the panel closed, between arming capture
     // and the press arriving; binding to whatever is selected now would attach
     // the press to a controller the user never touched.
-    if (capturing == null || deviceId != _device?.id) return;
+    if (capturing == null ||
+        selectedDevice == null ||
+        deviceId != selectedDevice.runtimeId) {
+      return;
+    }
 
     final mapping = _mapping.withBinding(code, capturing);
+    if (!mounted) return;
     setState(() {
       _mapping = mapping;
       _capturing = null;
     });
     await _capture?.end();
-    await widget.onMappingChanged(deviceId, mapping);
+    await widget.onMappingChanged(selectedDevice.id, mapping);
   }
 
   void _move(int delta) {
@@ -179,6 +292,14 @@ class NativeControllerMappingScreenState
       _changeDevice(1);
       return;
     }
+    if (_showsControllerTypeSelector && _selected == _controllerTypeRow) {
+      _beginControllerTypeSelection();
+      return;
+    }
+    if (_selected == _copyRow) {
+      _beginCopy();
+      return;
+    }
     if (_selected == _rowCount - 1) {
       _reset();
       return;
@@ -186,9 +307,9 @@ class NativeControllerMappingScreenState
     final device = _device;
     final capture = _capture;
     if (device == null || capture == null) return;
-    final button = RetroPadButton.values[_selected - 1];
+    final button = RetroPadButton.values[_selected - _buttonStartRow];
     setState(() => _capturing = button);
-    unawaited(capture.begin(device.id));
+    unawaited(capture.begin(device.runtimeId));
   }
 
   void _reset() {
@@ -198,6 +319,69 @@ class NativeControllerMappingScreenState
     unawaited(
       widget.onMappingChanged(device.id, NativeControllerMapping.empty),
     );
+  }
+
+  void _beginCopy() {
+    if (widget.onCopyMapping == null || !_canCopy) return;
+    setState(() {
+      _confirmingCopy = true;
+      _selected = _copyConfirmRow;
+    });
+  }
+
+  void _confirmCopy() {
+    final device = _device;
+    final callback = widget.onCopyMapping;
+    if (device == null || callback == null) return;
+    setState(() => _confirmingCopy = false);
+    unawaited(callback(device.id));
+  }
+
+  List<CoreControllerType?> get _controllerTypeChoices => [
+    null,
+    ..._alternateControllerTypes,
+  ];
+
+  String get _controllerTypeLabel {
+    final selected = _mapping.controllerTypeForCore(widget.coreId);
+    return _alternateControllerTypes
+            .where((type) => type.id == selected)
+            .firstOrNull
+            ?.label ??
+        'Auto (Core default)';
+  }
+
+  void _beginControllerTypeSelection() {
+    if (!_showsControllerTypeSelector) return;
+    final selected = _mapping.controllerTypeForCore(widget.coreId);
+    final choices = _controllerTypeChoices;
+    _controllerTypeSelected = choices.indexWhere(
+      (type) => type?.id == selected,
+    );
+    if (_controllerTypeSelected < 0) _controllerTypeSelected = 0;
+    setState(() => _choosingControllerType = true);
+  }
+
+  void _moveControllerType(int delta) {
+    final count = _controllerTypeChoices.length;
+    if (count == 0) return;
+    setState(() {
+      _controllerTypeSelected =
+          ((_controllerTypeSelected + delta) % count + count) % count;
+    });
+  }
+
+  void _applyControllerType() {
+    final device = _device;
+    final callback = widget.onControllerTypeChanged;
+    if (device == null || callback == null) return;
+    final type = _controllerTypeChoices[_controllerTypeSelected];
+    final deviceType = type?.id ?? retroDeviceJoypad;
+    setState(() {
+      _mapping = _mapping.withControllerType(widget.coreId, deviceType);
+      _choosingControllerType = false;
+    });
+    unawaited(callback(device.id, deviceType));
   }
 
   /// How a stored binding is described back to the user.
@@ -253,6 +437,38 @@ class NativeControllerMappingScreenState
       );
     }
 
+    if (_confirmingCopy) {
+      final source = _device;
+      return Flexible(
+        child: ListView(
+          controller: _scroll,
+          shrinkWrap: true,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                'Copy ${source?.portLabel ?? 'selected controller'} mapping and core controller type to ${_copyTargets.length} other controller profile${_copyTargets.length == 1 ? '' : 's'}?\n\nThis copies Android button keycodes and this core\'s selected layout. Use only with compatible controller layouts; analog axes are not copied.',
+                style: const TextStyle(color: Colors.white, fontSize: 18),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            _row(
+              'Copy mappings',
+              _copyConfirmRow,
+              trailing: Icons.check,
+              onTap: _confirmCopy,
+            ),
+            _row(
+              'Cancel',
+              _copyCancelRow,
+              trailing: Icons.close,
+              onTap: () => setState(() => _confirmingCopy = false),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (_capturing case final button?) {
       return Padding(
         padding: const EdgeInsets.all(20),
@@ -260,6 +476,33 @@ class NativeControllerMappingScreenState
           'Press the physical button to bind to ${button.label}.',
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.white, fontSize: 20),
+        ),
+      );
+    }
+
+    if (_choosingControllerType) {
+      final choices = _controllerTypeChoices;
+      return Flexible(
+        child: ListView.builder(
+          controller: _scroll,
+          shrinkWrap: true,
+          itemExtent: _rowExtent,
+          itemCount: choices.length,
+          itemBuilder: (context, index) {
+            final type = choices[index];
+            return _row(
+              type?.label ?? 'Auto (Core default)',
+              index,
+              subtitle: type == null
+                  ? 'Let the core choose its default layout'
+                  : null,
+              trailing: index == _controllerTypeSelected ? Icons.check : null,
+              onTap: () {
+                setState(() => _controllerTypeSelected = index);
+                _applyControllerType();
+              },
+            );
+          },
         ),
       );
     }
@@ -273,7 +516,7 @@ class NativeControllerMappingScreenState
         itemBuilder: (context, index) {
           if (index == 0) {
             return _row(
-              'Controller: ${_device!.name}',
+              '${_device!.portLabel} — ${_device!.name}',
               index,
               trailing: Icons.swap_horiz,
               onTap: () {
@@ -282,7 +525,37 @@ class NativeControllerMappingScreenState
               },
             );
           }
-          if (index == _rowCount - 1) {
+          if (_showsControllerTypeSelector && index == _controllerTypeRow) {
+            return _row(
+              'Core controller type',
+              index,
+              subtitle: _controllerTypeLabel,
+              trailing: Icons.chevron_right,
+              onTap: () {
+                setState(() => _selected = index);
+                _beginControllerTypeSelection();
+              },
+            );
+          }
+          if (index == _copyRow) {
+            final targets = _copyTargets.length;
+            final canCopy = _canCopy;
+            return _row(
+              !canCopy
+                  ? 'Copy mapping to all controller ports (none)'
+                  : 'Copy mapping to all controller ports',
+              index,
+              subtitle: !canCopy
+                  ? 'Select an assigned controller with another port available'
+                  : '$targets other profile${targets == 1 ? '' : 's'}',
+              trailing: Icons.copy,
+              onTap: () {
+                setState(() => _selected = index);
+                _beginCopy();
+              },
+            );
+          }
+          if (index == _resetRow) {
             return _row(
               'Reset to defaults',
               index,
@@ -293,7 +566,7 @@ class NativeControllerMappingScreenState
               },
             );
           }
-          final button = RetroPadButton.values[index - 1];
+          final button = RetroPadButton.values[index - _buttonStartRow];
           final keycode = _keycodeFor(button);
           return _row(
             button.label,

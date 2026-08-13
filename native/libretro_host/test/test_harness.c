@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "../libretro_host.h"
+#include "../libretro.h"
 
 #ifdef _WIN32
 #include <direct.h>
@@ -238,6 +239,106 @@ static void test_vfs_dir_reports_subdir(const char *core_path,
   CHECK(rc == 0, "core loads with the VFS dir check variable set");
   CHECK(strcmp(g_last_message, "stub vfs dir probe_subdir is a directory") == 0,
         "a real subdirectory is reported as a directory through the VFS");
+  lh_destroy(host);
+}
+
+// SET_CONTROLLER_INFO is supplied by the core through borrowed pointers, and
+// controller changes must cross to the emulation thread just like save-state
+// requests. The stub mutates every source label as soon as the environment
+// callback returns, then exposes the selected port-0 device in word four of
+// its save state so this checks both properties without reaching into host
+// internals.
+static void test_controller_types(const char *core_path, const char *rom_path,
+                                  const char *work_dir) {
+  printf("controller types:\n");
+  lh_host *host = lh_create(LH_FORMAT_RGBA8888, make_callbacks());
+  lh_av_info av;
+  int rc = lh_load(host, core_path, rom_path, work_dir, work_dir,
+                   "controllertypes", NULL, NULL, 0, &av);
+  CHECK(rc == 0, "core loads for controller type discovery");
+  if (rc != 0) {
+    lh_destroy(host);
+    return;
+  }
+
+  CHECK(lh_controller_type_count(host, 0) == 3,
+        "all advertised port-0 types are retained, including unsupported ones");
+  CHECK(lh_controller_type_count(host, 3) == 1,
+        "the fourth Moonfin port is retained");
+  CHECK(lh_controller_type_count(host, 4) == 0,
+        "ports beyond Moonfin input capacity are logged but not exposed");
+  lh_controller_type type;
+  CHECK(lh_get_controller_type(host, 0, 0, &type) == 0,
+        "first controller type is enumerable");
+  CHECK(type.id == RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 1),
+        "controller type id is copied");
+  CHECK(strcmp(type.label, "Stub Classic") == 0,
+        "controller label survives the core mutating its source buffer");
+  CHECK(lh_get_controller_type(host, 0, 3, &type) != 0,
+        "past-the-end controller type is rejected");
+  CHECK(lh_get_controller_type(host, 4, 0, &type) != 0,
+        "unroutable controller port is not enumerable");
+
+  lh_start(host);
+  lh_pause(host);
+  msleep(30);  // ensure the running loop drains controller jobs while paused
+  const unsigned classic = RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 1);
+  CHECK(lh_set_controller_type(host, 0, classic) == 0,
+        "advertised controller type applies on the emulation thread");
+
+  size_t size = lh_serialize_size(host);
+  uint8_t state[64] = {0};
+  CHECK(size >= sizeof(int32_t) * 4 && size <= sizeof(state),
+        "stub state carries applied controller type");
+  if (size >= sizeof(int32_t) * 4 && size <= sizeof(state)) {
+    CHECK(lh_serialize(host, state, size) == 0,
+          "serialize after advertised controller selection");
+    int32_t applied;
+    memcpy(&applied, state + sizeof(int32_t) * 3, sizeof(applied));
+    CHECK((unsigned)applied == classic,
+          "core receives the advertised controller device id");
+  }
+
+  unsigned generation_before_restart = lh_restart_generation(host);
+  CHECK(lh_restart_async(host) == 0,
+        "controller-selection restart schedules on the emulation thread");
+  int waited_ms = 0;
+  while (lh_restart_generation(host) == generation_before_restart &&
+         waited_ms < 2000) {
+    msleep(5);
+    waited_ms += 5;
+  }
+  CHECK(lh_restart_generation(host) != generation_before_restart,
+        "controller-selection restart completes");
+  if (size >= sizeof(int32_t) * 4 && size <= sizeof(state)) {
+    memset(state, 0, sizeof(state));
+    CHECK(lh_serialize(host, state, size) == 0,
+          "serialize after controller-selection restart");
+    int32_t applied;
+    memcpy(&applied, state + sizeof(int32_t) * 3, sizeof(applied));
+    CHECK((unsigned)applied == classic,
+          "restart reapplies the selected controller device to the new core");
+  }
+
+  CHECK(lh_set_controller_type(host, 0, 0x7fffffffU) == 1,
+        "stale explicit controller type falls back safely");
+  if (size >= sizeof(int32_t) * 4 && size <= sizeof(state)) {
+    memset(state, 0, sizeof(state));
+    CHECK(lh_serialize(host, state, size) == 0,
+          "serialize after stale controller fallback");
+    int32_t applied;
+    memcpy(&applied, state + sizeof(int32_t) * 3, sizeof(applied));
+    CHECK((unsigned)applied == RETRO_DEVICE_JOYPAD,
+          "core receives the libretro default after a stale controller id");
+  }
+  CHECK(lh_set_controller_type(host, 2, RETRO_DEVICE_JOYPAD) == 0,
+        "Auto accepts libretro's joypad default when the port did not advertise it");
+  CHECK(lh_set_controller_type(host, 4, RETRO_DEVICE_JOYPAD) != 0,
+        "unroutable controller port is rejected");
+
+  lh_stop(host);
+  CHECK(lh_controller_type_count(host, 0) == 0,
+        "controller types are cleared when the core unloads");
   lh_destroy(host);
 }
 
@@ -915,6 +1016,7 @@ int main(int argc, char **argv) {
   test_input_latch();
   test_vfs_zip(core_path, work_dir);
   test_vfs_dir_reports_subdir(core_path, rom_path, work_dir);
+  test_controller_types(core_path, rom_path, work_dir);
 
   test_format(core_path, rom_path, work_dir, LH_FORMAT_RGBA8888);
   test_format(core_path, rom_path, work_dir, LH_FORMAT_BGRA8888);
