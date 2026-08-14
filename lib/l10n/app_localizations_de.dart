@@ -208,17 +208,17 @@ class AppLocalizationsDe extends AppLocalizations {
   String get glassQuality => 'Glass-Qualität';
 
   @override
-  String get oledMode => 'OLED Mode';
+  String get oledMode => 'OLED Modus';
 
   @override
   String get oledModeSubtitle =>
       'Deepen blacks and enrich artwork. Best on OLED displays.';
 
   @override
-  String get oledModeSubtle => 'Subtle';
+  String get oledModeSubtle => 'Subtil';
 
   @override
-  String get oledModeVivid => 'Vivid';
+  String get oledModeVivid => 'Lebhaft';
 
   @override
   String get glassQualitySubtitle =>
@@ -521,10 +521,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get extraLarge => 'Sehr groß';
 
   @override
-  String get scrollDirection => 'Scroll Direction';
+  String get scrollDirection => 'Scrollrichtung';
 
   @override
-  String get scrollDirectionVertical => 'Vertical';
+  String get scrollDirectionVertical => 'Vertikal';
 
   @override
   String get scrollDirectionHorizontal => 'Horizontal';
@@ -642,7 +642,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get scrollRight => 'Nach rechts scrollen';
 
   @override
-  String get scrollToTop => 'Scroll to top';
+  String get scrollToTop => 'Scroll nach oben';
 
   @override
   String get couldNotLoadGenre =>
@@ -1165,7 +1165,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get cast => 'Übertragen';
 
   @override
-  String get castMembers => 'Cast';
+  String get castMembers => 'Besetzung';
 
   @override
   String get trailer => 'Trailer';

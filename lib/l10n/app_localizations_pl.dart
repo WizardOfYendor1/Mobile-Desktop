@@ -28,7 +28,7 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String connectingToServer(String serverName) {
-    return 'Połącz z$serverName';
+    return 'Łączenie z $serverName';
   }
 
   @override
@@ -1982,7 +1982,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get savedMedia => 'Zapisane multimedia';
 
   @override
-  String get tvShows => 'Programy telewizyjne';
+  String get tvShows => 'Seriale';
 
   @override
   String get music => 'Muzyka';
@@ -3387,13 +3387,13 @@ class AppLocalizationsPl extends AppLocalizations {
   String get contentType => 'Typ zawartości';
 
   @override
-  String get moviesAndTvShows => 'Filmy i programy telewizyjne';
+  String get moviesAndTvShows => 'Filmy i seriale';
 
   @override
   String get moviesOnly => 'Tylko filmy';
 
   @override
-  String get tvShowsOnly => 'Tylko programy telewizyjne';
+  String get tvShowsOnly => 'Tylko seriale';
 
   @override
   String get itemCount => 'Liczba pozycji';
