@@ -36,10 +36,10 @@ abstract class ControllerMappingCapture {
   /// a [desktopGamepadButtonCodes] value depending on the implementation; it is
   /// only ever handed back to a [NativeControllerMapping] for the same device,
   /// so the caller never has to care which.
-  void attach(void Function(String deviceId, int code) onCaptured);
+  void attach(void Function(String connectionId, int code) onCaptured);
 
-  /// Starts listening for the next button from [deviceId].
-  Future<void> begin(String deviceId);
+  /// Starts listening for the next button from [connectionId].
+  Future<void> begin(String connectionId);
 
   /// Stops listening. Safe to call when capture was never armed.
   Future<void> end();
@@ -51,11 +51,11 @@ abstract class ControllerMappingCapture {
 /// Android: arms the native channel's capture mode and reads the raw KeyEvent
 /// it sends back.
 class _AndroidControllerMappingCapture implements ControllerMappingCapture {
-  void Function(String deviceId, int code)? _onCaptured;
-  String? _armedDeviceId;
+  void Function(String connectionId, int code)? _onCaptured;
+  String? _armedConnectionId;
 
   @override
-  void attach(void Function(String deviceId, int code) onCaptured) {
+  void attach(void Function(String connectionId, int code) onCaptured) {
     _onCaptured = onCaptured;
     AndroidGamepadChannel.ensureInstalled();
     AndroidGamepadChannel.setControllerMappingKeyHandler(_onRawKey);
@@ -63,35 +63,37 @@ class _AndroidControllerMappingCapture implements ControllerMappingCapture {
 
   Future<dynamic> _onRawKey(MethodCall call) async {
     if (call.method != 'onControllerMappingKey') return;
-    final armed = _armedDeviceId;
+    final armed = _armedConnectionId;
     if (armed == null) return;
     final args = (call.arguments as Map).cast<String, dynamic>();
     final keycode = (args['keyCode'] as num?)?.toInt();
     final device = (args['device'] as Map?)?.cast<String, dynamic>();
     // A press from a controller other than the one being remapped is not the
     // binding the user is making, and must not be swallowed as one.
-    if (keycode == null || device?['id'] != armed) return;
+    final connectionId =
+        device?['connectionId']?.toString() ?? device?['id']?.toString();
+    if (keycode == null || connectionId != armed) return;
     _onCaptured?.call(armed, keycode);
   }
 
   @override
-  Future<void> begin(String deviceId) async {
-    _armedDeviceId = deviceId;
+  Future<void> begin(String connectionId) async {
+    _armedConnectionId = connectionId;
     await AndroidGamepadChannel.setControllerMappingCapture(
       true,
-      deviceId: deviceId,
+      connectionId: connectionId,
     );
   }
 
   @override
   Future<void> end() async {
-    _armedDeviceId = null;
+    _armedConnectionId = null;
     await AndroidGamepadChannel.setControllerMappingCapture(false);
   }
 
   @override
   void dispose() {
-    _armedDeviceId = null;
+    _armedConnectionId = null;
     unawaited(AndroidGamepadChannel.setControllerMappingCapture(false));
     AndroidGamepadChannel.setControllerMappingKeyHandler(null);
     _onCaptured = null;
@@ -101,18 +103,18 @@ class _AndroidControllerMappingCapture implements ControllerMappingCapture {
 /// Windows and Linux: watches the gamepads stream the player screen is already
 /// consuming.
 class _GamepadsControllerMappingCapture implements ControllerMappingCapture {
-  void Function(String deviceId, int code)? _onCaptured;
+  void Function(String connectionId, int code)? _onCaptured;
   StreamSubscription<NormalizedGamepadEvent>? _subscription;
-  String? _armedDeviceId;
+  String? _armedConnectionId;
 
   @override
-  void attach(void Function(String deviceId, int code) onCaptured) {
+  void attach(void Function(String connectionId, int code) onCaptured) {
     _onCaptured = onCaptured;
   }
 
   @override
-  Future<void> begin(String deviceId) async {
-    _armedDeviceId = deviceId;
+  Future<void> begin(String connectionId) async {
+    _armedConnectionId = connectionId;
     // Subscribed per capture rather than for the panel's lifetime so a pad
     // being waggled while the user reads the list can never be mistaken for a
     // binding.
@@ -121,7 +123,7 @@ class _GamepadsControllerMappingCapture implements ControllerMappingCapture {
   }
 
   void _onEvent(NormalizedGamepadEvent event) {
-    final armed = _armedDeviceId;
+    final armed = _armedConnectionId;
     final button = event.button;
     // Axis events carry a null button, and the release edge of a press would
     // otherwise bind whichever button the user just let go of.
@@ -134,14 +136,14 @@ class _GamepadsControllerMappingCapture implements ControllerMappingCapture {
 
   @override
   Future<void> end() async {
-    _armedDeviceId = null;
+    _armedConnectionId = null;
     await _subscription?.cancel();
     _subscription = null;
   }
 
   @override
   void dispose() {
-    _armedDeviceId = null;
+    _armedConnectionId = null;
     unawaited(_subscription?.cancel());
     _subscription = null;
     _onCaptured = null;

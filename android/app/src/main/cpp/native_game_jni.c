@@ -7,9 +7,11 @@
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
 #include <jni.h>
+#include <limits.h>
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -648,6 +650,113 @@ JNI(jobjectArray, nativeOptions)(JNIEnv *env, jobject thiz) {
   }
   (*env)->DeleteLocalRef(env, result);
   return trimmed;
+}
+
+JNI(jobjectArray, nativeControllerTypes)(JNIEnv *env, jobject thiz) {
+  (void)thiz;
+  jclass string_cls = (*env)->FindClass(env, "java/lang/String");
+  if (!string_cls) return NULL;
+  if (!g_ctx.host) return (*env)->NewObjectArray(env, 0, string_cls, NULL);
+
+  int counts[LH_MAX_PORTS] = {0};
+  int total = 0;
+  for (int port = 0; port < LH_MAX_PORTS; port++) {
+    int count = lh_controller_type_count(g_ctx.host, port);
+    if (count < 0 || count > INT_MAX - total) {
+      LOGE("nativeControllerTypes: invalid capability count for port %d", port);
+      return (*env)->NewObjectArray(env, 0, string_cls, NULL);
+    }
+    counts[port] = count;
+    total += count;
+  }
+
+  jobjectArray result = (*env)->NewObjectArray(env, (jsize)total, string_cls, NULL);
+  if (!result) return NULL;
+  int filled = 0;
+  for (int port = 0; port < LH_MAX_PORTS; port++) {
+    for (int index = 0; index < counts[port]; index++) {
+      lh_controller_type type;
+      // A core may replace SET_CONTROLLER_INFO between the count and this
+      // snapshot. Stop this port at the first missing entry rather than
+      // returning a Kotlin Array<String> containing null holes.
+      if (lh_get_controller_type(g_ctx.host, port, index, &type) != 0) break;
+      char joined[LH_CONTROLLER_TYPE_LABEL_MAX + 64];
+      int written = snprintf(joined, sizeof(joined), "%d\t%u\t%s", port,
+                             type.id, type.label);
+      if (written < 0 || (size_t)written >= sizeof(joined)) break;
+      jstring entry = (*env)->NewStringUTF(env, joined);
+      if (!entry) break;
+      (*env)->SetObjectArrayElement(env, result, filled++, entry);
+      (*env)->DeleteLocalRef(env, entry);
+    }
+  }
+  if (filled == total) return result;
+
+  jobjectArray trimmed = (*env)->NewObjectArray(env, (jsize)filled, string_cls, NULL);
+  if (!trimmed) return NULL;
+  for (int index = 0; index < filled; index++) {
+    jobject entry = (*env)->GetObjectArrayElement(env, result, index);
+    (*env)->SetObjectArrayElement(env, trimmed, index, entry);
+    (*env)->DeleteLocalRef(env, entry);
+  }
+  (*env)->DeleteLocalRef(env, result);
+  return trimmed;
+}
+
+JNI(jobjectArray, nativeInputDescriptors)(JNIEnv *env, jobject thiz) {
+  (void)thiz;
+  jclass string_cls = (*env)->FindClass(env, "java/lang/String");
+  if (!string_cls) return NULL;
+  if (!g_ctx.host) return (*env)->NewObjectArray(env, 0, string_cls, NULL);
+
+  int total = lh_input_descriptor_count(g_ctx.host);
+  if (total < 0) {
+    LOGE("nativeInputDescriptors: invalid descriptor count");
+    return (*env)->NewObjectArray(env, 0, string_cls, NULL);
+  }
+
+  jobjectArray result = (*env)->NewObjectArray(env, (jsize)total, string_cls, NULL);
+  if (!result) return NULL;
+  int filled = 0;
+  for (int index = 0; index < total; index++) {
+    lh_input_descriptor descriptor;
+    // A core may replace SET_INPUT_DESCRIPTORS between the count and this
+    // snapshot. Stop at the first missing entry rather than returning a
+    // Kotlin Array<String> containing null holes.
+    if (lh_get_input_descriptor(g_ctx.host, index, &descriptor) != 0) break;
+    char joined[LH_INPUT_DESCRIPTOR_LABEL_MAX + 64];
+    int written = snprintf(joined, sizeof(joined), "%u\t%u\t%u\t%u\t%s",
+                           descriptor.port, descriptor.device,
+                           descriptor.index, descriptor.id,
+                           descriptor.description);
+    if (written < 0 || (size_t)written >= sizeof(joined)) break;
+    jstring entry = (*env)->NewStringUTF(env, joined);
+    if (!entry) break;
+    (*env)->SetObjectArrayElement(env, result, filled++, entry);
+    (*env)->DeleteLocalRef(env, entry);
+  }
+  if (filled == total) return result;
+
+  jobjectArray trimmed = (*env)->NewObjectArray(env, (jsize)filled, string_cls, NULL);
+  if (!trimmed) return NULL;
+  for (int index = 0; index < filled; index++) {
+    jobject entry = (*env)->GetObjectArrayElement(env, result, index);
+    (*env)->SetObjectArrayElement(env, trimmed, index, entry);
+    (*env)->DeleteLocalRef(env, entry);
+  }
+  (*env)->DeleteLocalRef(env, result);
+  return trimmed;
+}
+
+JNI(jint, nativeSetControllerType)(JNIEnv *env, jobject thiz, jint port,
+                                   jlong device_type) {
+  (void)env;
+  (void)thiz;
+  if (!g_ctx.host || device_type < 0 || (uint64_t)device_type > UINT_MAX) {
+    return -1;
+  }
+  return (jint)lh_set_controller_type(g_ctx.host, (int)port,
+                                      (unsigned)device_type);
 }
 
 JNI(void, nativeSetOption)(JNIEnv *env, jobject thiz, jstring id, jstring value) {

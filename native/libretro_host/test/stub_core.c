@@ -54,6 +54,64 @@ static char stashed_copy[32];
 static int32_t stash_recheck;
 static int32_t saw_variable_update;
 
+#define STUB_CLASSIC_PAD RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 1)
+
+// The labels are deliberately overwritten immediately after the environment
+// call. A frontend that only borrows SET_CONTROLLER_INFO strings will then
+// expose the mutated values instead of the capability snapshot it received.
+static char controller_label_classic[32];
+static char controller_label_modern[32];
+static char controller_label_lightgun[32];
+static char controller_label_mouse[32];
+static char controller_label_pointer[32];
+static char controller_label_keyboard[32];
+static char controller_label_extra[32];
+static struct retro_controller_description controller_types_0[] = {
+    {controller_label_classic, STUB_CLASSIC_PAD},
+    {controller_label_modern, RETRO_DEVICE_JOYPAD},
+    {controller_label_lightgun, RETRO_DEVICE_LIGHTGUN},
+};
+static struct retro_controller_description controller_types_1[] = {
+    {controller_label_mouse, RETRO_DEVICE_MOUSE},
+};
+static struct retro_controller_description controller_types_2[] = {
+    {controller_label_pointer, RETRO_DEVICE_POINTER},
+};
+static struct retro_controller_description controller_types_3[] = {
+    {controller_label_keyboard, RETRO_DEVICE_KEYBOARD},
+};
+static struct retro_controller_description controller_types_4[] = {
+    {controller_label_extra, RETRO_DEVICE_ANALOG},
+};
+static struct retro_controller_info controller_info[] = {
+    {controller_types_0, 3},
+    {controller_types_1, 1},
+    {controller_types_2, 1},
+    {controller_types_3, 1},
+    {controller_types_4, 1},
+    {NULL, 0},
+};
+static unsigned controller_devices[4];
+
+// Same borrowed-pointer discipline as controller_info above: the labels are
+// static buffers overwritten immediately after the SET_INPUT_DESCRIPTORS
+// call, so a frontend that only borrowed the strings instead of copying them
+// would expose the mutated text instead of the original descriptions. Spans
+// two ports and several distinct ids, including id 0 (RETRO_DEVICE_ID_JOYPAD_B)
+// and id 8 (RETRO_DEVICE_ID_JOYPAD_A) to catch an off-by-default-zero bug in
+// the id field specifically.
+static char id_label_port0_b[32];
+static char id_label_port0_a[32];
+static char id_label_port0_start[32];
+static char id_label_port1_b[32];
+static struct retro_input_descriptor input_descriptors[] = {
+    {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, id_label_port0_b},
+    {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, id_label_port0_a},
+    {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, id_label_port0_start},
+    {1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, id_label_port1_b},
+    {0, 0, 0, 0, NULL},
+};
+
 static void stash_reset(void) {
   stashed_value = NULL;
   stashed_copy[0] = '\0';
@@ -99,6 +157,31 @@ void retro_set_environment(retro_environment_t cb) {
       {NULL, NULL},
   };
   env_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void *)vars);
+  strcpy(controller_label_classic, "Stub Classic");
+  strcpy(controller_label_modern, "Stub Modern");
+  strcpy(controller_label_lightgun, "Stub Lightgun");
+  strcpy(controller_label_mouse, "Stub Mouse");
+  strcpy(controller_label_pointer, "Stub Pointer");
+  strcpy(controller_label_keyboard, "Stub Keyboard");
+  strcpy(controller_label_extra, "Stub Extra");
+  env_cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, controller_info);
+  strcpy(controller_label_classic, "changed");
+  strcpy(controller_label_modern, "changed");
+  strcpy(controller_label_lightgun, "changed");
+  strcpy(controller_label_mouse, "changed");
+  strcpy(controller_label_pointer, "changed");
+  strcpy(controller_label_keyboard, "changed");
+  strcpy(controller_label_extra, "changed");
+
+  strcpy(id_label_port0_b, "Fire");
+  strcpy(id_label_port0_a, "Jump");
+  strcpy(id_label_port0_start, "Coin");
+  strcpy(id_label_port1_b, "P2 Fire");
+  env_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, input_descriptors);
+  strcpy(id_label_port0_b, "changed");
+  strcpy(id_label_port0_a, "changed");
+  strcpy(id_label_port0_start, "changed");
+  strcpy(id_label_port1_b, "changed");
 }
 // Set from the ROM contents, to mimic a core whose boot fails a few frames in:
 // it asks the frontend to quit and would fault if it were run again.
@@ -222,6 +305,7 @@ void retro_set_input_state(retro_input_state_t cb) { input_state_cb = cb; }
 // the stub does the same to keep the host honest about GET_LOG_INTERFACE.
 void retro_init(void) {
   frame_counter = 0;
+  memset(controller_devices, 0, sizeof(controller_devices));
   // A restart reloads the core into the same process, and the host drains its
   // retired-value arena as part of that teardown, so a pointer stashed by the
   // previous session must not be carried into this one.
@@ -416,14 +500,15 @@ void retro_run(void) {
 
 void retro_reset(void) { frame_counter = 0; }
 
-size_t retro_serialize_size(void) { return sizeof(frame_counter) * 3; }
+size_t retro_serialize_size(void) { return sizeof(frame_counter) * 4; }
 
 bool retro_serialize(void *data, size_t size) {
-  if (size < sizeof(frame_counter) * 3) return false;
+  if (size < sizeof(frame_counter) * 4) return false;
   int32_t *state = data;
   state[0] = frame_counter;
   state[1] = speed_fast;
   state[2] = stash_recheck;
+  state[3] = (int32_t)controller_devices[0];
   return true;
 }
 
@@ -445,8 +530,7 @@ size_t retro_get_memory_size(unsigned id) {
 
 // Unused libretro entry points.
 void retro_set_controller_port_device(unsigned port, unsigned device) {
-  (void)port;
-  (void)device;
+  if (port < 4) controller_devices[port] = device;
 }
 bool retro_load_game_special(unsigned type, const struct retro_game_info *info,
                              size_t num) {

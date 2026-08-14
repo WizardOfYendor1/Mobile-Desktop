@@ -4152,7 +4152,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get seerrSeriesContinuing =>
-      'Series Continuing · Future Seasons Can Be Requested';
+      'Dizi Devam Ediyor · Gelecek Sezonlar Talep Edilebilir';
 
   @override
   String get advancedOptions => 'Gelişmiş Seçenekler';
@@ -8746,11 +8746,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get settingsNone => 'Hiçbiri';
 
   @override
-  String get settingsSkipButtonAutoHide => 'Auto Hide Skip Button';
+  String get settingsSkipButtonAutoHide => 'Atla Butonunu Otomatik Gizle';
 
   @override
   String get settingsSkipButtonAutoHideDescription =>
-      'Automatically dismiss the skip intro and outro button after a few seconds.';
+      'İntro ve jenerik atlama butonunu birkaç saniye sonra otomatik olarak gizle.';
 
   @override
   String get settingsPromptUser => 'Kullanıcıya Sor';
@@ -10507,40 +10507,40 @@ class AppLocalizationsTr extends AppLocalizations {
   String get showAlphabeticalFilters => 'Alfabeyi Göster';
 
   @override
-  String get personalRatingStyle => 'Personal rating style';
+  String get personalRatingStyle => 'Kişisel derecelendirme tarzı';
 
   @override
-  String get personalRatingThumbs => 'Like / dislike';
+  String get personalRatingThumbs => 'Beğen / Beğenme';
 
   @override
-  String get personalRatingStars => '5 stars';
+  String get personalRatingStars => '5 yıldız';
 
   @override
-  String get personalRatingNumeric => 'Numeric score out of 10';
+  String get personalRatingNumeric => '10 üzerinden sayısal puan';
 
   @override
-  String get rate => 'Rate';
+  String get rate => 'Puan';
 
   @override
-  String get like => 'Like';
+  String get like => 'Beğen';
 
   @override
-  String get dislike => 'Dislike';
+  String get dislike => 'Beğenme';
 
   @override
-  String get personalRatingClear => 'Clear rating';
+  String get personalRatingClear => 'Derecelendirmeyi Sil';
 
   @override
-  String get personalRatingRated => 'Rated';
+  String get personalRatingRated => 'Derecelendirilmiş';
 
   @override
-  String get personalRatingSaveFailed => 'Could not save rating';
+  String get personalRatingSaveFailed => 'Derecelendirme kaydedilemedi';
 
   @override
-  String get increase => 'Increase';
+  String get increase => 'Yükselme';
 
   @override
-  String get decrease => 'Decrease';
+  String get decrease => 'Azalma';
 
   @override
   String personalRatingOutOfTen(String rating) {

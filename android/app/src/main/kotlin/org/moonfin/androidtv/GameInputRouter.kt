@@ -5,12 +5,10 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 
 /**
- * Owns Android input policy and state for the EmulatorJS (WebView) path only.
- * EmulatorJS remains the mapping and persistence authority; this router only
- * translates Android events to its upstream labels. The native libretro path
- * is owned end-to-end by [NativePadInput], checked first in
- * [MainActivity.dispatchKeyEvent] so nothing gameplay-shaped reaches here
- * while a native session is active.
+ * Owns Android input policy for the EmulatorJS (WebView) path only, translating
+ * Android events to EmulatorJS's upstream labels. The native libretro path is
+ * owned by [NativePadInput], checked first in [MainActivity.dispatchKeyEvent]
+ * so nothing gameplay-shaped reaches here during a native session.
  */
 internal class GameInputRouter(
     private val callbacks: Callbacks,
@@ -33,8 +31,8 @@ internal class GameInputRouter(
     private var navX = 0
     private var navY = 0
 
-    // Android device IDs can change after reconnecting. Cache the derived
-    // identity by descriptor for the active game session only.
+    // Device IDs can change after reconnecting; cache identity by descriptor
+    // for the active session only.
     private val deviceCache = mutableMapOf<String, Map<String, String>>()
 
     fun setGameActive(active: Boolean) {
@@ -108,9 +106,8 @@ internal class GameInputRouter(
             return true
         }
 
-        // Outside a game the left stick drives UI focus. Ignore the HAT here:
-        // Android already exposes its d-pad as keys, and double delivery can
-        // cause one path to release the other's held direction.
+        // Outside a game the left stick drives UI focus. Ignore the HAT: it's
+        // already exposed as keys, and double delivery can conflict.
         if (!gameActive && isJoystickMove(event)) {
             updateNavigation("h", stickDirection(event, MotionEvent.AXIS_X), navX) { navX = it }
             updateNavigation("v", stickDirection(event, MotionEvent.AXIS_Y), navY) { navY = it }
@@ -212,29 +209,12 @@ internal class GameInputRouter(
     private fun physicalDevice(device: InputDevice?): InputDevice? =
         device?.takeIf(::isPhysicalGamepad)
 
-    private fun isPhysicalGamepad(device: InputDevice): Boolean {
-        if (device.isVirtual) return false
-        val hasGamepadSource = device.supportsSource(InputDevice.SOURCE_GAMEPAD)
-        val hasJoystickSource = device.supportsSource(InputDevice.SOURCE_JOYSTICK)
-        if (!hasGamepadSource && !hasJoystickSource) return false
-        val hasJoystickAxis = device.motionRanges.any { range ->
-            range.source and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
-        }
-        // hasKeys() is a synchronous binder call to system_server. Only pay for
-        // it when hasJoystickAxis alone can't decide the result -- this method
-        // runs per key event via physicalDevice(), so evaluating it eagerly
-        // (as a val computed before the ||) meant every real gamepad, which
-        // already satisfies hasJoystickAxis, paid the IPC for a result that
-        // was then discarded by short-circuiting.
-        return hasJoystickAxis || (device.isExternal && hasFaceButtons(device))
-    }
-
-    private fun hasFaceButtons(device: InputDevice): Boolean = device.hasKeys(
-        KeyEvent.KEYCODE_BUTTON_A,
-        KeyEvent.KEYCODE_BUTTON_B,
-        KeyEvent.KEYCODE_BUTTON_X,
-        KeyEvent.KEYCODE_BUTTON_Y,
-    ).any { it }
+    // Shares NativeInputDeviceClassifier with the native libretro path so the
+    // two can't disagree on the same device. Uses classifyCached, not classify:
+    // this runs per key event, and the uncached form's binder calls can block
+    // the main thread long enough to trip an input-dispatch ANR.
+    private fun isPhysicalGamepad(device: InputDevice): Boolean =
+        NativeInputDeviceClassifier.classifyCached(device) == NativeInputDeviceClass.GAMEPAD
 
     private fun deviceIdentity(device: InputDevice): Map<String, String> {
         deviceCache[device.descriptor]?.let { return it }
