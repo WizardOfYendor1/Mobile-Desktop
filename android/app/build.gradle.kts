@@ -166,6 +166,11 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    testImplementation("junit:junit:4.13.2")
+    // android.jar's org.json is stubbed for unit tests -- every method throws
+    // "Stub!", so a JSON parser under test can only ever be observed taking its
+    // failure path. This puts the real implementation on the test classpath.
+    testImplementation("org.json:json:20240303")
     implementation("com.google.android.gms:play-services-cast-framework:22.0.0")
     implementation("eu.simonbinder:sqlite3-native-library:3.52.0")
     implementation("androidx.tvprovider:tvprovider:1.1.0")

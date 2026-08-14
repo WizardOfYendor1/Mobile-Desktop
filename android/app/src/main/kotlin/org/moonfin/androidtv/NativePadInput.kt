@@ -10,43 +10,9 @@ import android.view.MotionEvent
 import org.json.JSONObject
 
 /**
- * Owns the native libretro input path end-to-end: physical gamepad/keyboard
- * events go straight from [MainActivity.dispatchKeyEvent] /
- * [MainActivity.dispatchGenericMotionEvent] through here to
- * [LibretroBridge.onPad] with no binder IPC, no boxing, and no Dart channel
- * crossing on the hot path.
- *
- * A custom binding on a device simply overwrites that keycode's slot in its
- * preflattened [IntArray] (built once, on mapping change or first sight of a
- * device) -- so a remap beating the fixed D-pad/button layout is structural,
- * not a guard clause (see task B2, preserved from [GameInputRouter]'s old
- * `handlePhysicalDpadKey`).
- *
- * D-pad/trigger state from physical keys and from the analog HAT/trigger axes
- * are two independent bit sources ([keyMask] / [motionMask]) that are OR'd
- * together per RetroPad bit before being forwarded -- releasing the HAT while
- * the digital key is still held (or vice versa) cannot clobber the other
- * source's held bit. The per-frame OR-latch on the native side (added
- * alongside this change) guarantees a same-frame press+release is still
- * observed by the core, so no reconciliation beyond that OR is needed.
- *
- * Controller-mapping capture (the pause menu's "press a button to bind it"
- * flow) runs concurrently with an active native session -- the mapping panel
- * is opened *from* the pause menu of a running game, so `active == true` and
- * capture-armed are simultaneously true, not exclusive states. [onKey] checks
- * [captureActive] before Start/Menu/table dispatch specifically so capture
- * wins: a key that would otherwise be swallowed as gameplay input, or
- * special-cased as Start, is captured as a binding instead while armed.
- *
- * [event.deviceId][KeyEvent.getDeviceId] is a per-connection int that
- * changes when a controller disconnects and reconnects; persisted bindings
- * are keyed by the stable vendor/product/descriptor hash from
- * [AndroidGamepadIdentity] instead. [buildTable] is the one place that
- * resolves deviceId -> stable id (one [InputDevice.getDevice] call), and it
- * only runs on a [deviceTables] cache miss -- first sight of a deviceId,
- * right after [setControllerMappings] invalidates the cache, or after a
- * device add/remove/change invalidates just that id. Every other event is a
- * plain array index.
+ * Android's direct native-libretro input path. Every assigned connection owns
+ * an independent whole-state mask and writes it straight to its libretro port;
+ * no event crosses Dart and no controller worker/queue is introduced.
  */
 internal class NativePadInput(
     private val bridge: LibretroBridge,
@@ -55,175 +21,155 @@ internal class NativePadInput(
     private val callbacks: Callbacks,
 ) {
     internal interface Callbacks {
-        fun onControllerMappingKey(keyCode: Int, device: Map<String, String>)
+        fun onControllerMappingKey(keyCode: Int, device: Map<String, Any?>)
     }
 
     private val inputManager = context.getSystemService(Context.INPUT_SERVICE) as? InputManager
+    private val registry = NativeControllerPortRegistry()
+    private val padStates = SparseArray<PadState>()
+    private val maskComposer = NativePortMaskComposer()
+    // Android TV remotes and USB keyboards are not controller connections,
+    // but historically contributed their D-pad/Enter state to P1. Keep that
+    // source independent so it composes with (rather than replaces) P1's pad.
+    private val keyboardState = PadState(KEYBOARD_DEVICE_ID, "", 0, DEFAULT_TABLE)
 
-    init {
-        // Reconnecting a controller (or hot-plugging a second one) can hand
-        // out a new/changed deviceId; drop just that id's cached table so the
-        // next event resolves it fresh against the stable identity rather
-        // than reusing a table built for whatever device previously held
-        // that int. Registered without a Handler, so callbacks land on this
-        // thread (the UI thread, same as onKey/onMotion).
-        inputManager?.registerInputDeviceListener(
-            object : InputManager.InputDeviceListener {
-                // A pad that re-enumerates arrives here under a new id, and any
-                // direction still latched from the old one is orphaned: the
-                // axis that asserted it belongs to a device that no longer
-                // exists, so no motion event can ever clear it. Releasing the
-                // motion bits (not the key bits, which recover on their own via
-                // releaseLostHolds) is what stops that from reading as a
-                // direction held for ever.
-                override fun onInputDeviceAdded(deviceId: Int) {
-                    invalidateDevice(deviceId)
-                    releaseMotionInputs()
-                }
-
-                // Only a removal releases held bits. onInputDeviceChanged fires
-                // for unrelated reasons -- a keyboard-layout reconfiguration
-                // raises it for every device -- and releasing on those would
-                // cut a genuinely held direction short mid-game.
-                override fun onInputDeviceRemoved(deviceId: Int) {
-                    invalidateDevice(deviceId)
-                    releaseAllInputs()
-                }
-
-                override fun onInputDeviceChanged(deviceId: Int) {
-                    invalidateDevice(deviceId)
-                }
-            },
-            null,
-        )
-    }
-
-    private fun invalidateDevice(deviceId: Int) {
-        deviceTables.remove(deviceId)
-    }
-
-    /**
-     * Drops every latched bit and tells the core, so no press can outlive the
-     * device that made it.
-     *
-     * A wireless pad that drops its link mid-press never sends the matching
-     * ACTION_UP, so the bit stays set in [keyMask] and [sentMask] keeps saying
-     * "already forwarded as pressed". The core then sees that button held for
-     * ever -- a stuck direction reads as the pad having stopped responding --
-     * and, worse, the next real press of it computes pressed == was and is
-     * swallowed by [publishMask]'s change check without ever reaching the core.
-     *
-     * Releasing everything on any device change can cut a genuinely held button
-     * short, but device churn is rare and a dropped hold recovers on the next
-     * press, whereas a stuck one does not recover at all.
-     */
-    private fun releaseAllInputs() {
-        keyMask = 0
-        motionMask = 0
-        motionDeviceId = -1
-        // One send: publishMask recomputes from the now-clear masks, so every
-        // held bit is released in a single crossing rather than one each.
-        publishMask()
-    }
+    private var customMappings: Map<String, Map<Int, Int>> = emptyMap()
+    private var captureActive = false
+    private var captureConnectionId: String? = null
 
     /** True while a native session is loaded; checked first in dispatch. */
     @Volatile var active = false
         private set
 
-    // Independent bit sources for the RetroPad mask, OR'd together in
-    // [publishMask]. sentMask is what was last forwarded to the bridge, so
-    // publish only calls out on an actual change.
-    private var keyMask = 0
-    private var motionMask = 0
-    private var sentMask = 0
+    init {
+        inputManager?.registerInputDeviceListener(
+            object : InputManager.InputDeviceListener {
+                override fun onInputDeviceAdded(deviceId: Int) = onDeviceAdded(deviceId)
 
-    private val deviceTables = SparseArray<IntArray>()
-    private var customMappings: Map<String, Map<Int, Int>> = emptyMap()
+                override fun onInputDeviceRemoved(deviceId: Int) = onDeviceRemoved(deviceId)
 
-    private var captureActive = false
-    private var captureDeviceId: String? = null
+                override fun onInputDeviceChanged(deviceId: Int) = onDeviceChanged(deviceId)
+            },
+            null,
+        )
+        refreshInactiveSnapshot()
+    }
 
-    private var startTimer: Runnable? = null
-    private var startConsumed = false
-    private var motionDeviceId = -1
+    /** Available before gameplay so Dart can load all profile mappings first. */
+    fun nativeGamepadDevices(): List<Map<String, Any?>> {
+        if (!active) refreshInactiveSnapshot()
+        return registry.snapshot().map(NativeControllerConnection::channelPayload)
+    }
 
     fun setActive(value: Boolean) {
+        if (active == value) return
         active = value
-        keyMask = 0
-        motionMask = 0
-        sentMask = 0
-        motionDeviceId = -1
-        deviceTables.clear()
-        cancelStartTimer()
-        startConsumed = false
-        bridge.resetPadMask()
+        clearPadStates(publish = false)
+        bridge.resetPadMasks()
+        if (value) {
+            val connections = registry.activate(discoverCandidates(logDiagnostics = true))
+            for (connection in connections) addPadState(connection)
+        } else {
+            registry.deactivate(discoverCandidates())
+        }
+        bridge.setControllerCount(if (value) registry.assignedCount() else 0)
+    }
+
+    /**
+     * Applies the user's durable Player 1-4 assignment. Ports are rebuilt from
+     * scratch, so pad state is dropped and masks reset first: a button held
+     * across a reassignment must not strand a bit set on the port it left.
+     */
+    fun setControllerAssignments(json: String) {
+        val pins = NativeControllerAssignmentParser.parse(json)
+        clearPadStates(publish = active)
+        bridge.resetPadMasks()
+        val connections = registry.setPins(pins)
+        if (!active) return
+        for (connection in connections) addPadState(connection)
+        bridge.setControllerCount(registry.assignedCount(), force = true)
     }
 
     fun setControllerMappings(json: String) {
-        customMappings = parseControllerMappings(json)
-        deviceTables.clear()
+    customMappings = NativeControllerMappingParser.parse(json)
+        for (index in 0 until padStates.size()) {
+            val state = padStates.valueAt(index)
+            state.table = tableFor(state.profileId)
+        }
     }
 
-    fun setCapture(active: Boolean, deviceId: String?) {
+    fun setCapture(active: Boolean, connectionId: String?) {
         captureActive = active
-        captureDeviceId = deviceId.takeIf { active }
+        captureConnectionId = connectionId.takeIf { active }
     }
 
     /** Returns true when this key was consumed by the native pad path. */
     fun onKey(event: KeyEvent): Boolean {
         val keyCode = event.keyCode
         if (keyCode == KeyEvent.KEYCODE_BACK || isVolumeKey(keyCode)) return false
-        // Repeats carry no new information: the level is already latched from
-        // the initial DOWN and stays latched until UP. Consume and drop them.
         if (event.repeatCount != 0) return true
 
-        // Capture takes priority over every other interpretation of the key,
-        // including Start/Menu: the whole point is binding *any* physical key
-        // (Start included) to whichever RetroPad slot the mapping screen has
-        // selected. Falls through to normal handling for a non-matching
-        // device, same as the rest of this method would for a stray event.
-        if (captureActive && event.action == KeyEvent.ACTION_DOWN && tryCapture(event)) {
-            return true
-        }
-
-        // Escape joins Menu here rather than being handled up in Flutter. A USB
-        // or Bluetooth keyboard is a real Android TV accessory, and Escape is
-        // the obvious "let me out" key on one, but it is not a game key -- so
-        // it belongs on the same native path as Menu. Handling it in a Flutter
-        // Focus instead would put the framework's key pipeline in front of
-        // every gameplay key that falls through to it, and each of those then
-        // waits on a platform -> Dart -> platform round trip before the event
-        // is acknowledged.
+        val connection = registry.connection(event.deviceId)
+        // Android TV remotes retain their menu gesture independently of a
+        // physical gamepad. An unsupported fifth controller is consumed, but
+        // cannot control the running session or overlay.
         if (keyCode == KeyEvent.KEYCODE_MENU ||
             keyCode == KeyEvent.KEYCODE_BUTTON_MODE ||
             keyCode == KeyEvent.KEYCODE_ESCAPE
         ) {
-            if (event.action == KeyEvent.ACTION_DOWN) bridge.onMenu()
+            // A remote or keyboard keeps its menu gesture: it is a navigation
+            // source that holds no port, not an overflow pad being ignored.
+            if (event.action == KeyEvent.ACTION_DOWN &&
+                (connection == null || connection.supported || !connection.isGamepad)
+            ) {
+                bridge.onMenu(connection?.port ?: 0)
+            }
             return true
+        }
+
+        // Capture wins over Start and normal dispatch so a physical Start key
+        // can be rebound without opening the pause menu. Capture remains
+        // available to an unassigned fifth device because it is profile work,
+        // not gameplay routing; its normal gameplay events are still consumed.
+        if (connection != null && captureActive && event.action == KeyEvent.ACTION_DOWN &&
+            (connection.connectionId == captureConnectionId || connection.profileId == captureConnectionId)
+        ) {
+            captureActive = false
+            captureConnectionId = null
+            callbacks.onControllerMappingKey(event.keyCode, connection.channelPayload())
+            return true
+        }
+
+        // Three routes. A device holding a port drives that port. A remote or an
+        // unpinned keyboard has no port and keeps feeding the composed Player 1
+        // navigation state, which is why it must not be swallowed as "not
+        // supported". A gamepad past the fourth is consumed and goes nowhere.
+        val state = when {
+            connection == null -> keyboardState
+            connection.supported -> padStates.get(event.deviceId) ?: return true
+            connection.isGamepad -> return true
+            else -> keyboardState
         }
 
         if (keyCode == KeyEvent.KEYCODE_BUTTON_START) {
-            handleStart(event.action == KeyEvent.ACTION_DOWN)
+            handleStart(state, event.action == KeyEvent.ACTION_DOWN)
             return true
         }
+        if (event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return true
 
-        if (event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) {
-            return true
-        }
-
-        val index = indexFor(event.deviceId, keyCode)
+        val index = indexFor(state.table, keyCode)
         when (index) {
             NONE -> return false
             SWALLOW -> return true
             else -> {
                 val bit = 1 shl index
                 if (event.action == KeyEvent.ACTION_DOWN) {
-                    releaseLostHolds(index, bit)
-                    keyMask = keyMask or bit
+                    releaseLostHolds(state, index, bit)
+                    state.keyMask = state.keyMask or bit
                 } else {
-                    keyMask = keyMask and bit.inv()
+                    state.keyMask = state.keyMask and bit.inv()
                 }
-                publishMask()
+                publishMask(state)
             }
         }
         return true
@@ -233,175 +179,193 @@ internal class NativePadInput(
     fun onMotion(event: MotionEvent): Boolean {
         if (event.source and InputDevice.SOURCE_JOYSTICK != InputDevice.SOURCE_JOYSTICK ||
             event.action != MotionEvent.ACTION_MOVE
-        ) {
-            return false
-        }
-        // Bits latched by a different pad cannot be cleared by this one's
-        // axes, so drop them before this event's values are applied. Catches a
-        // re-enumeration even when the listener above never reports it.
-        if (motionMask != 0 && motionDeviceId != -1 && event.deviceId != motionDeviceId) {
-            releaseMotionInputs()
-        }
-        motionDeviceId = event.deviceId
+        ) return false
+
+        val connection = registry.connection(event.deviceId) ?: return false
+        // Consume an overflow pad's sticks; let a remote's touch-navigation
+        // motion fall through to Flutter's normal focus handling.
+        if (!connection.supported) return connection.isGamepad
+        val state = padStates.get(event.deviceId) ?: return true
         val hatX = axisDirection(event, MotionEvent.AXIS_HAT_X, MotionEvent.AXIS_X)
         val hatY = axisDirection(event, MotionEvent.AXIS_HAT_Y, MotionEvent.AXIS_Y)
-        applyMotionBit(RETRO_LEFT, hatX == -1)
-        applyMotionBit(RETRO_RIGHT, hatX == 1)
-        applyMotionBit(RETRO_UP, hatY == -1)
-        applyMotionBit(RETRO_DOWN, hatY == 1)
-        applyMotionBit(RETRO_L2, event.getAxisValue(MotionEvent.AXIS_LTRIGGER) >= AXIS_THRESHOLD)
-        applyMotionBit(RETRO_R2, event.getAxisValue(MotionEvent.AXIS_RTRIGGER) >= AXIS_THRESHOLD)
-        publishMask()
+        applyMotionBit(state, RETRO_LEFT, hatX == -1)
+        applyMotionBit(state, RETRO_RIGHT, hatX == 1)
+        applyMotionBit(state, RETRO_UP, hatY == -1)
+        applyMotionBit(state, RETRO_DOWN, hatY == 1)
+        applyMotionBit(state, RETRO_L2, event.getAxisValue(MotionEvent.AXIS_LTRIGGER) >= AXIS_THRESHOLD)
+        applyMotionBit(state, RETRO_R2, event.getAxisValue(MotionEvent.AXIS_RTRIGGER) >= AXIS_THRESHOLD)
+        publishMask(state)
         return true
     }
 
-    /**
-     * Repairs [keyMask] when a pad's ACTION_UP was lost, which a wireless link
-     * does often enough to be felt: the bit stays set, the core sees that
-     * direction held for ever, and [publishMask]'s change check then swallows the
-     * next press of it because pressed == was.
-     *
-     * Two facts make a lost release provable rather than guessed at. A key
-     * cannot go down twice without an intervening up -- auto-repeat carries a
-     * non-zero repeatCount and returned earlier -- and a d-pad cannot hold
-     * left and right, or up and down, at the same time. Reaching either state
-     * is therefore always the error, never real input.
-     *
-     * Only [keyMask] is touched. A direction still asserted by [motionMask] is
-     * a hat or stick genuinely being held, and that path repairs itself: every
-     * ACTION_MOVE recomputes all four directions from the current axis values.
-     */
-    private fun releaseLostHolds(index: Int, bit: Int) {
-        val opposite = if (index in OPPOSITE.indices) OPPOSITE[index] else NONE
-        if (opposite != NONE) {
-            val oppositeBit = 1 shl opposite
-            if (keyMask and oppositeBit != 0) {
-                keyMask = keyMask and oppositeBit.inv()
+    private fun onDeviceAdded(deviceId: Int) {
+        val candidate = candidateFor(deviceId) ?: return
+        val connection = registry.addOrUpdate(candidate)
+        if (active && connection.supported && padStates.get(deviceId) == null) addPadState(connection)
+        if (active) bridge.setControllerCount(registry.assignedCount(), force = true)
+    }
+
+    private fun onDeviceRemoved(deviceId: Int) {
+        val connection = registry.remove(deviceId) ?: return
+        padStates.get(deviceId)?.let { clearPadState(it, publish = active) }
+        padStates.remove(deviceId)
+        // No promotion pass here: the registry holds the vacated port open so a
+        // sleeping or briefly disconnected pad reclaims it, rather than a spare
+        // pad silently inheriting its player number.
+        if (captureConnectionId == connection.connectionId) setCapture(false, null)
+        if (active) bridge.setControllerCount(registry.assignedCount(), force = true)
+    }
+
+    private fun onDeviceChanged(deviceId: Int) {
+        val candidate = candidateFor(deviceId) ?: run {
+            onDeviceRemoved(deviceId)
+            return
+        }
+        val previous = registry.connection(deviceId)
+        val connection = registry.addOrUpdate(candidate)
+        if (previous?.profileId != connection.profileId) {
+            padStates.get(deviceId)?.let { clearPadState(it, publish = active) }
+            padStates.remove(deviceId)
+            if (active && connection.supported) addPadState(connection)
+        } else {
+            padStates.get(deviceId)?.let { state -> state.table = tableFor(connection.profileId) }
+        }
+        if (active) bridge.setControllerCount(registry.assignedCount(), force = true)
+    }
+
+    private fun refreshInactiveSnapshot() {
+        registry.refreshInactive(discoverCandidates())
+    }
+
+    private fun discoverCandidates(logDiagnostics: Boolean = false): List<NativeControllerCandidate> =
+        buildList {
+            for (deviceId in InputDevice.getDeviceIds()) {
+                candidateFor(deviceId, logDiagnostics)?.let(::add)
             }
         }
-        if (keyMask and bit == 0) return
-        // Same key down twice. Clearing here restores the invariant so the
-        // ACTION_UP that follows releases correctly. The core will not observe
-        // a distinct re-press: a release and a press published between two
-        // polls collapse in the host's OR-latch. Holding the re-press back for
-        // a frame would make it visible, but that delay would land on every
-        // rapid press, which is a worse trade than a missing re-trigger.
-        keyMask = keyMask and bit.inv()
-    }
+
+    private fun candidateFor(deviceId: Int): NativeControllerCandidate? =
+        candidateFor(deviceId, logDiagnostics = false)
 
     /**
-     * Releases every direction/trigger bit held by the analog path.
-     *
-     * The key path can prove a lost release (see [releaseLostHolds]); this one
-     * cannot. Motion events are edge-triggered, so once a bit is latched,
-     * "no event" means "unchanged" rather than "released" -- a timeout could
-     * not tell a dropped centring event from a direction genuinely being held.
-     * The only sound trigger is therefore an external one: the device that was
-     * asserting the axis went away or was replaced.
-     *
-     * [keyMask] is deliberately untouched, so a button held through the event
-     * keeps working; [publishMask] recomputes from both masks.
+     * Every routable device becomes a candidate, not only gamepads: a remote or
+     * keyboard has to reach the snapshot so the assignment UI can show what it
+     * is and why it drives Player 1. Eligibility for an actual port is the
+     * registry's decision, not this one's.
      */
-    private fun releaseMotionInputs() {
-        if (motionMask == 0) return
-        motionMask = 0
-        motionDeviceId = -1
-        publishMask()
+    private fun candidateFor(deviceId: Int, logDiagnostics: Boolean): NativeControllerCandidate? {
+        val device = InputDevice.getDevice(deviceId) ?: return null
+        val traits = NativeInputDeviceClassifier.traitsOf(device)
+        if (logDiagnostics) NativeInputDeviceClassifier.logDiagnostics(device, traits)
+        val deviceClass = NativeInputDeviceClassifier.classify(traits) ?: return null
+        val identity = AndroidGamepadIdentity.of(device)
+        return NativeControllerCandidate(
+            deviceId = deviceId,
+            profileId = identity.getValue("id"),
+            name = identity.getValue("name"),
+            controllerNumber = device.controllerNumber,
+            deviceClass = deviceClass,
+        )
     }
 
-    private fun applyMotionBit(index: Int, pressed: Boolean) {
+    private fun addPadState(connection: NativeControllerConnection) {
+        val port = connection.port ?: return
+        val state = PadState(connection.deviceId, connection.profileId, port, tableFor(connection.profileId))
+        padStates.put(connection.deviceId, state)
+    }
+
+    private fun clearPadStates(publish: Boolean) {
+        for (index in 0 until padStates.size()) clearPadState(padStates.valueAt(index), publish)
+        padStates.clear()
+        clearPadState(keyboardState, publish)
+        maskComposer.reset()
+    }
+
+    private fun clearPadState(state: PadState, publish: Boolean) {
+        state.startTimer?.let(handler::removeCallbacks)
+        state.pulseTimer?.let(handler::removeCallbacks)
+        state.startTimer = null
+        state.pulseTimer = null
+        state.keyMask = 0
+        state.motionMask = 0
+        state.pulseMask = 0
+        state.sentMask = 0
+        val combined = updateComposedMask(state)
+        if (publish) bridge.onPad(state.port, combined)
+    }
+
+    private fun releaseLostHolds(state: PadState, index: Int, bit: Int) {
+        val opposite = if (index in OPPOSITE.indices) OPPOSITE[index] else NONE
+        if (opposite != NONE) state.keyMask = state.keyMask and (1 shl opposite).inv()
+        if (state.keyMask and bit != 0) state.keyMask = state.keyMask and bit.inv()
+    }
+
+    private fun applyMotionBit(state: PadState, index: Int, pressed: Boolean) {
         val bit = 1 shl index
-        val was = motionMask and bit != 0
-        if (was == pressed) return
-        motionMask = if (pressed) motionMask or bit else motionMask and bit.inv()
+        val was = state.motionMask and bit != 0
+        if (was != pressed) {
+            state.motionMask = if (pressed) state.motionMask or bit else state.motionMask and bit.inv()
+        }
     }
 
-    /**
-     * Sends the port's whole state when it differs from what was last sent.
-     *
-     * Both sources are already bitmasks, so the current state is one OR and
-     * the change test is one comparison -- no per-bit work, and one JNI call
-     * per input event however many bits moved.
-     */
-    private fun publishMask() {
-        val desired = keyMask or motionMask
-        if (desired == sentMask) return
-        sentMask = desired
-        bridge.onPad(desired)
+    /** One whole-mask JNI write at most for this port when its state changed. */
+    private fun publishMask(state: PadState) {
+        val desired = state.keyMask or state.motionMask or state.pulseMask
+        if (desired == state.sentMask) return
+        state.sentMask = desired
+        bridge.onPad(state.port, updateComposedMask(state))
     }
 
-    // Start is deferred so it can double as the menu gesture: a quick
-    // press/release reaches the game as a brief pulse, holding past the
-    // threshold opens (or steps back through) the overlay -- exactly once per
-    // gesture, not per edge. While the overlay is already open any press
-    // closes/steps it back immediately, matching the old Dart behaviour.
-    private fun handleStart(pressed: Boolean) {
+    private fun updateComposedMask(state: PadState): Int =
+        if (state === keyboardState) maskComposer.setKeyboard(state.sentMask)
+        else maskComposer.setController(state.port, state.sentMask)
+
+    private fun handleStart(state: PadState, pressed: Boolean) {
         if (pressed) {
             if (bridge.overlayOpen) {
-                startConsumed = true
-                bridge.onMenu()
+                state.startConsumed = true
+                bridge.onMenu(state.port)
                 return
             }
-            startConsumed = false
-            cancelStartTimer()
+            state.startConsumed = false
+            state.startTimer?.let(handler::removeCallbacks)
             val timer = Runnable {
-                startTimer = null
-                startConsumed = true
-                bridge.onMenu()
+                if (padStates.get(state.deviceId) !== state || !active) return@Runnable
+                state.startTimer = null
+                state.startConsumed = true
+                bridge.onMenu(state.port)
             }
-            startTimer = timer
+            state.startTimer = timer
             handler.postDelayed(timer, START_HOLD_MS)
-        } else {
-            cancelStartTimer()
-            val consumed = startConsumed
-            startConsumed = false
-            if (!consumed) pulseStart()
+            return
         }
+
+        state.startTimer?.let(handler::removeCallbacks)
+        state.startTimer = null
+        val consumed = state.startConsumed
+        state.startConsumed = false
+        if (!consumed) pulseStart(state)
     }
 
-    private fun cancelStartTimer() {
-        startTimer?.let(handler::removeCallbacks)
-        startTimer = null
-    }
-
-    private fun pulseStart() {
-        val bit = 1 shl RETRO_START
-        keyMask = keyMask or bit
-        publishMask()
-        handler.postDelayed({
-            keyMask = keyMask and bit.inv()
-            publishMask()
-        }, START_PULSE_MS)
-    }
-
-    private fun tryCapture(event: KeyEvent): Boolean {
-        val device = event.device ?: return false
-        val identity = AndroidGamepadIdentity.of(device)
-        if (identity.getValue("id") != captureDeviceId) return false
-        captureActive = false
-        captureDeviceId = null
-        callbacks.onControllerMappingKey(event.keyCode, identity)
-        return true
-    }
-
-    private fun indexFor(deviceId: Int, keyCode: Int): Int {
-        if (keyCode < 0 || keyCode >= TABLE_SIZE) return NONE
-        return tableFor(deviceId)[keyCode]
-    }
-
-    private fun tableFor(deviceId: Int): IntArray {
-        deviceTables.get(deviceId)?.let { return it }
-        val table = buildTable(deviceId)
-        deviceTables.put(deviceId, table)
-        return table
-    }
-
-    private fun buildTable(deviceId: Int): IntArray {
-        if (customMappings.isEmpty()) return DEFAULT_TABLE
-        val overrides = InputDevice.getDevice(deviceId)?.let { device ->
-            customMappings[AndroidGamepadIdentity.of(device).getValue("id")]
+    private fun pulseStart(state: PadState) {
+        val mapping = indexFor(state.table, KeyEvent.KEYCODE_BUTTON_START)
+        val index = mapping.takeIf { it >= 0 } ?: RETRO_START
+        val bit = 1 shl index
+        state.pulseTimer?.let(handler::removeCallbacks)
+        state.pulseMask = state.pulseMask or bit
+        publishMask(state)
+        val timer = Runnable {
+            if (padStates.get(state.deviceId) !== state || !active) return@Runnable
+            state.pulseTimer = null
+            state.pulseMask = state.pulseMask and bit.inv()
+            publishMask(state)
         }
-        if (overrides.isNullOrEmpty()) return DEFAULT_TABLE
+        state.pulseTimer = timer
+        handler.postDelayed(timer, START_PULSE_MS)
+    }
+
+    private fun tableFor(profileId: String): IntArray {
+        val overrides = customMappings[profileId] ?: return DEFAULT_TABLE
         val table = DEFAULT_TABLE.copyOf()
         for ((keyCode, index) in overrides) {
             if (keyCode in 0 until TABLE_SIZE && index in 0..15) table[keyCode] = index
@@ -409,9 +373,11 @@ internal class NativePadInput(
         return table
     }
 
+    private fun indexFor(table: IntArray, keyCode: Int): Int =
+        if (keyCode in 0 until TABLE_SIZE) table[keyCode] else NONE
+
     private fun isVolumeKey(keyCode: Int): Boolean = keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
-        keyCode == KeyEvent.KEYCODE_VOLUME_DOWN ||
-        keyCode == KeyEvent.KEYCODE_VOLUME_MUTE
+        keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_MUTE
 
     private fun axisDirection(event: MotionEvent, hatAxis: Int, stickAxis: Int): Int =
         direction(event.getAxisValue(hatAxis)).takeIf { it != 0 }
@@ -423,34 +389,25 @@ internal class NativePadInput(
         else -> 0
     }
 
-    private fun parseControllerMappings(json: String): Map<String, Map<Int, Int>> = try {
-        val root = JSONObject(json)
-        buildMap {
-            val deviceIds = root.keys()
-            while (deviceIds.hasNext()) {
-                val deviceId = deviceIds.next()
-                val rawMapping = root.optJSONObject(deviceId) ?: continue
-                val mapping = mutableMapOf<Int, Int>()
-                val keycodes = rawMapping.keys()
-                while (keycodes.hasNext()) {
-                    val keycodeText = keycodes.next()
-                    val keycode = keycodeText.toIntOrNull() ?: continue
-                    val button = rawMapping.optInt(keycodeText, -1)
-                    if (button in 0..15) mapping[keycode] = button
-                }
-                put(deviceId, mapping)
-            }
-        }
-    } catch (_: Exception) {
-        emptyMap()
-    }
+    private class PadState(
+        val deviceId: Int,
+        val profileId: String,
+        val port: Int,
+        var table: IntArray,
+        var keyMask: Int = 0,
+        var motionMask: Int = 0,
+        var pulseMask: Int = 0,
+        var sentMask: Int = 0,
+        var startTimer: Runnable? = null,
+        var pulseTimer: Runnable? = null,
+        var startConsumed: Boolean = false,
+    )
 
     private companion object {
         const val AXIS_THRESHOLD = 0.5f
         const val START_HOLD_MS = 1500L
-        // Two frames at 60Hz: long enough for the per-frame OR-latch to
-        // guarantee visibility to the core, short enough to read as a tap.
         const val START_PULSE_MS = 34L
+        const val KEYBOARD_DEVICE_ID = -1
         const val TABLE_SIZE = 256
         const val NONE = -1
         const val SWALLOW = -2
@@ -472,9 +429,6 @@ internal class NativePadInput(
         const val RETRO_L3 = 14
         const val RETRO_R3 = 15
 
-        // Physically exclusive pairs: no d-pad can assert both ends of an axis,
-        // so a press of one proves the other is no longer held. NONE for every
-        // other slot -- two face buttons carry no such relationship.
         val OPPOSITE = IntArray(16) { NONE }.apply {
             this[RETRO_UP] = RETRO_DOWN
             this[RETRO_DOWN] = RETRO_UP
@@ -482,35 +436,20 @@ internal class NativePadInput(
             this[RETRO_RIGHT] = RETRO_LEFT
         }
 
-        // Keycodes Android defines for generic gamepad buttons that RetroPad
-        // has no default slot for. Left unmapped they must still be swallowed
-        // here, or they leak into Flutter's focus system as exactly the
-        // unfinished events InputDispatcher warns about (defect #5).
         val SWALLOWED_KEYCODES = intArrayOf(
-            KeyEvent.KEYCODE_BUTTON_C,
-            KeyEvent.KEYCODE_BUTTON_Z,
-            KeyEvent.KEYCODE_BUTTON_1,
-            KeyEvent.KEYCODE_BUTTON_2,
-            KeyEvent.KEYCODE_BUTTON_3,
-            KeyEvent.KEYCODE_BUTTON_4,
-            KeyEvent.KEYCODE_BUTTON_5,
-            KeyEvent.KEYCODE_BUTTON_6,
-            KeyEvent.KEYCODE_BUTTON_7,
-            KeyEvent.KEYCODE_BUTTON_8,
-            KeyEvent.KEYCODE_BUTTON_9,
-            KeyEvent.KEYCODE_BUTTON_10,
-            KeyEvent.KEYCODE_BUTTON_11,
-            KeyEvent.KEYCODE_BUTTON_12,
-            KeyEvent.KEYCODE_BUTTON_13,
-            KeyEvent.KEYCODE_BUTTON_14,
-            KeyEvent.KEYCODE_BUTTON_15,
-            KeyEvent.KEYCODE_BUTTON_16,
+            KeyEvent.KEYCODE_BUTTON_C, KeyEvent.KEYCODE_BUTTON_Z,
+            KeyEvent.KEYCODE_BUTTON_1, KeyEvent.KEYCODE_BUTTON_2,
+            KeyEvent.KEYCODE_BUTTON_3, KeyEvent.KEYCODE_BUTTON_4,
+            KeyEvent.KEYCODE_BUTTON_5, KeyEvent.KEYCODE_BUTTON_6,
+            KeyEvent.KEYCODE_BUTTON_7, KeyEvent.KEYCODE_BUTTON_8,
+            KeyEvent.KEYCODE_BUTTON_9, KeyEvent.KEYCODE_BUTTON_10,
+            KeyEvent.KEYCODE_BUTTON_11, KeyEvent.KEYCODE_BUTTON_12,
+            KeyEvent.KEYCODE_BUTTON_13, KeyEvent.KEYCODE_BUTTON_14,
+            KeyEvent.KEYCODE_BUTTON_15, KeyEvent.KEYCODE_BUTTON_16,
         )
 
         val DEFAULT_TABLE: IntArray = IntArray(TABLE_SIZE) { NONE }.also { table ->
-            for (keyCode in SWALLOWED_KEYCODES) {
-                if (keyCode in 0 until TABLE_SIZE) table[keyCode] = SWALLOW
-            }
+            for (keyCode in SWALLOWED_KEYCODES) if (keyCode in 0 until TABLE_SIZE) table[keyCode] = SWALLOW
             table[KeyEvent.KEYCODE_DPAD_UP] = RETRO_UP
             table[KeyEvent.KEYCODE_DPAD_DOWN] = RETRO_DOWN
             table[KeyEvent.KEYCODE_DPAD_LEFT] = RETRO_LEFT
@@ -529,5 +468,85 @@ internal class NativePadInput(
             table[KeyEvent.KEYCODE_BUTTON_THUMBL] = RETRO_L3
             table[KeyEvent.KEYCODE_BUTTON_THUMBR] = RETRO_R3
         }
+    }
+}
+
+/**
+ * Reads the durable player assignment payload, `{"players":{"1":"<profileId>"}}`.
+ *
+ * The wire format counts players from 1 because that is what the user sees;
+ * ports count from 0. The conversion happens here and nowhere else, so the rest
+ * of the Kotlin and C code keeps thinking purely in ports.
+ */
+internal object NativeControllerAssignmentParser {
+    fun parse(json: String): Map<String, Int> = try {
+        val players = JSONObject(json).optJSONObject("players")
+        if (players == null) {
+            emptyMap()
+        } else {
+            buildMap {
+                val keys = players.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    val player = key.toIntOrNull() ?: continue
+                    if (player !in 1..NativeControllerPortRegistry.MAX_PORTS) continue
+                    val profileId = players.optString(key).takeIf { it.isNotBlank() } ?: continue
+                    // One profile cannot hold two players. A payload that says
+                    // otherwise is malformed; keep the lowest player rather than
+                    // letting iteration order decide.
+                    val port = player - 1
+                    val existing = this[profileId]
+                    if (existing == null || port < existing) put(profileId, port)
+                }
+            }
+        }
+    } catch (_: Exception) {
+        emptyMap()
+    }
+}
+
+/** Reads both the legacy flat profile map and the structured mapping payload.
+ * Controller-type preferences are deliberately ignored here: they are sent to
+ * the libretro bridge separately and must never become gameplay key bindings.
+ */
+internal object NativeControllerMappingParser {
+    fun parse(json: String): Map<String, Map<Int, Int>> = try {
+        val root = JSONObject(json)
+        buildMap {
+            val deviceIds = root.keys()
+            while (deviceIds.hasNext()) {
+                val deviceId = deviceIds.next()
+                val profile = try {
+                    root.getJSONObject(deviceId)
+                } catch (_: Exception) {
+                    continue
+                }
+                // `bindings` supports the short-lived structured format used
+                // during development. Shipping payloads remain flat so older
+                // clients still see numeric keycodes and ignore the additive
+                // `controllerTypes` metadata key.
+                val rawMapping = if (profile.has("bindings")) {
+                    try {
+                        profile.getJSONObject("bindings")
+                    } catch (_: Exception) {
+                        null
+                    }
+                } else {
+                    profile
+                }
+                if (rawMapping == null) continue
+                val mapping = mutableMapOf<Int, Int>()
+                val keycodes = rawMapping.keys()
+                while (keycodes.hasNext()) {
+                    val keycodeText = keycodes.next()
+                    val keycode = keycodeText.toIntOrNull() ?: continue
+                    val button = rawMapping.optInt(keycodeText, -1)
+                    if (button in 0..15) mapping[keycode] = button
+                }
+                put(deviceId, mapping)
+            }
+        }
+    } catch (_: Exception) {
+        emptyMap()
     }
 }
