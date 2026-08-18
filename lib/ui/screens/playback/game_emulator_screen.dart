@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:server_core/server_core.dart';
 
+import '../../navigation/destinations.dart';
 import '../../widgets/adaptive/adaptive_glass.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../data/services/retro_artwork/retro_artwork_activity_gate.dart';
@@ -998,7 +999,15 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
     } catch (_) {}
     await _restoreSystemUi();
     _releaseScreensaverBlock();
-    if (mounted) context.pop();
+    if (!mounted) return;
+    // Popping the last route empties the navigator and finishes the activity;
+    // MainActivity.onDestroy then calls Process.killProcess, killing the app
+    // instead of returning to the library.
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(Destinations.home);
+    }
   }
 
   Future<void> _persistOnExit() async {
