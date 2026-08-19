@@ -7,6 +7,7 @@ import 'package:moonfin/ui/widgets/bounded_network_image.dart';
 import 'package:moonfin/ui/widgets/focus/focusable_wrapper.dart';
 import 'package:moonfin/ui/widgets/game/game_card_focus_frame.dart';
 import 'package:moonfin/ui/widgets/game/game_poster_card.dart';
+import 'package:moonfin/util/focus/input_mode_tracker.dart';
 import 'package:moonfin_design/moonfin_design.dart';
 
 void main() {
@@ -182,6 +183,66 @@ void main() {
     // game focus frame) and no FocusableWrapper to draw a second outline.
     expect(find.byType(FocusableWrapper), findsNothing);
     expect(find.byType(GameCardFocusFrame), findsOneWidget);
+  });
+
+  testWidgets('a resting pointer stops highlighting once the d-pad moves focus', (
+    tester,
+  ) async {
+    final restingNode = FocusNode(debugLabel: 'resting');
+    final movedNode = FocusNode(debugLabel: 'moved');
+    addTearDown(restingNode.dispose);
+    addTearDown(movedNode.dispose);
+
+    await tester.pumpWidget(
+      _TestApp(
+        child: InputModeTracker(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GamePosterCard(
+                focusNode: restingNode,
+                title: 'Gauntlet',
+                fileName: 'gauntlet.zip',
+                seed: 'gauntlet',
+                autoScroll: false,
+                onTap: () {},
+              ),
+              GamePosterCard(
+                focusNode: movedNode,
+                title: 'Giga Wing',
+                fileName: 'gigawing.zip',
+                seed: 'gigawing',
+                autoScroll: false,
+                onTap: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    List<bool> frames() => tester
+        .widgetList<GameCardFocusFrame>(find.byType(GameCardFocusFrame))
+        .map((frame) => frame.active)
+        .toList(growable: false);
+
+    // A cursor comes to rest on the first card and never moves again.
+    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    addTearDown(() => mouse.removePointer());
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(
+      tester.getCenter(find.byType(GamePosterCard).first),
+    );
+    await tester.pumpAndSettle();
+    expect(frames(), [true, false], reason: 'the pointer owns the highlight');
+
+    // The user picks up the remote and moves focus to the second card.
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    movedNode.requestFocus();
+    await tester.pumpAndSettle();
+
+    // The stationary pointer must not leave a second border behind.
+    expect(frames(), [false, true]);
   });
 }
 

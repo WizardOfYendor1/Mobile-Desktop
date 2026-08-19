@@ -22,11 +22,11 @@ void main() {
       // is not available for this core" message unreachable.
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(controlChannel, (call) async {
-        if (call.method == 'restart') {
-          throw PlatformException(code: 'restart_unavailable');
-        }
-        return null;
-      });
+            if (call.method == 'restart') {
+              throw PlatformException(code: 'restart_unavailable');
+            }
+            return null;
+          });
 
       final player = NativeGamePlayerChannel();
 
@@ -50,14 +50,49 @@ void main() {
       // swallowing for them.
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(controlChannel, (call) async {
-        throw PlatformException(code: 'boom');
-      });
+            throw PlatformException(code: 'boom');
+          });
 
       final player = NativeGamePlayerChannel();
 
       await expectLater(player.pause(), completes);
       await expectLater(player.resume(), completes);
       await expectLater(player.stop(), completes);
+    },
+  );
+
+  test(
+    'transports every advertised controller type and applies Auto as joypad',
+    () async {
+      final calls = <MethodCall>[];
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(controlChannel, (call) async {
+            calls.add(call);
+            if (call.method == 'getControllerTypes') {
+              return [
+                {'port': 0, 'id': 5, 'label': 'Classic'},
+                {'port': 0, 'id': 2, 'label': 'Mouse'},
+              ];
+            }
+            return null;
+          });
+
+      final player = NativeGamePlayerChannel();
+      final types = await player.getControllerTypes();
+      await player.setControllerType(0, 1);
+
+      expect(types, hasLength(2));
+      expect(types[0].id, 5);
+      expect(types[1].label, 'Mouse');
+      expect(
+        calls.last,
+        isA<MethodCall>()
+            .having((call) => call.method, 'method', 'setControllerType')
+            .having((call) => call.arguments, 'arguments', {
+              'port': 0,
+              'deviceType': 1,
+            }),
+      );
     },
   );
 

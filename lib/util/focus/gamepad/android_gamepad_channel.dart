@@ -18,9 +18,7 @@ class AndroidGamepadChannel {
     'org.moonfin.androidtv/gamepad',
   );
 
-  // Handles both onButton (native RetroPad input) and onKeyboard (physical
-  // keyboard forwarded from the overlay) — despite the name implied by the
-  // old field, it is not button-only.
+  // Handles both onButton and onKeyboard despite the name; not button-only.
   static Future<dynamic> Function(MethodCall)? _emulatorInputHandler;
   static Future<dynamic> Function(MethodCall)? _controllerMappingKeyHandler;
   static AndroidStickNavigator? _navigator;
@@ -62,16 +60,26 @@ class AndroidGamepadChannel {
     });
   }
 
+  /// Applies the durable Player 1-4 assignment to the native port registry.
+  /// Sent before a session starts and again on every edit, reallocating ports
+  /// immediately.
+  static Future<void> setControllerAssignments(String assignmentsJson) async {
+    if (!PlatformDetection.isAndroid) return;
+    await _channel.invokeMethod('setControllerAssignments', {
+      'assignments': assignmentsJson,
+    });
+  }
+
   /// Captures the next physical button from [deviceId] instead of forwarding
   /// it to libretro. Used only while the native mapping overlay is rebinding.
   static Future<void> setControllerMappingCapture(
     bool active, {
-    String? deviceId,
+    String? connectionId,
   }) async {
     if (!PlatformDetection.isAndroid) return;
     await _channel.invokeMethod('setControllerMappingCapture', {
       'active': active,
-      'deviceId': ?deviceId,
+      'connectionId': ?connectionId,
     });
   }
 
@@ -79,12 +87,9 @@ class AndroidGamepadChannel {
     Future<dynamic> Function(MethodCall)? handler,
   ) => _controllerMappingKeyHandler = handler;
 
-  /// Tells NativePadInput whether the in-game pause overlay is showing.
-  /// Native RetroPad Start uses this to decide between its short-press
-  /// pulse/long-press-hold gesture (overlay closed) and closing/stepping
-  /// back through the overlay on any press (overlay open); LibretroBridge
-  /// uses it to gate the "button" EventChannel message to overlay navigation
-  /// only, so nothing crosses the channel during gameplay.
+  /// Tells NativePadInput whether the in-game pause overlay is showing, so
+  /// Start switches between its gameplay gesture and overlay navigation, and
+  /// LibretroBridge only sends "button" EventChannel messages while paused.
   static Future<void> setOverlayOpen(bool open) async {
     if (!PlatformDetection.isAndroid) return;
     await _channel.invokeMethod('setOverlayOpen', {'open': open});
@@ -96,6 +101,21 @@ class AndroidGamepadChannel {
     if (!PlatformDetection.isAndroid) return const [];
     final result = await _channel.invokeListMethod<dynamic>(
       'getGamepadDevices',
+    );
+    return result
+            ?.whereType<Map>()
+            .map((value) => value.cast<String, dynamic>())
+            .toList(growable: false) ??
+        const [];
+  }
+
+  /// Native-libretro controller snapshot. Unlike [getEmulatorGamepads], this
+  /// route reports runtime connection/port metadata and is never used by the
+  /// EmulatorJS backend.
+  static Future<List<Map<String, dynamic>>> getNativeGamepadDevices() async {
+    if (!PlatformDetection.isAndroid) return const [];
+    final result = await _channel.invokeListMethod<dynamic>(
+      'getNativeGamepadDevices',
     );
     return result
             ?.whereType<Map>()

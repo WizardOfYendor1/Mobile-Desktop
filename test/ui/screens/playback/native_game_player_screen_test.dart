@@ -13,6 +13,8 @@ import 'package:moonfin/data/services/retro_artwork/retro_artwork_activity_gate.
 import 'package:moonfin/l10n/app_localizations.dart';
 import 'package:moonfin/playback/native_game_player.dart';
 import 'package:moonfin/ui/screens/playback/native_game_player_screen.dart';
+import 'package:moonfin/util/core_input_descriptors.dart';
+import 'package:moonfin/util/native_controller_mapping.dart';
 // Transitive via path_provider; not worth promoting to a direct pubspec.yaml
 // dependency just for this test-only fake.
 // ignore: depend_on_referenced_packages
@@ -43,8 +45,7 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
   final Directory _root;
 
   @override
-  Future<String?> getApplicationSupportPath() async =>
-      '${_root.path}/support';
+  Future<String?> getApplicationSupportPath() async => '${_root.path}/support';
 
   @override
   Future<String?> getApplicationCachePath() async => '${_root.path}/cache';
@@ -205,6 +206,17 @@ class _FakeNativeGamePlayer implements NativeGamePlayer {
   Future<Map<String, String>> getCurrentOptions() async => const {};
   @override
   Future<int> controllerCount() async => 1;
+  @override
+  Future<List<CoreControllerType>> getControllerTypes() async => const [
+    // Keep this non-empty: real cores expose capability lists, and the player
+    // must preserve their nested generic type when publishing its snapshot.
+    CoreControllerType(port: 0, id: 5, label: 'Classic'),
+  ];
+  @override
+  Future<void> setControllerType(int port, int deviceType) async {}
+  @override
+  Future<CoreInputDescriptors> getInputDescriptors() async =>
+      CoreInputDescriptors.empty;
 }
 
 /// Counts actual Navigator pops, distinct from pop *attempts* -- the bug
@@ -308,7 +320,11 @@ void main() {
         // lets it actually progress between pumps that pick up the resulting
         // setState calls, and the explicit duration on pump() lets the
         // Cupertino-style route transition (macOS) finish too.
-        for (var i = 0; i < 60 && find.byType(Texture).evaluate().isEmpty; i++) {
+        for (
+          var i = 0;
+          i < 60 && find.byType(Texture).evaluate().isEmpty;
+          i++
+        ) {
           await tester.runAsync(
             () => Future<void>.delayed(const Duration(milliseconds: 20)),
           );
