@@ -291,6 +291,20 @@ void main() {
     ).called(greaterThan(0));
   });
 
+  testWidgets('opening a game focuses the primary action once it loads', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 720));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpDetailScreen(tester);
+
+    final playButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Play'),
+    );
+    expect(playButton.focusNode?.hasFocus, isTrue);
+  });
+
   testWidgets('Down from the app bar focuses the primary play action', (
     tester,
   ) async {
@@ -299,9 +313,13 @@ void main() {
 
     await pumpDetailScreen(tester);
 
+    // The screen now opens with the primary action focused, so clear that
+    // first to reach the app bar the way traversal from nothing used to.
+    expect(find.byType(BackButton), findsOneWidget);
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await tester.pump();
-    expect(find.byType(BackButton), findsOneWidget);
     expect(
       FocusManager.instance.primaryFocus!.context!
           .findAncestorWidgetOfExactType<BackButton>(),

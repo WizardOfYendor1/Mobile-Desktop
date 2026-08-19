@@ -13,6 +13,8 @@ import 'package:moonfin/data/services/retro_artwork/retro_artwork_activity_gate.
 import 'package:moonfin/l10n/app_localizations.dart';
 import 'package:moonfin/playback/native_game_player.dart';
 import 'package:moonfin/ui/screens/playback/native_game_player_screen.dart';
+import 'package:moonfin/util/core_input_descriptors.dart';
+import 'package:moonfin/util/native_controller_mapping.dart';
 // Transitive via path_provider; not worth promoting to a direct pubspec.yaml
 // dependency just for this test-only fake.
 // ignore: depend_on_referenced_packages
@@ -43,8 +45,7 @@ class _FakePathProviderPlatform extends PathProviderPlatform {
   final Directory _root;
 
   @override
-  Future<String?> getApplicationSupportPath() async =>
-      '${_root.path}/support';
+  Future<String?> getApplicationSupportPath() async => '${_root.path}/support';
 
   @override
   Future<String?> getApplicationCachePath() async => '${_root.path}/cache';
@@ -154,6 +155,10 @@ class _FakeNativeGamePlayer implements NativeGamePlayer {
     _eventsController.add({'event': 'error', 'message': message});
   }
 
+  void emitMenuPressed() {
+    _eventsController.add({'event': 'menuPressed'});
+  }
+
   void dispose() => _eventsController.close();
 
   @override
@@ -205,6 +210,17 @@ class _FakeNativeGamePlayer implements NativeGamePlayer {
   Future<Map<String, String>> getCurrentOptions() async => const {};
   @override
   Future<int> controllerCount() async => 1;
+  @override
+  Future<List<CoreControllerType>> getControllerTypes() async => const [
+    // Keep this non-empty: real cores expose capability lists, and the player
+    // must preserve their nested generic type when publishing its snapshot.
+    CoreControllerType(port: 0, id: 5, label: 'Classic'),
+  ];
+  @override
+  Future<void> setControllerType(int port, int deviceType) async {}
+  @override
+  Future<CoreInputDescriptors> getInputDescriptors() async =>
+      CoreInputDescriptors.empty;
 }
 
 /// Counts actual Navigator pops, distinct from pop *attempts* -- the bug
@@ -308,7 +324,11 @@ void main() {
         // lets it actually progress between pumps that pick up the resulting
         // setState calls, and the explicit duration on pump() lets the
         // Cupertino-style route transition (macOS) finish too.
-        for (var i = 0; i < 60 && find.byType(Texture).evaluate().isEmpty; i++) {
+        for (
+          var i = 0;
+          i < 60 && find.byType(Texture).evaluate().isEmpty;
+          i++
+        ) {
           await tester.runAsync(
             () => Future<void>.delayed(const Duration(milliseconds: 20)),
           );
@@ -337,6 +357,110 @@ void main() {
         );
         expect(find.byType(NativeGamePlayerScreen), findsNothing);
         expect(find.text('home'), findsOneWidget);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    },
+  );
+
+  testWidgets(
+    'Save & exit keeps the game running when the save fails',
+    (tester) async {
+      // macOS bundles its cores, so _prepare() skips the download-manager/ABI
+      // path entirely and goes straight from a resolved GamesApi through to
+      // _player.load() -- the shortest real route to a live texture. Reset in
+      // a finally block rather than addTearDown/tearDown: the binding's
+      // "foundation debug var" invariant check runs directly after this test
+      // body returns, before any package:test tearDown hook fires.
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        final observer = _PopCountingObserver();
+        final router = GoRouter(
+          initialLocation: '/home',
+          observers: [observer],
+          routes: [
+            GoRoute(
+              path: '/home',
+              builder: (context, state) => const Scaffold(body: Text('home')),
+            ),
+            GoRoute(
+              path: '/game',
+              builder: (context, state) => NativeGamePlayerScreen(
+                libraryId: 'lib1',
+                gameId: 'game1',
+                core: 'snes',
+                startFresh: true,
+                player: player,
+              ),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        router.push('/game');
+        await tester.pump();
+        // Not pumpAndSettle(): the loading screen's CircularProgressIndicator
+        // animates indefinitely, so it never "settles" on its own. _prepare()
+        // also does real (temp-dir-backed) file IO, which completes on the
+        // real event loop rather than flutter_test's fake clock -- runAsync()
+        // lets it actually progress between pumps that pick up the resulting
+        // setState calls, and the explicit duration on pump() lets the
+        // Cupertino-style route transition (macOS) finish too.
+        for (
+          var i = 0;
+          i < 60 && find.byType(Texture).evaluate().isEmpty;
+          i++
+        ) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 20)),
+          );
+          await tester.pump(const Duration(milliseconds: 20));
+        }
+        expect(find.byType(NativeGamePlayerScreen), findsOneWidget);
+
+        // Reached a live-texture state through the real _prepare() flow
+        // (backed by the fake GamesApi/player above). Now fail the session
+        // the way a core crash does.
+        expect(find.byType(Texture), findsOneWidget);
+
+        // Open the in-game overlay the way the Menu button does.
+        player.emitMenuPressed();
+        await tester.pumpAndSettle();
+
+        // Exit sits below the fold in the action list at the test window size.
+        await tester.scrollUntilVisible(
+          find.text('Exit'),
+          200,
+          scrollable: find.byType(Scrollable).last,
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Exit'), findsOneWidget);
+
+        await tester.tap(find.text('Exit'));
+        await tester.pumpAndSettle();
+        expect(find.text('Keep playing'), findsOneWidget);
+        expect(find.text('Save & exit'), findsOneWidget);
+
+        // The fake player's saveState() returns null, i.e. nothing was
+        // captured, so the save cannot have landed.
+        await tester.tap(find.text('Save & exit'));
+        await tester.pumpAndSettle();
+
+        expect(
+          observer.pops,
+          0,
+          reason: 'a failed save must not exit and discard the progress the '
+              'warning is about',
+        );
+        expect(find.byType(NativeGamePlayerScreen), findsOneWidget);
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }
