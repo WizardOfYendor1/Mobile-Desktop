@@ -8,6 +8,7 @@
 // stub_format drives RETRO_ENVIRONMENT_SET_PIXEL_FORMAT.
 
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -37,6 +38,13 @@ static uint8_t sram[64];
 // cleanly (no frame delivered, no crash) instead of converting it.
 static int32_t huge_frame_mode;
 static int32_t bad_pitch_mode;
+// When on, retro_run queries input_state_cb directly for RETRO_DEVICE_ANALOG
+// (both stick indices, the analog-button plane's L2/R2 and a derived id) and
+// for the untouched MOUSE/LIGHTGUN/POINTER domains, then reports every result
+// through SET_MESSAGE. This exercises input_state_cb's actual dispatch (index
+// and id mapping, derivation from the digital mask), which the frame-snapshot
+// test hooks (lh_test_read_analog/lh_test_read_trigger) intentionally bypass.
+static int32_t analog_check_mode;
 
 // Holds onto a GET_VARIABLE pointer across frames the way a real core does,
 // so the host's promise that the pointer stays readable for the life of the
@@ -99,16 +107,23 @@ static unsigned controller_devices[4];
 // would expose the mutated text instead of the original descriptions. Spans
 // two ports and several distinct ids, including id 0 (RETRO_DEVICE_ID_JOYPAD_B)
 // and id 8 (RETRO_DEVICE_ID_JOYPAD_A) to catch an off-by-default-zero bug in
-// the id field specifically.
+// the id field specifically. Port 1 also gets one RETRO_DEVICE_ANALOG entry
+// alongside its JOYPAD one, mirroring a real mixed core (e.g. Capcom
+// Bowling's JOYPAD buttons plus ANALOG trackball), so lh_analog_descriptor_ports
+// tests have a real device=ANALOG descriptor to key off, distinct from port 0
+// which stays JOYPAD-only like a 4-way game's descriptors.
 static char id_label_port0_b[32];
 static char id_label_port0_a[32];
 static char id_label_port0_start[32];
 static char id_label_port1_b[32];
+static char id_label_port1_analog_x[32];
 static struct retro_input_descriptor input_descriptors[] = {
     {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, id_label_port0_b},
     {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, id_label_port0_a},
     {0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, id_label_port0_start},
     {1, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, id_label_port1_b},
+    {1, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT,
+     RETRO_DEVICE_ID_ANALOG_X, id_label_port1_analog_x},
     {0, 0, 0, 0, NULL},
 };
 
@@ -154,6 +169,7 @@ void retro_set_environment(retro_environment_t cb) {
       {"stub_huge_frame", "Huge frame; off|on"},
       {"stub_bad_pitch", "Bad pitch; off|on"},
       {"stub_vfs_dir_check", "VFS dir check; off|on"},
+      {"stub_analog_check", "Analog check; off|on"},
       {NULL, NULL},
   };
   env_cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void *)vars);
@@ -177,11 +193,13 @@ void retro_set_environment(retro_environment_t cb) {
   strcpy(id_label_port0_a, "Jump");
   strcpy(id_label_port0_start, "Coin");
   strcpy(id_label_port1_b, "P2 Fire");
+  strcpy(id_label_port1_analog_x, "P2 Stick X");
   env_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, input_descriptors);
   strcpy(id_label_port0_b, "changed");
   strcpy(id_label_port0_a, "changed");
   strcpy(id_label_port0_start, "changed");
   strcpy(id_label_port1_b, "changed");
+  strcpy(id_label_port1_analog_x, "changed");
 }
 // Set from the ROM contents, to mimic a core whose boot fails a few frames in:
 // it asks the frontend to quit and would fault if it were run again.
@@ -290,6 +308,55 @@ static void probe_vfs_dir(void) {
       (found_entry && found_dir) ? "stub vfs dir probe_subdir is a directory"
                                   : "stub vfs dir probe_subdir NOT a directory",
       180};
+  env_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
+}
+
+// Drives input_state_cb directly for RETRO_DEVICE_ANALOG plus the domains the
+// analog design deliberately leaves untouched, and reports every result
+// through SET_MESSAGE so the harness can parse them back out. Port 0 for the
+// analog/mouse reads, port 1 for lightgun, matching what a real core's query
+// pattern looks like (see the design doc's measured tuples).
+static void probe_analog(void) {
+  int16_t lx = input_state_cb(0, RETRO_DEVICE_ANALOG,
+                              RETRO_DEVICE_INDEX_ANALOG_LEFT,
+                              RETRO_DEVICE_ID_ANALOG_X);
+  int16_t ly = input_state_cb(0, RETRO_DEVICE_ANALOG,
+                              RETRO_DEVICE_INDEX_ANALOG_LEFT,
+                              RETRO_DEVICE_ID_ANALOG_Y);
+  int16_t rx = input_state_cb(0, RETRO_DEVICE_ANALOG,
+                              RETRO_DEVICE_INDEX_ANALOG_RIGHT,
+                              RETRO_DEVICE_ID_ANALOG_X);
+  int16_t ry = input_state_cb(0, RETRO_DEVICE_ANALOG,
+                              RETRO_DEVICE_INDEX_ANALOG_RIGHT,
+                              RETRO_DEVICE_ID_ANALOG_Y);
+  int16_t l2 = input_state_cb(0, RETRO_DEVICE_ANALOG,
+                              RETRO_DEVICE_INDEX_ANALOG_BUTTON,
+                              RETRO_DEVICE_ID_JOYPAD_L2);
+  int16_t r2 = input_state_cb(0, RETRO_DEVICE_ANALOG,
+                              RETRO_DEVICE_INDEX_ANALOG_BUTTON,
+                              RETRO_DEVICE_ID_JOYPAD_R2);
+  // Derived-from-digital ids: whatever bit is (or isn't) set in the JOYPAD
+  // mask for this port right now.
+  int16_t derived_b = input_state_cb(0, RETRO_DEVICE_ANALOG,
+                                     RETRO_DEVICE_INDEX_ANALOG_BUTTON,
+                                     RETRO_DEVICE_ID_JOYPAD_B);
+  int16_t derived_start = input_state_cb(0, RETRO_DEVICE_ANALOG,
+                                         RETRO_DEVICE_INDEX_ANALOG_BUTTON,
+                                         RETRO_DEVICE_ID_JOYPAD_START);
+  int16_t mouse_x =
+      input_state_cb(0, RETRO_DEVICE_MOUSE, 0, RETRO_DEVICE_ID_MOUSE_X);
+  int16_t gun_x = input_state_cb(1, RETRO_DEVICE_LIGHTGUN, 0,
+                                 RETRO_DEVICE_ID_LIGHTGUN_SCREEN_X);
+  int16_t pointer_x =
+      input_state_cb(0, RETRO_DEVICE_POINTER, 0, RETRO_DEVICE_ID_POINTER_X);
+
+  char text[256];
+  snprintf(text, sizeof(text),
+          "stub analog lx=%d ly=%d rx=%d ry=%d l2=%d r2=%d db=%d ds=%d "
+          "mx=%d gx=%d px=%d",
+          lx, ly, rx, ry, l2, r2, derived_b, derived_start, mouse_x, gun_x,
+          pointer_x);
+  struct retro_message msg = {text, 1};
   env_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &msg);
 }
 
@@ -414,6 +481,10 @@ bool retro_load_game(const struct retro_game_info *game) {
     probe_vfs_dir();
   }
 
+  struct retro_variable analog_var = {"stub_analog_check", NULL};
+  env_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &analog_var);
+  analog_check_mode = analog_var.value && strcmp(analog_var.value, "on") == 0;
+
   return true;
 }
 
@@ -437,6 +508,7 @@ void retro_run(void) {
   input_poll_cb();
   int16_t mask =
       input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_MASK);
+  if (analog_check_mode) probe_analog();
   frame_counter += speed_fast ? 2 : 1;
 
   int bpp = pixel_fmt == RETRO_PIXEL_FORMAT_XRGB8888 ? 4 : 2;
