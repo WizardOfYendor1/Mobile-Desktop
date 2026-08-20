@@ -535,6 +535,27 @@ JNI(void, nativeSetMask)(JNIEnv *env, jobject thiz, jint port, jint mask) {
   if (g_ctx.host) lh_set_input(g_ctx.host, (int)port, (uint16_t)mask);
 }
 
+JNI(void, nativeSetPadState)(JNIEnv *env, jobject thiz, jint port, jint mask,
+                             jint lx, jint ly, jint rx, jint ry,
+                             jint l2, jint r2) {
+  (void)env;
+  (void)thiz;
+  if (!g_ctx.host) return;
+  lh_set_pad_state(g_ctx.host, (int)port, (uint16_t)mask,
+                   (int16_t)lx, (int16_t)ly, (int16_t)rx, (int16_t)ry,
+                   (uint16_t)l2, (uint16_t)r2);
+}
+
+// Bitmask of ports on which the core has queried RETRO_DEVICE_ANALOG since
+// the current content was loaded (bit N = port N). Drives the digital/analog
+// rule in NativePadInput: see lh_analog_queried_ports's doc comment.
+JNI(jint, nativeAnalogQueriedPorts)(JNIEnv *env, jobject thiz) {
+  (void)env;
+  (void)thiz;
+  if (!g_ctx.host) return 0;
+  return (jint)lh_analog_queried_ports(g_ctx.host);
+}
+
 JNI(jint, nativeReadAudio)(JNIEnv *env, jobject thiz, jshortArray buffer,
                            jint frames) {
   (void)thiz;

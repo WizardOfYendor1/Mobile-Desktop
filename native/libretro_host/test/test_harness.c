@@ -177,6 +177,224 @@ static void test_input_latch(void) {
   lh_destroy(host);
 }
 
+// ---------------------------------------------------------------------------
+// Analog passthrough (RETRO_DEVICE_ANALOG). Mirrors test_input_latch's style:
+// driven directly through lh_set_pad_state/lh_test_poll_input and the
+// frame-snapshot hooks, so poll boundaries are deterministic instead of
+// racing a running core. See test_analog_via_core below for the coverage that
+// requires calling through the real input_state_cb dispatch.
+// ---------------------------------------------------------------------------
+
+static void test_analog_passthrough(void) {
+  printf("analog passthrough:\n");
+  lh_callbacks cb;
+  memset(&cb, 0, sizeof(cb));
+  lh_host *host = lh_create(LH_FORMAT_RGBA8888, cb);
+  CHECK(host != NULL, "analog test host allocates");
+  if (!host) return;
+
+  // Round trip: left and right stick axes come back exactly as set.
+  lh_set_pad_state(host, 0, 0, 100, -200, 300, -400, 0, 0);
+  lh_test_poll_input(host);
+  CHECK(lh_test_read_analog(host, 0, 0, 0) == 100, "left stick X round-trips");
+  CHECK(lh_test_read_analog(host, 0, 0, 1) == -200, "left stick Y round-trips");
+  CHECK(lh_test_read_analog(host, 0, 1, 0) == 300, "right stick X round-trips");
+  CHECK(lh_test_read_analog(host, 0, 1, 1) == -400, "right stick Y round-trips");
+
+  // Full-scale values round-trip too (int16 boundary).
+  lh_set_pad_state(host, 0, 0, 32767, -32768, -32768, 32767, 0, 0);
+  lh_test_poll_input(host);
+  CHECK(lh_test_read_analog(host, 0, 0, 0) == 32767,
+        "max positive axis round-trips");
+  CHECK(lh_test_read_analog(host, 0, 0, 1) == -32768,
+        "max negative axis round-trips");
+
+  // Torn-diagonal: X and Y written together in one call are always read back
+  // as that same pair, never mixed with a previous or later write.
+  lh_set_pad_state(host, 0, 0, 1000, 2000, 0, 0, 0, 0);
+  lh_test_poll_input(host);
+  CHECK(lh_test_read_analog(host, 0, 0, 0) == 1000 &&
+            lh_test_read_analog(host, 0, 0, 1) == 2000,
+        "pair A reads back as pair A, not torn");
+  lh_set_pad_state(host, 0, 0, -3000, 4000, 0, 0, 0, 0);
+  lh_test_poll_input(host);
+  CHECK(lh_test_read_analog(host, 0, 0, 0) == -3000 &&
+            lh_test_read_analog(host, 0, 0, 1) == 4000,
+        "pair B reads back as pair B, not torn");
+
+  // NOT OR-latched: two successive writes inside one poll window yield the
+  // SECOND value, unlike the digital edge-latch (see test_input_latch's
+  // "clearing without an intervening poll" case, which preserves an edge that
+  // landed entirely inside one window instead of discarding it). An axis has
+  // no press/release semantics to preserve, so this is deliberately the
+  // opposite behaviour.
+  lh_set_pad_state(host, 0, 0, 111, 222, 0, 0, 0, 0);
+  lh_set_pad_state(host, 0, 0, 555, 666, 0, 0, 0, 0);
+  lh_test_poll_input(host);
+  CHECK(lh_test_read_analog(host, 0, 0, 0) == 555 &&
+            lh_test_read_analog(host, 0, 0, 1) == 666,
+        "two writes inside one poll window yield the second value, not a "
+        "combination");
+
+  // Triggers round-trip independently of the axes.
+  lh_set_pad_state(host, 0, 0, 0, 0, 0, 0, 0x1234, 0x5678);
+  lh_test_poll_input(host);
+  CHECK(lh_test_read_trigger(host, 0, 0) == 0x1234, "L2 pressure round-trips");
+  CHECK(lh_test_read_trigger(host, 0, 1) == 0x5678, "R2 pressure round-trips");
+
+  // Digital is unaffected by lh_set_pad_state: the mask half still goes
+  // through the same OR-latch as lh_set_input.
+  lh_set_pad_state(host, 0, 0x0003, 0, 0, 0, 0, 0, 0);
+  lh_test_poll_input(host);
+  CHECK(lh_test_read_input(host, 0) == 0x0003,
+        "lh_set_pad_state's digital mask latches exactly like lh_set_input");
+
+  // Ports remain independent for analog too.
+  lh_set_pad_state(host, 0, 0, 10, 20, 0, 0, 0, 0);
+  lh_set_pad_state(host, 1, 0, 30, 40, 0, 0, 0, 0);
+  lh_test_poll_input(host);
+  CHECK(lh_test_read_analog(host, 0, 0, 0) == 10 &&
+            lh_test_read_analog(host, 0, 0, 1) == 20,
+        "port 0 analog unaffected by port 1's write");
+  CHECK(lh_test_read_analog(host, 1, 0, 0) == 30 &&
+            lh_test_read_analog(host, 1, 0, 1) == 40,
+        "port 1 analog unaffected by port 0's write");
+
+  // lh_set_input leaves the analog and trigger words untouched.
+  lh_set_pad_state(host, 0, 0, 999, 888, 0, 0, 0x77, 0x88);
+  lh_test_poll_input(host);
+  lh_set_input(host, 0, 0x0001);
+  lh_test_poll_input(host);
+  CHECK(lh_test_read_analog(host, 0, 0, 0) == 999 &&
+            lh_test_read_analog(host, 0, 0, 1) == 888,
+        "lh_set_input does not disturb analog state set earlier");
+  CHECK(lh_test_read_trigger(host, 0, 0) == 0x77 &&
+            lh_test_read_trigger(host, 0, 1) == 0x88,
+        "lh_set_input does not disturb trigger state set earlier");
+
+  lh_destroy(host);
+}
+
+// ---------------------------------------------------------------------------
+// Coverage that requires calling through the real input_state_cb dispatch
+// (index/id mapping, derivation from the digital mask, and the domains other
+// than JOYPAD/ANALOG) rather than reading the frame snapshots directly. Drives
+// a loaded stub core with stub_analog_check=on, which performs the
+// input_state_cb queries itself and reports every result through SET_MESSAGE
+// (see probe_analog in stub_core.c).
+// ---------------------------------------------------------------------------
+
+static void test_analog_via_core(const char *core_path, const char *rom_path,
+                                 const char *work_dir) {
+  printf("analog via input_state_cb dispatch:\n");
+  const char *keys[] = {"stub_analog_check"};
+  const char *vals[] = {"on"};
+  g_last_message[0] = '\0';
+
+  lh_host *host = lh_create(LH_FORMAT_RGBA8888, make_callbacks());
+  lh_av_info av;
+  int rc = lh_load(host, core_path, rom_path, work_dir, work_dir,
+                   "analogviacore", keys, vals, 1, &av);
+  CHECK(rc == 0, "core loads with the analog check variable set");
+  if (rc != 0) {
+    lh_destroy(host);
+    return;
+  }
+
+  // Hold JOYPAD_B (bit 0) so the derived analog-button path has a set bit to
+  // observe, and leave JOYPAD_START (bit 3) unset as the negative case. Set
+  // axis values and trigger pressures that are distinct from each other and
+  // from zero, so any swapped field shows up as a mismatch.
+  lh_set_pad_state(host, 0, 1u << RETRO_DEVICE_ID_JOYPAD_B, 111, -222, 333,
+                   -444, 0x1111, 0x2222);
+
+  lh_start(host);
+  msleep(200);
+
+  int lx, ly, rx, ry, l2, r2, db, ds, mx, gx, px;
+  int parsed = sscanf(g_last_message,
+                      "stub analog lx=%d ly=%d rx=%d ry=%d l2=%d r2=%d "
+                      "db=%d ds=%d mx=%d gx=%d px=%d",
+                      &lx, &ly, &rx, &ry, &l2, &r2, &db, &ds, &mx, &gx, &px);
+  CHECK(parsed == 11, "stub core's analog probe message parses");
+  if (parsed == 11) {
+    CHECK(lx == 111 && ly == -222,
+          "left stick reaches the core through input_state_cb");
+    CHECK(rx == 333 && ry == -444,
+          "right stick reaches the core through input_state_cb");
+    CHECK(l2 == 0x1111 && r2 == 0x2222,
+          "L2/R2 analog-button ids return the trigger pressures, not derived "
+          "values");
+    CHECK(db == 0x7fff,
+          "an analog-button id whose bit is set in the digital mask returns "
+          "0x7fff");
+    CHECK(ds == 0,
+          "an analog-button id whose bit is unset in the digital mask "
+          "returns 0");
+    CHECK(mx == 0, "RETRO_DEVICE_MOUSE still returns 0");
+    CHECK(gx == 0, "RETRO_DEVICE_LIGHTGUN still returns 0");
+    CHECK(px == 0, "RETRO_DEVICE_POINTER still returns 0");
+  }
+
+  lh_stop(host);
+  lh_destroy(host);
+}
+
+// ---------------------------------------------------------------------------
+// lh_analog_queried_ports: the per-port "has this core ever asked for
+// RETRO_DEVICE_ANALOG on this port since content was loaded" signal that
+// drives the platform's digital/analog rule. Reuses stub_analog_check=on
+// (see probe_analog in stub_core.c), which queries RETRO_DEVICE_ANALOG on
+// port 0 for real through input_state_cb - the same dispatch path
+// test_analog_via_core exercises - rather than poking the bit directly,
+// since the whole point is to prove the host sets it from that real query.
+// ---------------------------------------------------------------------------
+
+static void test_analog_queried_ports(const char *core_path,
+                                      const char *rom_path,
+                                      const char *work_dir) {
+  printf("analog-queried-ports tracking:\n");
+  lh_host *host = lh_create(LH_FORMAT_RGBA8888, make_callbacks());
+  CHECK(lh_analog_queried_ports(host) == 0,
+        "a freshly created host reports no queried ports");
+
+  const char *keys[] = {"stub_analog_check"};
+  const char *vals[] = {"on"};
+  lh_av_info av;
+  int rc = lh_load(host, core_path, rom_path, work_dir, work_dir,
+                   "analogqueriedports", keys, vals, 1, &av);
+  CHECK(rc == 0, "core loads with the analog check variable set");
+  if (rc != 0) {
+    lh_destroy(host);
+    return;
+  }
+  CHECK(lh_analog_queried_ports(host) == 0,
+        "loading content clears any previously-set bits before the core has "
+        "run a single frame");
+
+  lh_start(host);
+  msleep(200);  // let probe_analog's port-0 RETRO_DEVICE_ANALOG query land
+  CHECK((lh_analog_queried_ports(host) & 1u) != 0,
+        "port 0's bit is set after the core queries RETRO_DEVICE_ANALOG on it");
+  CHECK((lh_analog_queried_ports(host) & ~1u) == 0,
+        "no other port's bit is set - the stub only queries port 0");
+
+  // Reloading content is a new game, and the design treats this signal as
+  // per-game: stop the running core and load again on the same host, this
+  // time without the analog probe, and confirm lh_load itself cleared the
+  // mask rather than the bit surviving from the previous load.
+  lh_stop(host);
+  const char *off_vals[] = {"off"};
+  rc = lh_load(host, core_path, rom_path, work_dir, work_dir,
+              "analogqueriedportsreload", keys, off_vals, 1, &av);
+  CHECK(rc == 0, "core reloads for the reload-clears-the-mask case");
+  CHECK(lh_analog_queried_ports(host) == 0,
+        "reloading content clears a port bit set by the previous load");
+
+  lh_stop(host);
+  lh_destroy(host);
+}
+
 static void write_vfs_zip(const char *path) {
   // One stored member (chip.bin = 10 20 30 40), followed by a conventional
   // central directory and 22-byte EOCD record. The probe core reads the ZIP
@@ -479,8 +697,8 @@ static void test_format(const char *core_path, const char *rom_path,
 
   if (fmt == LH_FORMAT_RGBA8888) {
     // stub_speed, stub_pattern, stub_rotation, stub_format, stub_huge_frame,
-    // stub_bad_pitch, stub_vfs_dir_check.
-    CHECK(lh_option_count(host) == 7, "seven core options");
+    // stub_bad_pitch, stub_vfs_dir_check, stub_analog_check.
+    CHECK(lh_option_count(host) == 8, "eight core options");
     lh_option opt;
     int opt_rc = lh_get_option(host, 0, &opt);
     CHECK(opt_rc == 0 && strcmp(opt.id, "stub_speed") == 0, "option id");
@@ -508,7 +726,7 @@ static void test_format(const char *core_path, const char *rom_path,
     uint8_t blob_a[64], blob_b[64], blob_c[64];
     CHECK(size > 0, "serialize size");
     CHECK(lh_serialize(host, blob_a, size) == 0, "serialize after restart");
-    CHECK(lh_option_count(host) == 7, "restart replaces option definitions");
+    CHECK(lh_option_count(host) == 8, "restart replaces option definitions");
     lh_get_option(host, 0, &opt);
     CHECK(strcmp(opt.current, "fast") == 0, "restart retains option value");
     int32_t restart_marker;
@@ -1042,6 +1260,41 @@ int main(int argc, char **argv) {
   snprintf(rom_path, sizeof(rom_path), "%s/dummy.rom", work_dir);
   write_rom(rom_path, "stub-rom");
 
+  // A stick left deflected when one game exits must not still be deflected for
+  // the first frames of the next: the platform's session reset is mask-only and
+  // never clears these words, so lh_load has to.
+  {
+    printf("stale analog does not survive a load:\n");
+    lh_host *stale = lh_create(LH_FORMAT_RGBA8888, make_callbacks());
+    lh_av_info stale_av;
+    CHECK(lh_load(stale, core_path, rom_path, work_dir, work_dir, "stale", NULL,
+                  NULL, 0, &stale_av) == 0,
+          "host loads for the stale-analog check");
+    lh_set_pad_state(stale, 0, 0, 30000, -30000, 0, 0, 0x7fff, 0x7fff);
+    lh_test_poll_input(stale);
+    CHECK(lh_test_read_analog(stale, 0, 0, 0) == 30000,
+          "analog is deflected before the reload");
+    CHECK(lh_test_read_trigger(stale, 0, 0) == 0x7fff,
+          "trigger is pressed before the reload");
+
+    // The real sequence: a game ends (stop) and another is loaded on the same
+    // host. lh_load refuses to load over a live core.
+    lh_stop(stale);
+    CHECK(lh_load(stale, core_path, rom_path, work_dir, work_dir, "stale2",
+                  NULL, NULL, 0, &stale_av) == 0,
+          "the same host loads new content after a stop");
+    lh_test_poll_input(stale);
+    CHECK(lh_test_read_analog(stale, 0, 0, 0) == 0 &&
+              lh_test_read_analog(stale, 0, 0, 1) == 0,
+          "the new game starts centred, not at the old deflection");
+    CHECK(lh_test_read_trigger(stale, 0, 0) == 0 &&
+              lh_test_read_trigger(stale, 0, 1) == 0,
+          "the new game starts with triggers released");
+    CHECK(lh_analog_queried_ports(stale) == 0,
+          "the analog-queried mask clears with it");
+    lh_destroy(stale);
+  }
+
   // A failed load must clean up fully so a later load still works.
   printf("negative load:\n");
   lh_host *bad = lh_create(LH_FORMAT_RGBA8888, make_callbacks());
@@ -1066,6 +1319,9 @@ int main(int argc, char **argv) {
   lh_destroy(rejected);
 
   test_input_latch();
+  test_analog_passthrough();
+  test_analog_via_core(core_path, rom_path, work_dir);
+  test_analog_queried_ports(core_path, rom_path, work_dir);
   test_vfs_zip(core_path, work_dir);
   test_vfs_dir_reports_subdir(core_path, rom_path, work_dir);
   test_controller_types(core_path, rom_path, work_dir);

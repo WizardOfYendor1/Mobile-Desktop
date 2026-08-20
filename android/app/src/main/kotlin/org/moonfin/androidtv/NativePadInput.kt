@@ -7,6 +7,9 @@ import android.util.SparseArray
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
+import kotlin.math.abs
+import kotlin.math.hypot
+import kotlin.math.roundToInt
 import org.json.JSONObject
 
 /**
@@ -28,6 +31,9 @@ internal class NativePadInput(
     private val registry = NativeControllerPortRegistry()
     private val padStates = SparseArray<PadState>()
     private val maskComposer = NativePortMaskComposer()
+    // Which axis constants carry trigger pressure, resolved once per device
+    // id. See triggerAxesFor and TriggerAxisResolver below.
+    private val triggerAxisCache = SparseArray<TriggerAxes>()
     // Remotes/keyboards aren't controller connections but feed P1's D-pad/Enter
     // state; kept independent so it composes with, not replaces, P1's pad.
     private val keyboardState = PadState(KEYBOARD_DEVICE_ID, "", 0, DEFAULT_TABLE)
@@ -35,6 +41,15 @@ internal class NativePadInput(
     private var customMappings: Map<String, Map<Int, Int>> = emptyMap()
     private var captureActive = false
     private var captureConnectionId: String? = null
+
+    // Counts publishPadState calls across every port; every ANALOG_POLL_INTERVAL
+    // of them, one JNI call re-reads which ports the core has queried
+    // RETRO_DEVICE_ANALOG on. Tied to actual analog activity rather than a
+    // wall-clock tick: a Handler timer would keep firing (and need explicit
+    // start/stop bookkeeping around setActive/dispose) even while no stick is
+    // moving, whereas this piggybacks on a call site that already only runs
+    // while a pad is live.
+    private var analogPollCounter = 0
 
     /** True while a native session is loaded; checked first in dispatch. */
     @Volatile var active = false
@@ -71,7 +86,36 @@ internal class NativePadInput(
     fun dispose() {
         inputManager?.unregisterInputDeviceListener(deviceListener)
         clearPadStates(publish = false)
+        triggerAxisCache.clear()
         NativeInputDeviceClassifier.invalidate()
+    }
+
+    /**
+     * Marks whether the core has queried RETRO_DEVICE_ANALOG on [port] since
+     * the last game load. Per the digital/analog rule, this is what gates the
+     * stick->d-pad conversion in onMotion off once a core wants the raw
+     * axes; the hat keeps feeding digital either way. Defaults to false, so
+     * behaviour is unchanged until something calls this.
+     */
+    fun setCoreReadsAnalog(port: Int, reads: Boolean) {
+        for (index in 0 until padStates.size()) {
+            val state = padStates.valueAt(index)
+            if (state.port == port) state.coreReadsAnalog = reads
+        }
+    }
+
+    /**
+     * Polls [LibretroBridge.analogQueriedPorts] once and applies its bitmask
+     * to every live [PadState] via [setCoreReadsAnalog]. Called periodically
+     * from [publishPadState] (see [analogPollCounter]) rather than per event,
+     * since this crosses JNI and the digital/analog rule only needs to react
+     * within a handful of frames, not on every single one.
+     */
+    private fun refreshAnalogQueried() {
+        val mask = bridge.analogQueriedPorts()
+        for (port in 0 until NativeControllerPortRegistry.MAX_PORTS) {
+            setCoreReadsAnalog(port, (mask shr port) and 1 != 0)
+        }
     }
 
     /** Available before gameplay so Dart can load all profile mappings first. */
@@ -85,9 +129,16 @@ internal class NativePadInput(
         active = value
         clearPadStates(publish = false)
         bridge.resetPadMasks()
+        analogPollCounter = 0
         if (value) {
             val connections = registry.activate(discoverCandidates(logDiagnostics = true))
             for (connection in connections) addPadState(connection)
+            // The design doc notes the first ANALOG query lands in the same
+            // millisecond as content load, so a single refresh shortly after
+            // activation catches it instead of waiting for
+            // ANALOG_POLL_INTERVAL publishes, which may not happen for a
+            // while if nobody is touching a stick yet.
+            handler.postDelayed({ if (active) refreshAnalogQueried() }, ANALOG_POLL_ACTIVATE_DELAY_MS)
         } else {
             registry.deactivate(discoverCandidates())
         }
@@ -199,16 +250,23 @@ internal class NativePadInput(
         // through to Flutter's normal focus handling.
         if (!connection.supported) return connection.isGamepad
         val state = padStates.get(event.deviceId) ?: return true
-        state.stickDirX = stickAxisDirection(
-            event.getAxisValue(MotionEvent.AXIS_X),
-            state.stickDirX,
-        )
-        state.stickDirY = stickAxisDirection(
-            event.getAxisValue(MotionEvent.AXIS_Y),
-            state.stickDirY,
-        )
+
+        // Every axis is read exactly once: getAxisValue is a native call, and
+        // this runs on the UI thread for every motion event of every pad.
+        val rawLx = event.getAxisValue(MotionEvent.AXIS_X)
+        val rawLy = event.getAxisValue(MotionEvent.AXIS_Y)
+        val rawRx = event.getAxisValue(MotionEvent.AXIS_Z)
+        val rawRy = event.getAxisValue(MotionEvent.AXIS_RZ)
+
+        // The digital/analog rule: the stick keeps feeding the d-pad
+        // conversion only until the core has queried analog on this port;
+        // the hat always feeds digital, unconditionally, below.
+        if (!state.coreReadsAnalog) {
+            state.stickDirX = stickAxisDirection(rawLx, state.stickDirX)
+            state.stickDirY = stickAxisDirection(rawLy, state.stickDirY)
+        }
         // The hat wins while it is held; the stick supplies the direction the
-        // rest of the time.
+        // rest of the time (when it is still allowed to, see above).
         val hatX = direction(event.getAxisValue(MotionEvent.AXIS_HAT_X))
             .takeIf { it != 0 } ?: state.stickDirX
         val hatY = direction(event.getAxisValue(MotionEvent.AXIS_HAT_Y))
@@ -217,10 +275,43 @@ internal class NativePadInput(
         applyMotionBit(state, RETRO_RIGHT, hatX == 1)
         applyMotionBit(state, RETRO_UP, hatY == -1)
         applyMotionBit(state, RETRO_DOWN, hatY == 1)
-        applyMotionBit(state, RETRO_L2, event.getAxisValue(MotionEvent.AXIS_LTRIGGER) >= AXIS_THRESHOLD)
-        applyMotionBit(state, RETRO_R2, event.getAxisValue(MotionEvent.AXIS_RTRIGGER) >= AXIS_THRESHOLD)
-        publishMask(state)
+
+        val triggerAxes = triggerAxesFor(event.deviceId, event.device)
+        val leftTrigger = event.getAxisValue(triggerAxes.left)
+        val rightTrigger = event.getAxisValue(triggerAxes.right)
+        applyMotionBit(state, RETRO_L2, leftTrigger >= AXIS_THRESHOLD)
+        applyMotionBit(state, RETRO_R2, rightTrigger >= AXIS_THRESHOLD)
+
+        // Packed into a Long rather than a Pair: this is per motion event on
+        // every pad, and a Pair would be a heap allocation each time.
+        val left = analogAxisPair(rawLx, rawLy)
+        val right = analogAxisPair(rawRx, rawRy)
+        publishPadState(
+            state,
+            axisX(left), axisY(left),
+            axisX(right), axisY(right),
+            analogTrigger(leftTrigger), analogTrigger(rightTrigger),
+        )
         return true
+    }
+
+    /**
+     * Resolves and caches, once per device, which axis constants actually
+     * carry left/right trigger pressure. Cleared on device removal/change so
+     * a replacement device under the same id is re-probed rather than
+     * inheriting a stale resolution.
+     */
+    private fun triggerAxesFor(deviceId: Int, device: InputDevice?): TriggerAxes {
+        triggerAxisCache.get(deviceId)?.let { return it }
+        val resolved = if (device != null) {
+            TriggerAxisResolver.resolve { axis ->
+                device.getMotionRange(axis, InputDevice.SOURCE_JOYSTICK) != null
+            }
+        } else {
+            TriggerAxes(MotionEvent.AXIS_LTRIGGER, MotionEvent.AXIS_RTRIGGER)
+        }
+        triggerAxisCache.put(deviceId, resolved)
+        return resolved
     }
 
     // A pad returning under a new id leaves the old id's bits latched if its
@@ -245,6 +336,7 @@ internal class NativePadInput(
         val connection = registry.remove(deviceId) ?: return
         padStates.get(deviceId)?.let { clearPadState(it, publish = active) }
         padStates.remove(deviceId)
+        triggerAxisCache.remove(deviceId)
         // No promotion pass here: reallocating would move live players.
         if (captureConnectionId == connection.connectionId) setCapture(false, null)
         if (active) bridge.setControllerCount(registry.assignedCount(), force = true)
@@ -257,6 +349,9 @@ internal class NativePadInput(
         }
         val previous = registry.connection(deviceId)
         val connection = registry.addOrUpdate(candidate)
+        // A device can re-enumerate with a different HID descriptor under the
+        // same id; re-probe trigger axes rather than trusting a stale cache.
+        triggerAxisCache.remove(deviceId)
         if (previous?.profileId != connection.profileId) {
             padStates.get(deviceId)?.let { clearPadState(it, publish = active) }
             padStates.remove(deviceId)
@@ -325,6 +420,12 @@ internal class NativePadInput(
         state.sentMask = 0
         state.stickDirX = 0
         state.stickDirY = 0
+        state.analogLx = 0
+        state.analogLy = 0
+        state.analogRx = 0
+        state.analogRy = 0
+        state.trigL = 0
+        state.trigR = 0
         val combined = updateComposedMask(state)
         if (publish) bridge.onPad(state.port, combined)
     }
@@ -350,6 +451,43 @@ internal class NativePadInput(
         state.sentMask = desired
         bridge.onPad(state.port, updateComposedMask(state))
     }
+
+    /**
+     * Analog counterpart of [publishMask]: sends through
+     * [LibretroBridge.onPadState] instead of the mask-only path, but only
+     * when the mask changed or an analog value moved by more than
+     * [ANALOG_SEND_EPSILON], so a resting stick does not cross JNI on every
+     * motion event.
+     */
+    private fun publishPadState(state: PadState, lx: Int, ly: Int, rx: Int, ry: Int, trigL: Int, trigR: Int) {
+        val desiredMask = state.keyMask or state.motionMask or state.pulseMask
+        val maskChanged = desiredMask != state.sentMask
+        val analogChanged = analogMoved(lx, state.analogLx) || analogMoved(ly, state.analogLy) ||
+            analogMoved(rx, state.analogRx) || analogMoved(ry, state.analogRy) ||
+            analogMoved(trigL, state.trigL) || analogMoved(trigR, state.trigR)
+        state.analogLx = lx
+        state.analogLy = ly
+        state.analogRx = rx
+        state.analogRy = ry
+        state.trigL = trigL
+        state.trigR = trigR
+        if (!maskChanged && !analogChanged) return
+        val combined = if (maskChanged) {
+            state.sentMask = desiredMask
+            updateComposedMask(state)
+        } else {
+            maskComposer.combined(state.port)
+        }
+        bridge.onPadState(state.port, combined, lx, ly, rx, ry, trigL, trigR)
+
+        analogPollCounter++
+        if (analogPollCounter >= ANALOG_POLL_INTERVAL) {
+            analogPollCounter = 0
+            refreshAnalogQueried()
+        }
+    }
+
+    private fun analogMoved(new: Int, old: Int): Boolean = abs(new - old) > ANALOG_SEND_EPSILON
 
     private fun updateComposedMask(state: PadState): Int =
         if (state === keyboardState) maskComposer.setKeyboard(state.sentMask)
@@ -437,10 +575,38 @@ internal class NativePadInput(
         // previous value to hold on to. Hat axes are stateless.
         var stickDirX: Int = 0,
         var stickDirY: Int = 0,
+        // Last-sent analog state, int16 range (-32768..32767 for axes,
+        // 0..0x7fff for triggers). Used both as the value forwarded to
+        // lh_set_pad_state and as the baseline analogMoved diffs against.
+        var analogLx: Int = 0,
+        var analogLy: Int = 0,
+        var analogRx: Int = 0,
+        var analogRy: Int = 0,
+        var trigL: Int = 0,
+        var trigR: Int = 0,
+        // Set once the host reports the running core queried RETRO_DEVICE_ANALOG
+        // on this port; see setCoreReadsAnalog. Resets to false whenever a new
+        // PadState is constructed, i.e. every game load.
+        var coreReadsAnalog: Boolean = false,
     )
 
     private companion object {
         const val AXIS_THRESHOLD = 0.5f
+        // ~1/255 in int16 terms (32767/255 ≈ 128): the finest step the pads
+        // actually report, per the design doc's measured 8-bit resolution.
+        // A resting stick's rounding noise stays under this, a real move does
+        // not, so this is what gates crossing JNI on every motion event.
+        const val ANALOG_SEND_EPSILON = 128
+        // Every 64th publishPadState call re-reads analogQueriedPorts. Chosen
+        // to be cheap even at Gauntlet's measured ~56 ANALOG queries/frame
+        // (an unrelated, much hotter path) while still reacting within a
+        // fraction of a second of real stick movement.
+        const val ANALOG_POLL_INTERVAL = 64
+        // Delay before the one-shot refresh in setActive(true); the design
+        // doc measured the first ANALOG query landing in the same
+        // millisecond as content load, so this just needs to be comfortably
+        // after that, not tuned tightly.
+        const val ANALOG_POLL_ACTIVATE_DELAY_MS = 500L
         const val START_HOLD_MS = 1500L
         const val START_PULSE_MS = 34L
         const val KEYBOARD_DEVICE_ID = -1
@@ -599,5 +765,73 @@ internal fun stickAxisDirection(value: Float, previous: Int): Int = when {
     else -> 0
 }
 
-internal const val STICK_ENGAGE = 0.35f
+internal const val STICK_ENGAGE = 0.40f
 internal const val STICK_RELEASE = 0.20f
+
+/** Analog dead zone, deliberately minimal: ~5 steps of the 1/255 the pads
+ *  actually report, vs the 0.125 they declare. See the design doc. */
+internal const val ANALOG_DEAD_ZONE = 0.02f
+
+/**
+ * Radial dead zone plus rescale: values inside the dead zone are exactly
+ * centre, and everything outside is rescaled so full deflection still reaches
+ * the rails instead of clipping short. Returns the pair as packed ints in
+ * -32767..32767.
+ */
+internal fun analogAxisPair(rawX: Float, rawY: Float): Long {
+    val magnitude = hypot(rawX, rawY)
+    if (magnitude <= ANALOG_DEAD_ZONE || magnitude == 0f) return packAxes(0, 0)
+    val scale = ((magnitude - ANALOG_DEAD_ZONE) / (1f - ANALOG_DEAD_ZONE)) / magnitude
+    val x = (rawX * scale).coerceIn(-1f, 1f)
+    val y = (rawY * scale).coerceIn(-1f, 1f)
+    return packAxes((x * 32767f).roundToInt(), (y * 32767f).roundToInt())
+}
+
+/**
+ * X and Y packed into one Long so the conversion stays allocation-free on the
+ * per-motion-event path. A Pair would be a heap object per event per pad, which
+ * is real GC pressure on the low-end boxes this runs on.
+ */
+internal fun packAxes(x: Int, y: Int): Long = (x.toLong() shl 32) or (y.toLong() and 0xffffffffL)
+internal fun axisX(packed: Long): Int = (packed shr 32).toInt()
+internal fun axisY(packed: Long): Int = packed.toInt()
+
+/** Trigger pressure 0..1 -> 0..0x7fff, with the same dead zone applied. */
+internal fun analogTrigger(raw: Float): Int {
+    if (raw <= ANALOG_DEAD_ZONE) return 0
+    val scale = ((raw - ANALOG_DEAD_ZONE) / (1f - ANALOG_DEAD_ZONE)).coerceIn(0f, 1f)
+    return (scale * 0x7fff).roundToInt()
+}
+
+/** Which axis constants carry left/right trigger pressure for a device. */
+internal data class TriggerAxes(val left: Int, val right: Int)
+
+/**
+ * Discovers which axis a device actually carries trigger pressure on, rather
+ * than assuming AXIS_LTRIGGER/AXIS_RTRIGGER. Measured 2026-08-20: a Logitech
+ * F710 and F310 both *declare* those two axes but never send a changing
+ * value on them -- the live values arrive on AXIS_BRAKE/AXIS_GAS instead. See
+ * the design doc's "Platform layer" section.
+ *
+ * [declared] answers "does the device advertise this axis" (backed by
+ * `InputDevice.getMotionRange(axis, SOURCE_JOYSTICK) != null` in production);
+ * a fake is used in tests. AXIS_Z/AXIS_RZ are included as a last-resort
+ * fallback per the design but are excluded here since onMotion always binds
+ * them to the right stick.
+ */
+internal object TriggerAxisResolver {
+    private val LEFT_CANDIDATES = intArrayOf(
+        MotionEvent.AXIS_LTRIGGER, MotionEvent.AXIS_BRAKE, MotionEvent.AXIS_Z)
+    private val RIGHT_CANDIDATES = intArrayOf(
+        MotionEvent.AXIS_RTRIGGER, MotionEvent.AXIS_GAS, MotionEvent.AXIS_RZ)
+    private val STICK_AXES =
+        setOf(MotionEvent.AXIS_X, MotionEvent.AXIS_Y, MotionEvent.AXIS_Z, MotionEvent.AXIS_RZ)
+
+    fun resolve(declared: (Int) -> Boolean): TriggerAxes {
+        val left = LEFT_CANDIDATES.firstOrNull { declared(it) && it !in STICK_AXES }
+            ?: MotionEvent.AXIS_LTRIGGER
+        val right = RIGHT_CANDIDATES.firstOrNull { declared(it) && it !in STICK_AXES }
+            ?: MotionEvent.AXIS_RTRIGGER
+        return TriggerAxes(left, right)
+    }
+}
