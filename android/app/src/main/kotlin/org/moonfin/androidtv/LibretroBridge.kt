@@ -442,6 +442,40 @@ class LibretroBridge(
     }
   }
 
+  /**
+   * Sibling of [onPad] that also carries the analog axes and trigger
+   * pressures, for callers driving the analog passthrough
+   * (`lh_set_pad_state`) rather than the mask-only path. Mirrors onPad's mask
+   * bookkeeping (physicalMasks/publishedMasks/the overlay button-edge
+   * fan-out) but always ends in one nativeSetPadState call instead of
+   * applyMask's nativeSetMask, so a mask change and its analog values cross
+   * JNI together rather than as two separate calls. Callers keep using
+   * [onPad] for a mask-only update.
+   */
+  fun onPadState(port: Int, mask: Int, lx: Int, ly: Int, rx: Int, ry: Int, l2: Int, r2: Int) {
+    if (!isValidPort(port)) return
+    val changed = physicalMasks[port] xor mask
+    physicalMasks[port] = mask
+    val desired = physicalMasks[port] or pulseMasks[port] or methodMasks[port]
+    publishedMasks[port] = desired
+    nativeSetPadState(port, desired, lx, ly, rx, ry, l2, r2)
+    if (!overlayOpen || changed == 0) return
+    var remaining = changed
+    while (remaining != 0) {
+      val bit = remaining and -remaining
+      remaining = remaining and bit.inv()
+      val index = Integer.numberOfTrailingZeros(bit)
+      eventSink?.success(
+        mapOf(
+          "event" to "button",
+          "index" to index,
+          "pressed" to (mask and bit != 0),
+          "port" to port,
+        ),
+      )
+    }
+  }
+
   fun onMenu(port: Int = 0) {
     eventSink?.success(mapOf("event" to "menuPressed", "port" to port))
   }
@@ -571,6 +605,34 @@ class LibretroBridge(
   private fun parseInputDescriptors(entries: Array<String>): List<NativeInputDescriptor> =
     NativeInputDescriptorParser.parse(entries)
 
+  /**
+   * Bitmask of ports on which the loaded core has queried RETRO_DEVICE_ANALOG
+   * since content was loaded (bit N = port N). Drives
+   * [NativePadInput]'s digital/analog rule: a port stops getting stick->D-pad
+   * conversion once its bit is set. Returns 0 (no port queried) when no core
+   * is loaded, same guard as [refreshControllerTypes]/[refreshInputDescriptors].
+   */
+  fun analogQueriedPorts(): Int {
+    if (!isActive || loadedCore == null) return 0
+    return nativeAnalogQueriedPorts()
+  }
+
+  private external fun nativeAnalogQueriedPorts(): Int
+
+  /**
+   * Bitmask of ports the current game describes ANALOG controls for, from
+   * RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS (bit N = port N). Drives
+   * [NativePadInput]'s digital\analog rule: a port stops getting stick->D-pad
+   * conversion once its bit is set. Returns 0 (no analog descriptors) when no
+   * core is loaded, same guard as [analogQueriedPorts]/[refreshInputDescriptors].
+   */
+  fun analogDescriptorPorts(): Int {
+    if (!isActive || loadedCore == null) return 0
+    return nativeAnalogDescriptorPorts()
+  }
+
+  private external fun nativeAnalogDescriptorPorts(): Int
+
   private external fun nativeLoad(
     core: String, corePath: String, romPath: String, systemDir: String,
     saveDir: String, gameId: String, optKeys: Array<String>,
@@ -584,6 +646,8 @@ class LibretroBridge(
   private external fun nativeStop()
   private external fun nativeSetFastForward(factor: Int)
   private external fun nativeSetMask(port: Int, mask: Int)
+  private external fun nativeSetPadState(
+    port: Int, mask: Int, lx: Int, ly: Int, rx: Int, ry: Int, l2: Int, r2: Int)
   private external fun nativeReadAudio(buffer: ShortArray, frames: Int): Int
   private external fun nativeSaveState(): ByteArray?
   private external fun nativeLoadState(data: ByteArray): Boolean
