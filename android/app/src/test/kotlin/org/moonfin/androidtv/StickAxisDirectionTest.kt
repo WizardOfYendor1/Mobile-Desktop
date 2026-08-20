@@ -12,14 +12,14 @@ class StickAxisDirectionTest {
     @Test
     fun `the first half of the travel is no longer dead`() {
         // The old single 0.5 threshold ignored this; half the stick did nothing.
-        assertEquals(1, stickAxisDirection(0.4f, 0))
-        assertEquals(-1, stickAxisDirection(-0.4f, 0))
+        assertEquals(1, stickAxisDirection(0.45f, 0))
+        assertEquals(-1, stickAxisDirection(-0.45f, 0))
     }
 
     @Test
     fun `a small deflection still does not engage`() {
-        assertEquals(0, stickAxisDirection(0.3f, 0))
-        assertEquals(0, stickAxisDirection(-0.3f, 0))
+        assertEquals(0, stickAxisDirection(0.35f, 0))
+        assertEquals(0, stickAxisDirection(-0.35f, 0))
     }
 
     @Test
@@ -41,8 +41,8 @@ class StickAxisDirectionTest {
     @Test
     fun `hysteresis never holds the opposite direction`() {
         // Crossing centre must flip cleanly rather than latching the old side.
-        assertEquals(-1, stickAxisDirection(-0.4f, 1))
-        assertEquals(1, stickAxisDirection(0.4f, -1))
+        assertEquals(-1, stickAxisDirection(-0.45f, 1))
+        assertEquals(1, stickAxisDirection(0.45f, -1))
     }
 
     @Test
