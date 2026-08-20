@@ -3,6 +3,7 @@ package org.moonfin.androidtv
 import android.content.Context
 import android.hardware.input.InputManager
 import android.os.Handler
+import android.util.Log
 import android.util.SparseArray
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -199,6 +200,7 @@ internal class NativePadInput(
         // through to Flutter's normal focus handling.
         if (!connection.supported) return connection.isGamepad
         val state = padStates.get(event.deviceId) ?: return true
+        AxisDiagnostics.sample(event)
         state.stickDirX = stickAxisDirection(
             event.getAxisValue(MotionEvent.AXIS_X),
             state.stickDirX,
@@ -289,7 +291,10 @@ internal class NativePadInput(
     private fun candidateFor(deviceId: Int, logDiagnostics: Boolean): NativeControllerCandidate? {
         val device = InputDevice.getDevice(deviceId) ?: return null
         val traits = NativeInputDeviceClassifier.traitsOf(device)
-        if (logDiagnostics) NativeInputDeviceClassifier.logDiagnostics(device, traits)
+        if (logDiagnostics) {
+            NativeInputDeviceClassifier.logDiagnostics(device, traits)
+            AxisDiagnostics.logRanges(device)
+        }
         val deviceClass = NativeInputDeviceClassifier.classify(traits) ?: return null
         val identity = AndroidGamepadIdentity.of(device)
         return NativeControllerCandidate(
@@ -599,5 +604,78 @@ internal fun stickAxisDirection(value: Float, previous: Int): Int = when {
     else -> 0
 }
 
-internal const val STICK_ENGAGE = 0.35f
+internal const val STICK_ENGAGE = 0.40f
 internal const val STICK_RELEASE = 0.20f
+
+/**
+ * TEMPORARY DIAGNOSTICS -- remove before this ships.
+ *
+ * Answers one question the INPUT-QUERY logging could not: do these axes carry
+ * genuinely high-resolution values, or only switch positions? A hat, or a stick
+ * digitised by the pad's own MODE button, yields 3 distinct values; a real
+ * potentiometer yields hundreds.
+ */
+private object AxisDiagnostics {
+    private const val TAG = "moonfin_input"
+
+    private val AXES = intArrayOf(
+        MotionEvent.AXIS_X,
+        MotionEvent.AXIS_Y,
+        MotionEvent.AXIS_Z,
+        MotionEvent.AXIS_RZ,
+        MotionEvent.AXIS_HAT_X,
+        MotionEvent.AXIS_HAT_Y,
+        MotionEvent.AXIS_LTRIGGER,
+        MotionEvent.AXIS_RTRIGGER,
+    )
+
+    private class Stat {
+        val seen = HashSet<Int>()
+        var min = Float.MAX_VALUE
+        var max = -Float.MAX_VALUE
+        var last = 0f
+    }
+
+    private val stats = HashMap<String, Stat>()
+    private var events = 0
+
+    /** What the pad declares, before anything is moved. */
+    fun logRanges(device: InputDevice) {
+        for (axis in AXES) {
+            val range = device.getMotionRange(axis, InputDevice.SOURCE_JOYSTICK)
+            val name = MotionEvent.axisToString(axis)
+            if (range == null) {
+                Log.i(TAG, "AXIS-RANGE ${device.name} $name: absent")
+            } else {
+                Log.i(
+                    TAG,
+                    "AXIS-RANGE ${device.name} $name: min=${range.min} max=${range.max} " +
+                        "flat=${range.flat} fuzz=${range.fuzz} res=${range.resolution}",
+                )
+            }
+        }
+    }
+
+    /** What the pad actually sends. Distinct count is the proof. */
+    fun sample(event: MotionEvent) {
+        val device = event.device?.name ?: "device${event.deviceId}"
+        for (axis in AXES) {
+            val value = event.getAxisValue(axis)
+            val stat = stats.getOrPut("$device:${MotionEvent.axisToString(axis)}") { Stat() }
+            // Quantised to 1/1000 so float noise cannot inflate the distinct count.
+            stat.seen.add((value * 1000f).toInt())
+            if (value < stat.min) stat.min = value
+            if (value > stat.max) stat.max = value
+            stat.last = value
+        }
+        if (++events % 120 != 0) return
+        for ((key, stat) in stats) {
+            if (stat.seen.size <= 1) continue
+            Log.i(
+                TAG,
+                "AXIS-VALUES $key: distinct=${stat.seen.size} " +
+                    "min=${stat.min} max=${stat.max} last=${stat.last}",
+            )
+        }
+    }
+}

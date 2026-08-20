@@ -370,6 +370,20 @@ struct lh_host {
   atomic_uint input_level[LH_MAX_PORTS];
   atomic_uint input_pending[LH_MAX_PORTS];
   uint16_t input_frame[LH_MAX_PORTS];
+
+  // TEMPORARY DIAGNOSTICS -- remove before this ships. Records which
+  // (port, device, index, id) tuples a core actually asks for, to settle
+  // whether "the core queried RETRO_DEVICE_ANALOG" is a usable signal and
+  // whether analog is polled once per frame or many times. Touched only from
+  // the emulation thread (input_state_cb / input_poll_cb), like input_frame,
+  // so plain fields rather than atomics.
+  struct {
+    unsigned port, device, index, id;
+  } diag_seen[96];
+  int diag_seen_count;
+  unsigned diag_analog_queries;
+  unsigned diag_joypad_queries;
+  unsigned diag_frames;
 };
 
 // libretro's callbacks carry no user pointer, so the single live host is global.
@@ -1555,14 +1569,65 @@ static void latch_input(struct lh_host *h) {
 // lh_set_input's comment). Latching here, once per poll, is what fixes that.
 static void RETRO_CALLCONV input_poll_cb(void) {
   struct lh_host *h = g_session;
-  if (h) latch_input(h);
+  if (!h) return;
+  // TEMPORARY DIAGNOSTICS -- remove before this ships. Reports per-frame query
+  // counts every 300 polls (~5s at 60fps): "once per frame" vs "many times per
+  // frame" decides whether analog needs a per-frame snapshot or can be read
+  // live.
+  if (++h->diag_frames >= 300) {
+    diagnostic_log(
+        "INPUT-QUERY rate: over %u frames, joypad=%u analog=%u "
+        "(per frame: joypad=%.1f analog=%.1f), distinct tuples=%d",
+        h->diag_frames, h->diag_joypad_queries, h->diag_analog_queries,
+        (double)h->diag_joypad_queries / (double)h->diag_frames,
+        (double)h->diag_analog_queries / (double)h->diag_frames,
+        h->diag_seen_count);
+    h->diag_frames = 0;
+    h->diag_joypad_queries = 0;
+    h->diag_analog_queries = 0;
+  }
+  latch_input(h);
+}
+
+// TEMPORARY DIAGNOSTICS -- remove before this ships.
+static void diag_note_query(struct lh_host *h, unsigned port, unsigned device,
+                            unsigned index, unsigned id) {
+  if (device == RETRO_DEVICE_ANALOG) {
+    h->diag_analog_queries++;
+  } else if (device == RETRO_DEVICE_JOYPAD) {
+    h->diag_joypad_queries++;
+  }
+  for (int i = 0; i < h->diag_seen_count; i++) {
+    if (h->diag_seen[i].port == port && h->diag_seen[i].device == device &&
+        h->diag_seen[i].index == index && h->diag_seen[i].id == id) {
+      return;
+    }
+  }
+  if (h->diag_seen_count >= (int)(sizeof(h->diag_seen) / sizeof(h->diag_seen[0]))) {
+    return;
+  }
+  h->diag_seen[h->diag_seen_count].port = port;
+  h->diag_seen[h->diag_seen_count].device = device;
+  h->diag_seen[h->diag_seen_count].index = index;
+  h->diag_seen[h->diag_seen_count].id = id;
+  h->diag_seen_count++;
+  const char *kind = device == RETRO_DEVICE_ANALOG    ? "ANALOG"
+                     : device == RETRO_DEVICE_JOYPAD  ? "JOYPAD"
+                     : device == RETRO_DEVICE_MOUSE   ? "MOUSE"
+                     : device == RETRO_DEVICE_KEYBOARD ? "KEYBOARD"
+                     : device == RETRO_DEVICE_LIGHTGUN ? "LIGHTGUN"
+                     : device == RETRO_DEVICE_POINTER ? "POINTER"
+                                                      : "OTHER";
+  diagnostic_log("INPUT-QUERY new: port=%u device=%u (%s) index=%u id=%u",
+                 port, device, kind, index, id);
 }
 
 static int16_t RETRO_CALLCONV input_state_cb(unsigned port, unsigned device,
                                              unsigned index, unsigned id) {
-  (void)index;
   struct lh_host *h = g_session;
-  if (!h || device != RETRO_DEVICE_JOYPAD || port >= LH_MAX_PORTS) return 0;
+  if (!h) return 0;
+  diag_note_query(h, port, device, index, id);
+  if (device != RETRO_DEVICE_JOYPAD || port >= LH_MAX_PORTS) return 0;
   // Latched by input_poll_cb above, not a fresh read: every id read during
   // this frame sees the same snapshot, so composing e.g. up and left from two
   // different instants of the same frame (a torn read) can't happen.
