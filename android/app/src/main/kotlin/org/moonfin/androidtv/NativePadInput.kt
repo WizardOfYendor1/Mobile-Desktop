@@ -3,6 +3,7 @@ package org.moonfin.androidtv
 import android.content.Context
 import android.hardware.input.InputManager
 import android.os.Handler
+import android.util.Log
 import android.util.SparseArray
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -124,6 +125,14 @@ internal class NativePadInput(
     /** Returns true when this key was consumed by the native pad path. */
     fun onKey(event: KeyEvent): Boolean {
         val keyCode = event.keyCode
+        run {
+            val conn = registry.connection(event.deviceId)
+            RoutingDiagnostics.note(
+                "KEY", event.deviceId, event.device?.name ?: "?",
+                "entry code=$keyCode conn=${conn != null} supported=${conn?.supported} " +
+                    "port=${conn?.port} class=${conn?.deviceClass}",
+            )
+        }
         if (keyCode == KeyEvent.KEYCODE_BACK || isVolumeKey(keyCode)) return false
         if (event.repeatCount != 0) return true
 
@@ -190,15 +199,38 @@ internal class NativePadInput(
 
     /** Returns true when this motion event was gameplay-shaped and consumed. */
     fun onMotion(event: MotionEvent): Boolean {
+        val diagName = event.device?.name ?: "?"
         if (event.source and InputDevice.SOURCE_JOYSTICK != InputDevice.SOURCE_JOYSTICK ||
             event.action != MotionEvent.ACTION_MOVE
-        ) return false
+        ) {
+            RoutingDiagnostics.note(
+                "MOTION", event.deviceId, diagName,
+                "rejected-source-or-action src=0x${Integer.toHexString(event.source)} action=${event.action}",
+            )
+            return false
+        }
 
-        val connection = registry.connection(event.deviceId) ?: return false
+        val connection = registry.connection(event.deviceId) ?: run {
+            RoutingDiagnostics.note("MOTION", event.deviceId, diagName, "no-registry-connection")
+            return false
+        }
         // Consume an overflow pad's sticks; let remote touch-nav motion fall
         // through to Flutter's normal focus handling.
-        if (!connection.supported) return connection.isGamepad
-        val state = padStates.get(event.deviceId) ?: return true
+        if (!connection.supported) {
+            RoutingDiagnostics.note(
+                "MOTION", event.deviceId, diagName,
+                "unsupported-no-port consumed=${connection.isGamepad}",
+            )
+            return connection.isGamepad
+        }
+        val state = padStates.get(event.deviceId) ?: run {
+            RoutingDiagnostics.note(
+                "MOTION", event.deviceId, diagName, "no-padstate port=${connection.port}",
+            )
+            return true
+        }
+        RoutingDiagnostics.note("MOTION", event.deviceId, diagName, "handled port=${connection.port}")
+        AxisDiagnostics.sample(event)
         state.stickDirX = stickAxisDirection(
             event.getAxisValue(MotionEvent.AXIS_X),
             state.stickDirX,
@@ -289,7 +321,10 @@ internal class NativePadInput(
     private fun candidateFor(deviceId: Int, logDiagnostics: Boolean): NativeControllerCandidate? {
         val device = InputDevice.getDevice(deviceId) ?: return null
         val traits = NativeInputDeviceClassifier.traitsOf(device)
-        if (logDiagnostics) NativeInputDeviceClassifier.logDiagnostics(device, traits)
+        if (logDiagnostics) {
+            NativeInputDeviceClassifier.logDiagnostics(device, traits)
+            AxisDiagnostics.logRanges(device)
+        }
         val deviceClass = NativeInputDeviceClassifier.classify(traits) ?: return null
         val identity = AndroidGamepadIdentity.of(device)
         return NativeControllerCandidate(
@@ -599,5 +634,101 @@ internal fun stickAxisDirection(value: Float, previous: Int): Int = when {
     else -> 0
 }
 
-internal const val STICK_ENGAGE = 0.35f
+internal const val STICK_ENGAGE = 0.40f
 internal const val STICK_RELEASE = 0.20f
+
+/**
+ * TEMPORARY DIAGNOSTICS -- remove before this ships.
+ *
+ * Answers one question the INPUT-QUERY logging could not: do these axes carry
+ * genuinely high-resolution values, or only switch positions? A hat, or a stick
+ * digitised by the pad's own MODE button, yields 3 distinct values; a real
+ * potentiometer yields hundreds.
+ */
+private object AxisDiagnostics {
+    private const val TAG = "moonfin_input"
+
+    private val AXES = intArrayOf(
+        MotionEvent.AXIS_X,
+        MotionEvent.AXIS_Y,
+        MotionEvent.AXIS_Z,
+        MotionEvent.AXIS_RZ,
+        MotionEvent.AXIS_HAT_X,
+        MotionEvent.AXIS_HAT_Y,
+        MotionEvent.AXIS_LTRIGGER,
+        MotionEvent.AXIS_RTRIGGER,
+    )
+
+    private class Stat {
+        val seen = HashSet<Int>()
+        var min = Float.MAX_VALUE
+        var max = -Float.MAX_VALUE
+        var last = 0f
+    }
+
+    private val stats = HashMap<String, Stat>()
+    private var events = 0
+
+    /** What the pad declares, before anything is moved. */
+    fun logRanges(device: InputDevice) {
+        for (axis in AXES) {
+            val range = device.getMotionRange(axis, InputDevice.SOURCE_JOYSTICK)
+            val name = MotionEvent.axisToString(axis)
+            if (range == null) {
+                Log.i(TAG, "AXIS-RANGE ${device.name} $name: absent")
+            } else {
+                Log.i(
+                    TAG,
+                    "AXIS-RANGE ${device.name} $name: min=${range.min} max=${range.max} " +
+                        "flat=${range.flat} fuzz=${range.fuzz} res=${range.resolution}",
+                )
+            }
+        }
+    }
+
+    /** What the pad actually sends. Distinct count is the proof. */
+    fun sample(event: MotionEvent) {
+        val device = event.device?.name ?: "device${event.deviceId}"
+        for (axis in AXES) {
+            val value = event.getAxisValue(axis)
+            val stat = stats.getOrPut("$device:${MotionEvent.axisToString(axis)}") { Stat() }
+            // Quantised to 1/1000 so float noise cannot inflate the distinct count.
+            stat.seen.add((value * 1000f).toInt())
+            if (value < stat.min) stat.min = value
+            if (value > stat.max) stat.max = value
+            stat.last = value
+        }
+        if (++events % 120 != 0) return
+        for ((key, stat) in stats) {
+            if (stat.seen.size <= 1) continue
+            Log.i(
+                TAG,
+                "AXIS-VALUES $key: distinct=${stat.seen.size} " +
+                    "min=${stat.min} max=${stat.max} last=${stat.last}",
+            )
+        }
+    }
+}
+
+/**
+ * TEMPORARY DIAGNOSTICS -- remove before this ships.
+ *
+ * Logs at the ENTRY of the input handlers, before any guard, so a pad that
+ * enumerates but does nothing can be told apart: either no lines appear for it
+ * at all (the events never reach us) or a line names the guard that dropped it.
+ * Deduplicated by outcome string, so it is bounded no matter the event rate.
+ */
+internal object RoutingDiagnostics {
+    private const val TAG = "moonfin_input"
+    private val seen = HashSet<String>()
+    private val counts = LinkedHashMap<String, Int>()
+    private var events = 0
+
+    fun note(kind: String, deviceId: Int, deviceName: String, outcome: String) {
+        val key = "$kind dev=$deviceId '$deviceName' -> $outcome"
+        counts[key] = (counts[key] ?: 0) + 1
+        if (seen.add(key)) Log.i(TAG, "ROUTE new: $key")
+        if (++events % 240 != 0) return
+        for ((k, v) in counts) Log.i(TAG, "ROUTE count: $k  x$v")
+    }
+}

@@ -682,6 +682,11 @@ class MainActivity : AudioServiceActivity(), GamepadsCompatibleActivity {
     // of the dispatch chain before any view sees it.
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val pad = nativePad
+        // TEMPORARY DIAGNOSTICS -- remove before this ships.
+        RoutingDiagnostics.note(
+            "ACT-KEY", event.deviceId, event.device?.name ?: "?",
+            "padActive=${pad?.active} code=${event.keyCode} src=0x${Integer.toHexString(event.source)}",
+        )
         if (pad != null && pad.active && pad.onKey(event)) return true
         if (gameInputRouter.onKeyEvent(event)) return true
         // keyHandler is the gamepads_android plugin's registration
@@ -702,6 +707,11 @@ class MainActivity : AudioServiceActivity(), GamepadsCompatibleActivity {
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
         val pad = nativePad
+        // TEMPORARY DIAGNOSTICS -- remove before this ships.
+        RoutingDiagnostics.note(
+            "ACT-MOTION", event.deviceId, event.device?.name ?: "?",
+            "padActive=${pad?.active} action=${event.action} src=0x${Integer.toHexString(event.source)}",
+        )
         if (pad != null && pad.active && pad.onMotion(event)) return true
         if (gameInputRouter.onMotionEvent(event)) return true
         if (motionHandler?.invoke(event) == true) {
