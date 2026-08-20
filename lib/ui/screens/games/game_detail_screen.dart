@@ -271,6 +271,14 @@ class _GameDetailScreenState extends State<GameDetailScreen> with RouteAware {
         _loading = false;
       });
 
+      // Land on Play/Continue. The button's own autofocus only wins when
+      // nothing else holds focus by the time it is built, which depends on how
+      // long the load took.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _routeIsCovered) return;
+        _primaryActionFocusNode.requestFocus();
+      });
+
       unawaited(_initializeArtworkDataSource(game));
 
       // Save state and related games are enrichments; a failure here must not block the
