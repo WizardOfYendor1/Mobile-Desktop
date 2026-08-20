@@ -3,10 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:gamepads/gamepads.dart';
 
+import '../../../util/focus/gamepad/controller_diagnostics.dart';
+import '../../../util/focus/gamepad/controller_diagnostics_source.dart';
 import '../../../util/focus/gamepad/controller_mapping_capture.dart';
 import '../../../util/core_input_descriptors.dart';
 import '../../../util/native_controller_mapping.dart';
 import '../../../util/native_controller_player_assignments.dart';
+import 'controller_test_panel.dart';
 
 /// A privacy-safe physical controller identifier. On Android it comes from the
 /// gamepad channel and is stable across reconnects and never a raw descriptor;
@@ -143,6 +146,10 @@ class NativeControllerMappingScreenState
   late NativeControllerMapping _mapping;
   final ControllerMappingCapture? _capture =
       ControllerMappingCapture.forPlatform();
+  final ControllerDiagnosticsSource? _diagnostics =
+      ControllerDiagnosticsSource.forPlatform();
+  bool _testingController = false;
+  ControllerDiagnosticsSnapshot? _diagnosticsSnapshot;
 
   NativeControllerDevice? get _device =>
       widget.devices.isEmpty ? null : widget.devices[_deviceIndex];
@@ -172,7 +179,13 @@ class NativeControllerMappingScreenState
   int get _buttonStartRow =>
       _controllerTypeRow + (_showsControllerTypeSelector ? 1 : 0);
   int get _copyRow => _buttonStartRow + RetroPadButton.values.length;
-  int get _resetRow => _copyRow + 1;
+
+  /// Hidden entirely rather than shown disabled when no platform source
+  /// exists (Android for now, Apple permanently) -- a dead row invites the
+  /// user to wonder why it does nothing.
+  bool get _showsTestRow => _diagnostics != null;
+  int get _testRow => _copyRow + 1;
+  int get _resetRow => _testRow + (_showsTestRow ? 1 : 0);
   int get _rowCount => _resetRow + 1;
   int get _copyConfirmRow => 0;
   int get _copyCancelRow => 1;
@@ -194,10 +207,15 @@ class NativeControllerMappingScreenState
     super.initState();
     _loadSelectedDevice();
     _capture?.attach(_onCaptured);
+    _diagnostics?.attach(_onDiagnosticsSnapshot);
   }
 
   @override
   void dispose() {
+    // Nothing may stream while the panel is closed -- end() before dispose(),
+    // mirroring the design's lifecycle requirement.
+    unawaited(_diagnostics?.end());
+    _diagnostics?.dispose();
     _capture?.dispose();
     _scroll.dispose();
     super.dispose();
@@ -255,6 +273,10 @@ class NativeControllerMappingScreenState
   /// returning to the button list. It's also the only way out of an armed
   /// capture, since a pad press while armed binds rather than cancels.
   bool handleBack() {
+    if (_testingController) {
+      _closeTestPanel();
+      return true;
+    }
     if (_capturing != null) {
       setState(() => _capturing = null);
       unawaited(_capture?.end());
@@ -278,6 +300,13 @@ class NativeControllerMappingScreenState
   /// Called by the native player screen for standard RetroPad overlay input.
   void handleButton(int index, bool pressed) {
     if (!pressed || _capturing != null) return;
+    if (_testingController) {
+      // The panel is read-only monitoring, not another menu level: every
+      // button except Back is swallowed here rather than reaching the core,
+      // per the design's second invariant.
+      if (index == 8) _closeTestPanel();
+      return;
+    }
     if (_choosingControllerType) {
       switch (index) {
         case 4:
@@ -405,6 +434,10 @@ class NativeControllerMappingScreenState
       _beginCopy();
       return;
     }
+    if (_showsTestRow && _selected == _testRow) {
+      _beginTestController();
+      return;
+    }
     if (_selected == _rowCount - 1) {
       _reset();
       return;
@@ -424,6 +457,30 @@ class NativeControllerMappingScreenState
     unawaited(
       widget.onMappingChanged(device.id, NativeControllerMapping.empty),
     );
+  }
+
+  void _onDiagnosticsSnapshot(ControllerDiagnosticsSnapshot snapshot) {
+    if (!mounted) return;
+    setState(() => _diagnosticsSnapshot = snapshot);
+  }
+
+  void _beginTestController() {
+    final device = _device;
+    final diagnostics = _diagnostics;
+    if (device == null || diagnostics == null) return;
+    setState(() {
+      _testingController = true;
+      _diagnosticsSnapshot = null;
+    });
+    unawaited(diagnostics.begin(device.runtimeId));
+  }
+
+  void _closeTestPanel() {
+    setState(() {
+      _testingController = false;
+      _diagnosticsSnapshot = null;
+    });
+    unawaited(_diagnostics?.end());
   }
 
   void _beginCopy() {
@@ -635,6 +692,20 @@ class NativeControllerMappingScreenState
       );
     }
 
+    if (_testingController) {
+      final device = _device;
+      return Flexible(
+        child: SingleChildScrollView(
+          controller: _scroll,
+          child: ControllerTestPanel(
+            snapshot: _diagnosticsSnapshot,
+            deviceName: device?.name ?? 'Controller',
+            port: device?.port,
+          ),
+        ),
+      );
+    }
+
     if (_confirmingCopy) {
       final source = _device;
       return Flexible(
@@ -798,6 +869,18 @@ class NativeControllerMappingScreenState
               onTap: () {
                 setState(() => _selected = index);
                 _beginCopy();
+              },
+            );
+          }
+          if (_showsTestRow && index == _testRow) {
+            return _row(
+              'Test controller',
+              index,
+              subtitle: 'Live axis and button readout',
+              trailing: Icons.chevron_right,
+              onTap: () {
+                setState(() => _selected = index);
+                _beginTestController();
               },
             );
           }

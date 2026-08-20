@@ -137,6 +137,16 @@ lh_host *lh_create(lh_output_format fmt, lh_callbacks cb);
 // [0, LH_MAX_PORTS) is ignored.
 void lh_set_input(lh_host *host, int port, uint16_t mask);
 
+// Whole-pad state in one call: the digital mask plus the analog axes and
+// trigger pressures. One call rather than several keeps the digital and analog
+// stores adjacent, so a poll rarely lands between them, and halves the
+// per-event platform-boundary crossings.
+//
+// Axes are -32768..32767; triggers are 0..0x7fff.
+void lh_set_pad_state(lh_host *host, int port, uint16_t mask,
+                      int16_t lx, int16_t ly, int16_t rx, int16_t ry,
+                      uint16_t l2, uint16_t r2);
+
 // Loads [core_path] and [rom_path]. [system_dir] and [save_dir] back the core's
 // directory requests. [game_id] names the SRAM file. [opt_keys]/[opt_vals] seed
 // core options (may be NULL when [opt_count] is 0). Fills [out_info] and returns
@@ -231,6 +241,13 @@ int lh_get_input_descriptor(lh_host *host, int index,
 // retro_set_controller_port_device, or the host can no longer run a job.
 int lh_set_controller_type(lh_host *host, int port, unsigned device);
 
+// Bitmask of ports on which the core has queried RETRO_DEVICE_ANALOG since
+// the current content was loaded. Bit N = port N. Reset to 0 by lh_load and
+// by every internal restart (lh_restart/lh_restart_async), because the
+// design treats this as per-game state, not per-core: the same core can
+// query analog on one piece of content and not on another. Thread-safe.
+unsigned lh_analog_queried_ports(lh_host *host);
+
 // Test-only: drives one input-latch step directly, without a running core or
 // run loop, and reads the value that step produced for [port]. This is the
 // exact same latch step input_poll_cb runs once per real libretro poll (see
@@ -240,6 +257,12 @@ int lh_set_controller_type(lh_host *host, int port, unsigned device);
 // contract; no shipping caller should need these.
 void lh_test_poll_input(lh_host *host);
 uint16_t lh_test_read_input(lh_host *host, int port);
+// Test-only: reads the post-latch analog snapshot ([index] 0=left, 1=right
+// stick; [axis] 0=X, 1=Y) and trigger snapshot ([which] 0=L2, 1=R2) for
+// [port], exactly like lh_test_read_input reads input_frame. See that
+// comment for why these hooks exist.
+int16_t lh_test_read_analog(lh_host *host, int port, int index, int axis);
+uint16_t lh_test_read_trigger(lh_host *host, int port, int which);
 
 #ifdef __cplusplus
 }
