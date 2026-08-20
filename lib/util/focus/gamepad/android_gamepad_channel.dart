@@ -21,6 +21,8 @@ class AndroidGamepadChannel {
   // Handles both onButton and onKeyboard despite the name; not button-only.
   static Future<dynamic> Function(MethodCall)? _emulatorInputHandler;
   static Future<dynamic> Function(MethodCall)? _controllerMappingKeyHandler;
+  static Future<dynamic> Function(MethodCall)? _controllerDiagnosticsAxesHandler;
+  static Future<dynamic> Function(MethodCall)? _controllerDiagnosticsButtonHandler;
   static AndroidStickNavigator? _navigator;
   static bool _installed = false;
 
@@ -87,6 +89,28 @@ class AndroidGamepadChannel {
     Future<dynamic> Function(MethodCall)? handler,
   ) => _controllerMappingKeyHandler = handler;
 
+  /// Arms or disarms monitor mode for the controller test panel. Mirrors
+  /// [setControllerMappingCapture]'s shape: observation only, never binds
+  /// anything native-side. See the design doc's "Placement and lifecycle".
+  static Future<void> setControllerDiagnostics(
+    bool active, {
+    String? connectionId,
+  }) async {
+    if (!PlatformDetection.isAndroid) return;
+    await _channel.invokeMethod('setControllerDiagnostics', {
+      'active': active,
+      'connectionId': ?connectionId,
+    });
+  }
+
+  static void setControllerDiagnosticsAxesHandler(
+    Future<dynamic> Function(MethodCall)? handler,
+  ) => _controllerDiagnosticsAxesHandler = handler;
+
+  static void setControllerDiagnosticsButtonHandler(
+    Future<dynamic> Function(MethodCall)? handler,
+  ) => _controllerDiagnosticsButtonHandler = handler;
+
   /// Tells NativePadInput whether the in-game pause overlay is showing, so
   /// Start switches between its gameplay gesture and overlay navigation, and
   /// LibretroBridge only sends "button" EventChannel messages while paused.
@@ -131,6 +155,10 @@ class AndroidGamepadChannel {
         return _emulatorInputHandler?.call(call);
       case 'onControllerMappingKey':
         return _controllerMappingKeyHandler?.call(call);
+      case 'onControllerDiagnosticsAxes':
+        return _controllerDiagnosticsAxesHandler?.call(call);
+      case 'onControllerDiagnosticsButton':
+        return _controllerDiagnosticsButtonHandler?.call(call);
       case 'onNavigate':
         final args = (call.arguments as Map).cast<String, dynamic>();
         _navigator?.handle(
