@@ -6,6 +6,7 @@ import 'package:moonfin_design/moonfin_design.dart';
 import '../../../util/game_library.dart';
 import '../../../util/game_artwork_cache.dart';
 import '../../../util/focus/dpad_keys.dart';
+import '../../../util/focus/input_mode_tracker.dart';
 import '../../../util/platform_detection.dart';
 import '../bounded_network_image.dart';
 import '../media_card.dart';
@@ -84,7 +85,14 @@ class _GamePosterCardState extends State<GamePosterCard> {
   bool _hovered = false;
   bool _focused = false;
 
-  bool get _active => _hovered || _focused;
+  /// The highlight belongs to the input actually in use. A pointer resting on a
+  /// card would otherwise keep it highlighted for as long as it sits there,
+  /// leaving a second, stationary border while the d-pad moves focus elsewhere.
+  ///
+  /// Keyed on whether a pointer is *live* rather than on [InputModeTracker.of],
+  /// because that stays pinned to keyboard on TV -- which would mean a mouse
+  /// on a TV box could never highlight anything.
+  bool _activeIn(bool pointerLive) => pointerLive ? _hovered : _focused;
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     // Screen-supplied handling (TV back-to-alpha, right-edge stop) wins first,
@@ -133,7 +141,7 @@ class _GamePosterCardState extends State<GamePosterCard> {
 
   @override
   Widget build(BuildContext context) {
-    final active = _active;
+    final active = _activeIn(InputModeTracker.pointerIsLive(context));
     final scale = widget.cardFocusExpansion && active
         ? MediaCard.focusScale
         : 1.0;

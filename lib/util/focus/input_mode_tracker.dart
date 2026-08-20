@@ -16,6 +16,18 @@ class InputModeTracker extends StatefulWidget {
   static bool showFocusVisuals(BuildContext context, bool isFocused) =>
       isFocused && of(context) == InputMode.keyboard;
 
+  /// Whether a pointer is the input being used right now.
+  ///
+  /// Deliberately *not* suppressed on TV the way [of] is. A mouse attached to
+  /// a TV box -- screen mirroring, or a USB mouse -- really is being used, and
+  /// a widget that draws hover state has to know. [of] stays pinned to
+  /// keyboard there so focus visuals can never vanish for a remote user.
+  static bool pointerIsLive(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<_InputModeProvider>()
+          ?.pointerLive ??
+      false;
+
   static InputMode _fallbackMode() =>
       PlatformDetection.isTV ? InputMode.keyboard : InputMode.pointer;
 
@@ -34,6 +46,7 @@ class InputModeTracker extends StatefulWidget {
 
 class _InputModeTrackerState extends State<InputModeTracker> {
   late InputMode _mode;
+  bool _pointerLive = false;
 
   @override
   void initState() {
@@ -55,13 +68,20 @@ class _InputModeTrackerState extends State<InputModeTracker> {
 
   bool _onHardwareKey(KeyEvent event) {
     if (event is KeyDownEvent || event is KeyRepeatEvent) {
+      _setPointerLive(false);
       _setMode(InputMode.keyboard);
     }
     return false;
   }
 
   void _onPointer(PointerEvent event) {
+    _setPointerLive(true);
     _setMode(InputMode.pointer);
+  }
+
+  void _setPointerLive(bool live) {
+    if (_pointerLive == live) return;
+    setState(() => _pointerLive = live);
   }
 
   void _onPointerDown(PointerDownEvent event) {
@@ -89,16 +109,25 @@ class _InputModeTrackerState extends State<InputModeTracker> {
       onPointerDown: _onPointerDown,
       onPointerHover: _onPointer,
       onPointerSignal: _onPointer,
-      child: _InputModeProvider(mode: _mode, child: widget.child),
+      child: _InputModeProvider(
+        mode: _mode,
+        pointerLive: _pointerLive,
+        child: widget.child,
+      ),
     );
   }
 }
 
 class _InputModeProvider extends InheritedWidget {
   final InputMode mode;
-  const _InputModeProvider({required this.mode, required super.child});
+  final bool pointerLive;
+  const _InputModeProvider({
+    required this.mode,
+    required this.pointerLive,
+    required super.child,
+  });
 
   @override
   bool updateShouldNotify(covariant _InputModeProvider oldWidget) =>
-      oldWidget.mode != mode;
+      oldWidget.mode != mode || oldWidget.pointerLive != pointerLive;
 }
