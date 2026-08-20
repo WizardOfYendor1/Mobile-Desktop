@@ -599,5 +599,5 @@ internal fun stickAxisDirection(value: Float, previous: Int): Int = when {
     else -> 0
 }
 
-internal const val STICK_ENGAGE = 0.35f
+internal const val STICK_ENGAGE = 0.40f
 internal const val STICK_RELEASE = 0.20f
