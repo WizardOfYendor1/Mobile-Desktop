@@ -10,6 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:server_core/server_core.dart';
 
+import '../../navigation/destinations.dart';
 import '../../widgets/adaptive/adaptive_glass.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../data/services/retro_artwork/retro_artwork_activity_gate.dart';
@@ -561,6 +562,14 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
           null,
           _cancelExitConfirmation,
         ),
+        // Not localized yet: adding an .arb key regenerates every locale file,
+        // so this matches the native player's untranslated exit actions.
+        _OverlayItem(
+          Icons.save_outlined,
+          'Save & exit',
+          null,
+          _saveAndExit,
+        ),
         _OverlayItem(Icons.close, l?.exit ?? 'Exit', null, _exit, danger: true),
       ];
     }
@@ -861,6 +870,23 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
     _closeOverlay();
   }
 
+  /// Leaves only once the state is stored. Exiting on a failed save is the
+  /// exact outcome the exit warning exists to prevent, so a failure keeps the
+  /// game running and says so.
+  Future<void> _saveAndExit() async {
+    var saved = false;
+    try {
+      saved = await _saveState();
+    } catch (_) {
+      saved = false;
+    }
+    if (saved) {
+      await _exit();
+      return;
+    }
+    if (mounted) _showTransientMessage('Could not save state. Still playing.');
+  }
+
   Future<void> _loadAction() async {
     final games = _client.gamesApi;
     if (games != null) {
@@ -913,7 +939,10 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
   /// already wraps this in its own try/timeout, and `_saveAction` (the menu
   /// caller) needs to see failures so it can surface them instead of silently
   /// looking like a successful save.
-  Future<void> _saveState() async {
+  /// True only when a state actually reached the server. Every early return
+  /// here is a silent "no save happened", so callers that gate on it must not
+  /// treat a skip as success.
+  Future<bool> _saveState() async {
     final controller = _controller;
     final games = _client.gamesApi;
     // Every one of these is a silent "no save happened", and the user is told
@@ -926,7 +955,7 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
         'controller=${controller != null}, api=${games != null}, '
         'emulatorReady=$_emulatorReady',
       );
-      return;
+      return false;
     }
 
     Object? value;
@@ -941,7 +970,7 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
       // runs on, and a throw here would otherwise be swallowed whole by
       // _persistOnExit's catch.
       debugPrint('[GameEmulatorScreen] Save state read failed: $error');
-      return;
+      return false;
     }
 
     if (value is! String || value.isEmpty) {
@@ -949,7 +978,7 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
         '[GameEmulatorScreen] Save state empty; nothing persisted '
         '(moonfinGetState returned ${value == null ? 'null' : value.runtimeType})',
       );
-      return;
+      return false;
     }
     final bytes = base64.decode(value);
     await games.putSave(
@@ -957,6 +986,7 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
       bytes,
     );
     debugPrint('[GameEmulatorScreen] Save state persisted: ${bytes.length} B');
+    return true;
   }
 
   /// Reads EmulatorJS's settings out of the WebView and syncs them to the server (per user).
@@ -998,7 +1028,15 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
     } catch (_) {}
     await _restoreSystemUi();
     _releaseScreensaverBlock();
-    if (mounted) context.pop();
+    if (!mounted) return;
+    // Popping the last route empties the navigator and finishes the activity;
+    // MainActivity.onDestroy then calls Process.killProcess, killing the app
+    // instead of returning to the library.
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(Destinations.home);
+    }
   }
 
   Future<void> _persistOnExit() async {

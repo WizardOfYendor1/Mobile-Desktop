@@ -28,21 +28,82 @@ enum RetroPadButton {
   final String label;
 }
 
+/// Libretro's generic controller type. Leaving a port on this type asks the
+/// core to use its own default layout rather than assuming an advertised entry
+/// is the default.
+const retroDeviceJoypad = 1;
+
+/// One controller type advertised by the active libretro core for a port.
+class CoreControllerType {
+  const CoreControllerType({
+    required this.port,
+    required this.id,
+    required this.label,
+  });
+
+  final int port;
+  final int id;
+  final String label;
+
+  factory CoreControllerType.fromMap(Map<String, dynamic> map) {
+    return CoreControllerType(
+      port: (map['port'] as num?)?.toInt() ?? -1,
+      id: (map['id'] as num?)?.toInt() ?? retroDeviceJoypad,
+      label: map['label']?.toString() ?? 'Unknown controller type',
+    );
+  }
+
+  bool get isCoreDefault => id == retroDeviceJoypad;
+
+  /// The first UI pass intentionally supports generic joypads plus the three
+  /// FBNeo layouts we can drive through the existing Android RetroPad path.
+  /// Libretro subtype ids are core-specific, so an identical numeric id from a
+  /// different core is not presumed compatible.
+  bool isSupportedForCore(String coreId) {
+    if (isCoreDefault) return true;
+    return coreId == 'fbneo' && _fbNeoControllerTypeIds.contains(id);
+  }
+}
+
+const Set<int> _fbNeoControllerTypeIds = {5, 261, 517};
+
 /// Custom physical-keycode bindings for one controller. Missing bindings keep
 /// MainActivity's established RetroPad layout as their default.
 class NativeControllerMapping {
-  const NativeControllerMapping(this.keycodeToButton);
+  const NativeControllerMapping(
+    this.keycodeToButton, {
+    this.controllerTypesByCore = const {},
+  });
 
   static const empty = NativeControllerMapping({});
 
   final Map<int, RetroPadButton> keycodeToButton;
 
+  /// Explicit alternate layouts by canonical libretro core id. An absent entry
+  /// means [retroDeviceJoypad], i.e. Auto (Core default).
+  final Map<String, int> controllerTypesByCore;
+
+  /// Returns an independent immutable snapshot of this mapping.
+  ///
+  /// Mapping values are enums, but the source map may have come from a caller
+  /// that still owns a mutable map. Copying at the profile fan-out boundary
+  /// prevents one controller's edit from changing another profile in place.
+  NativeControllerMapping copy() => NativeControllerMapping(
+    Map.unmodifiable(Map<int, RetroPadButton>.from(keycodeToButton)),
+    controllerTypesByCore: Map.unmodifiable(
+      Map<String, int>.from(controllerTypesByCore),
+    ),
+  );
+
   factory NativeControllerMapping.fromJson(String json) {
     try {
       final decoded = jsonDecode(json);
       if (decoded is! Map) return empty;
+      final sourceBindings = decoded['bindings'] is Map
+          ? decoded['bindings'] as Map
+          : decoded;
       final bindings = <int, RetroPadButton>{};
-      for (final entry in decoded.entries) {
+      for (final entry in sourceBindings.entries) {
         final keycode = int.tryParse(entry.key.toString());
         final buttonIndex = entry.value is num
             ? (entry.value as num).toInt()
@@ -53,15 +114,37 @@ class NativeControllerMapping {
             .firstOrNull;
         if (button != null) bindings[keycode] = button;
       }
-      return NativeControllerMapping(Map.unmodifiable(bindings));
+      final controllerTypes = <String, int>{};
+      final rawTypes = decoded['controllerTypes'];
+      if (rawTypes is Map) {
+        for (final entry in rawTypes.entries) {
+          final coreId = entry.key.toString();
+          final deviceType = entry.value is num
+              ? (entry.value as num).toInt()
+              : int.tryParse(entry.value.toString());
+          if (coreId.isNotEmpty &&
+              deviceType != null &&
+              deviceType != retroDeviceJoypad) {
+            controllerTypes[coreId] = deviceType;
+          }
+        }
+      }
+      return NativeControllerMapping(
+        Map.unmodifiable(bindings),
+        controllerTypesByCore: Map.unmodifiable(controllerTypes),
+      );
     } catch (_) {
       return empty;
     }
   }
 
   String toJson() => jsonEncode({
+    // Keep keycodes at the top level so older Moonfin clients continue to
+    // consume the bindings and simply ignore the nonnumeric metadata key.
     for (final entry in keycodeToButton.entries)
       entry.key.toString(): entry.value.retroPadIndex,
+    if (controllerTypesByCore.isNotEmpty)
+      'controllerTypes': controllerTypesByCore,
   });
 
   NativeControllerMapping withBinding(int keycode, RetroPadButton button) {
@@ -69,7 +152,26 @@ class NativeControllerMapping {
     // One physical key and one semantic button each have exactly one binding.
     next.removeWhere((_, current) => current == button);
     next[keycode] = button;
-    return NativeControllerMapping(Map.unmodifiable(next));
+    return NativeControllerMapping(
+      Map.unmodifiable(next),
+      controllerTypesByCore: controllerTypesByCore,
+    );
+  }
+
+  int controllerTypeForCore(String coreId) =>
+      controllerTypesByCore[coreId] ?? retroDeviceJoypad;
+
+  NativeControllerMapping withControllerType(String coreId, int deviceType) {
+    final next = Map<String, int>.from(controllerTypesByCore);
+    if (deviceType == retroDeviceJoypad) {
+      next.remove(coreId);
+    } else {
+      next[coreId] = deviceType;
+    }
+    return NativeControllerMapping(
+      keycodeToButton,
+      controllerTypesByCore: Map.unmodifiable(next),
+    );
   }
 }
 

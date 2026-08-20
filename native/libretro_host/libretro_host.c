@@ -144,6 +144,7 @@ typedef void(RETRO_CALLCONV *fn_set_audio)(retro_audio_sample_t);
 typedef void(RETRO_CALLCONV *fn_set_audio_batch)(retro_audio_sample_batch_t);
 typedef void(RETRO_CALLCONV *fn_set_input_poll)(retro_input_poll_t);
 typedef void(RETRO_CALLCONV *fn_set_input_state)(retro_input_state_t);
+typedef void(RETRO_CALLCONV *fn_set_controller_port_device)(unsigned,unsigned);
 typedef void(RETRO_CALLCONV *fn_get_sysinfo)(struct retro_system_info *);
 typedef void(RETRO_CALLCONV *fn_get_avinfo)(struct retro_system_av_info *);
 typedef bool(RETRO_CALLCONV *fn_load_game)(const struct retro_game_info *);
@@ -161,6 +162,9 @@ typedef struct {
   fn_set_audio_batch set_audio_sample_batch;
   fn_set_input_poll set_input_poll;
   fn_set_input_state set_input_state;
+  // Optional in practice: older/minimal cores can omit this entry point even
+  // though the libretro API documents it. Keep the rest of the core usable.
+  fn_set_controller_port_device set_controller_port_device;
   fn_void init;
   fn_void deinit;
   fn_get_sysinfo get_system_info;
@@ -192,6 +196,15 @@ typedef struct {
   char *value;
 } lh_var;
 
+typedef struct {
+  lh_controller_type *types;
+  unsigned type_count;
+} lh_controller_port;
+
+// lh_input_descriptor (one RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS entry, as
+// a caller-owned snapshot) is declared in libretro_host.h alongside
+// lh_controller_type, since both are part of the public accessor surface.
+
 // ---------------------------------------------------------------------------
 // Video double buffer: the run loop converts into the back buffer, the platform
 // pulls the front. A pull swaps them, so a returned frame stays valid until the
@@ -216,6 +229,7 @@ typedef enum {
   JOB_SERIALIZE_SIZE,
   JOB_SERIALIZE,
   JOB_UNSERIALIZE,
+  JOB_CONTROLLER_DEVICE,
 } lh_job_kind;
 
 typedef struct {
@@ -225,6 +239,8 @@ typedef struct {
   size_t size;
   size_t result_size;
   int result_ok;
+  int port;
+  unsigned device;
   int done;
 } lh_job;
 
@@ -286,6 +302,27 @@ struct lh_host {
   // open_core).
   int alloc_failed;
   lh_mutex vars_lock;
+
+  // Controller configuration snapshots. The core owns the structures passed
+  // through SET_CONTROLLER_INFO, so retain only copied labels and IDs here.
+  // We log every reported port, including ports Moonfin cannot drive, but keep
+  // snapshots only for the four ports this host can actually route input to.
+  lh_controller_port *controller_ports;
+  int controller_port_count;
+  lh_mutex controller_info_lock;
+  // Last device successfully handed to the core for each routable port. This
+  // survives an internal restart, whose new core instance otherwise forgets
+  // every retro_set_controller_port_device call.
+  unsigned controller_devices[LH_MAX_PORTS];
+
+  // RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS snapshot: a flat, core-supplied
+  // list of (port, device, index, id) -> human-readable label entries. Kept
+  // behind its own lock rather than controller_info_lock, since the two are
+  // updated independently and sharing the lock would only widen an unrelated
+  // critical section.
+  lh_input_descriptor *input_descriptors;
+  int input_descriptor_count;
+  lh_mutex input_descriptor_lock;
 
   // Video.
   lh_frame front;
@@ -773,6 +810,22 @@ static void host_log(struct lh_host *h, const char *fmt, ...) {
   h->cb.message(h->cb.user, buf);
 }
 
+// Host diagnostics that must never become a core message/overlay event. In
+// particular, a core's controller inventory can be sizeable and is useful in
+// logcat, but is not user-facing state. Keep this separate from log_printf_cb
+// too: these host messages must not overwrite a core's load-failure reason.
+static void diagnostic_log(const char *fmt, ...) {
+  va_list args;
+  va_start(args, fmt);
+#ifdef __ANDROID__
+  __android_log_vprint(ANDROID_LOG_INFO, "moonfin_libretro", fmt, args);
+#else
+  vfprintf(stderr, fmt, args);
+  fputc('\n', stderr);
+#endif
+  va_end(args);
+}
+
 // The host bakes SET_ROTATION into the converted frame, so the geometry it
 // advertises has to describe the rotated frame, not the core's raw buffer.
 // Quarter turns swap the axes.
@@ -859,6 +912,218 @@ static void deliver_message(struct lh_host *h, const char *text) {
   if (text && *text && h->cb.message) h->cb.message(h->cb.user, text);
 }
 
+static void free_controller_ports(lh_controller_port *ports, int count) {
+  for (int p = 0; p < count; p++) free(ports[p].types);
+  free(ports);
+}
+
+static void clear_controller_info(struct lh_host *h) {
+  mutex_lock(&h->controller_info_lock);
+  lh_controller_port *ports = h->controller_ports;
+  int count = h->controller_port_count;
+  h->controller_ports = NULL;
+  h->controller_port_count = 0;
+  mutex_unlock(&h->controller_info_lock);
+  free_controller_ports(ports, count);
+}
+
+static void clear_input_descriptors(struct lh_host *h) {
+  mutex_lock(&h->input_descriptor_lock);
+  lh_input_descriptor *descriptors = h->input_descriptors;
+  h->input_descriptors = NULL;
+  h->input_descriptor_count = 0;
+  mutex_unlock(&h->input_descriptor_lock);
+  free(descriptors);
+}
+
+// Borrowed array, NULL-description terminated. Like SET_CONTROLLER_INFO, cores
+// may free it after this returns, so nothing from it may escape; the snapshot is
+// built whole before publishing so readers never see a half-rebuilt list.
+static bool copy_input_descriptors(struct lh_host *h,
+                                   const struct retro_input_descriptor *descriptors) {
+  int count = 0;
+  for (;;) {
+    if (count == INT_MAX) {
+      diagnostic_log("Rejected input descriptors with too many entries");
+      return false;
+    }
+    if (!descriptors[count].description) break;
+    count++;
+  }
+
+  lh_input_descriptor *copy = NULL;
+  if (count > 0) {
+#if SIZE_MAX <= UINT_MAX
+    if ((size_t)count > SIZE_MAX / sizeof(lh_input_descriptor)) {
+      diagnostic_log("Rejected input descriptors with too many entries");
+      return false;
+    }
+#endif
+    copy = calloc((size_t)count, sizeof(*copy));
+    if (!copy) {
+      diagnostic_log("Failed to allocate input descriptor snapshot");
+      return false;
+    }
+  }
+
+  for (int i = 0; i < count; i++) {
+    const struct retro_input_descriptor *source = &descriptors[i];
+    copy[i].port = source->port;
+    copy[i].device = source->device;
+    copy[i].index = source->index;
+    copy[i].id = source->id;
+    lh_copy_bounded(copy[i].description, sizeof(copy[i].description),
+                    source->description);
+  }
+
+  // Logged before publishing, while copy is still exclusively owned. Once it is
+  // in h->input_descriptors a concurrent clear can free it mid-read.
+  // Timestamped so "the core never sent any" is distinguishable from "we read
+  // them too early"
+  diagnostic_log("SET_INPUT_DESCRIPTORS: %d entries", count);
+  for (int i = 0; i < count && i < 8; i++) {
+    diagnostic_log("  descriptor port=%u device=%u index=%u id=%u '%s'",
+                   copy[i].port, copy[i].device, copy[i].index, copy[i].id,
+                   copy[i].description);
+  }
+
+  mutex_lock(&h->input_descriptor_lock);
+  lh_input_descriptor *old = h->input_descriptors;
+  h->input_descriptors = copy;
+  h->input_descriptor_count = count;
+  mutex_unlock(&h->input_descriptor_lock);
+  free(old);
+  return true;
+}
+
+static void reset_controller_devices(struct lh_host *h) {
+  for (int port = 0; port < LH_MAX_PORTS; port++) {
+    h->controller_devices[port] = RETRO_DEVICE_JOYPAD;
+  }
+}
+
+// SET_CONTROLLER_INFO is a borrowed, zero-terminated array. Cores often keep
+// it in static storage, but the API permits them to replace it after this
+// callback returns, so no pointer from it may escape this function. Build a
+// complete new snapshot before publishing it, leaving a reader with either the
+// old whole list or the new whole list (never a half-rebuilt list).
+static bool copy_controller_info(struct lh_host *h,
+                                 const struct retro_controller_info *info) {
+  lh_controller_port *ports = calloc(LH_MAX_PORTS, sizeof(*ports));
+  int stored_count = 0;
+  int source_port = 0;
+  if (!ports) {
+    diagnostic_log("Failed to allocate controller info snapshot");
+    return false;
+  }
+
+  for (;;) {
+    if (source_port == INT_MAX) {
+      diagnostic_log("Rejected controller info with too many ports");
+      free_controller_ports(ports, stored_count);
+      return false;
+    }
+    if (!info[source_port].types) break;
+
+    const struct retro_controller_info *source = &info[source_port];
+#if SIZE_MAX <= UINT_MAX
+    if ((size_t)source->num_types > SIZE_MAX / sizeof(lh_controller_type)) {
+      diagnostic_log("Rejected controller info for port %d with too many types",
+                     source_port);
+      free_controller_ports(ports, stored_count);
+      return false;
+    }
+#endif
+
+    lh_controller_type *types = NULL;
+    if (source_port < LH_MAX_PORTS && source->num_types > 0) {
+      types = calloc(source->num_types, sizeof(*types));
+      if (!types) {
+        diagnostic_log("Failed to copy controller info for port %d", source_port);
+        free_controller_ports(ports, stored_count);
+        return false;
+      }
+    }
+    for (unsigned t = 0; t < source->num_types; t++) {
+      const struct retro_controller_description *description = &source->types[t];
+      if (source_port < LH_MAX_PORTS) {
+        types[t].id = description->id;
+        lh_copy_bounded(types[t].label, sizeof(types[t].label),
+                        description->desc);
+      }
+      // Log every type rather than filtering to devices Moonfin currently
+      // understands. In particular, retain this diagnostic for an extra core
+      // port even though Moonfin currently exposes input only through P4.
+      diagnostic_log("Controller capability port=%d id=%u label='%s'%s",
+                     source_port, description->id,
+                     description->desc && *description->desc ? description->desc
+                                                              : "(unnamed)",
+                     source_port < LH_MAX_PORTS ? "" : " (unsupported port)");
+    }
+
+    if (source_port < LH_MAX_PORTS) {
+      ports[source_port].types = types;
+      ports[source_port].type_count = source->num_types;
+      stored_count = source_port + 1;
+    }
+    source_port++;
+  }
+
+  mutex_lock(&h->controller_info_lock);
+  lh_controller_port *old_ports = h->controller_ports;
+  int old_count = h->controller_port_count;
+  h->controller_ports = ports;
+  h->controller_port_count = stored_count;
+  mutex_unlock(&h->controller_info_lock);
+  free_controller_ports(old_ports, old_count);
+  return true;
+}
+
+static int controller_device_is_advertised(struct lh_host *h, int port,
+                                           unsigned device) {
+  if (device == RETRO_DEVICE_JOYPAD) return 1;  // Auto/libretro default.
+  int advertised = 0;
+  mutex_lock(&h->controller_info_lock);
+  if (port >= 0 && port < h->controller_port_count) {
+    lh_controller_port *controller_port = &h->controller_ports[port];
+    for (unsigned i = 0; i < controller_port->type_count; i++) {
+      if (controller_port->types[i].id == device) {
+        advertised = 1;
+        break;
+      }
+    }
+  }
+  mutex_unlock(&h->controller_info_lock);
+  return advertised;
+}
+
+// restart_core runs on the emulation thread after the new core has finished
+// load_content and re-published its controller list. Re-check stored explicit
+// IDs against that fresh list: a core version/content change can remove one,
+// in which case preserving a stale value is less safe than returning to Auto.
+static void reapply_controller_devices(struct lh_host *h) {
+  for (int port = 0; port < LH_MAX_PORTS; port++) {
+    unsigned device = h->controller_devices[port];
+    if (!controller_device_is_advertised(h, port, device)) {
+      diagnostic_log(
+          "Controller device port=%d id=%u is no longer advertised after "
+          "restart; using Auto (%u)",
+          port, device, RETRO_DEVICE_JOYPAD);
+      device = RETRO_DEVICE_JOYPAD;
+      h->controller_devices[port] = device;
+    }
+    if (h->core.set_controller_port_device) {
+      h->core.set_controller_port_device((unsigned)port, device);
+    } else if (device != RETRO_DEVICE_JOYPAD) {
+      diagnostic_log(
+          "Controller device port=%d id=%u could not be reapplied; core has "
+          "no controller-device entry point",
+          port, device);
+      h->controller_devices[port] = RETRO_DEVICE_JOYPAD;
+    }
+  }
+}
+
 static bool RETRO_CALLCONV environment_cb(unsigned cmd, void *data) {
   struct lh_host *h = g_session;
   if (!h) return false;
@@ -902,8 +1167,11 @@ static bool RETRO_CALLCONV environment_cb(unsigned cmd, void *data) {
       return true;
     }
     case RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS:
+      return data && copy_input_descriptors(
+                         h, (const struct retro_input_descriptor *)data);
     case RETRO_ENVIRONMENT_SET_CONTROLLER_INFO:
-      return true;
+      return data && copy_controller_info(
+                         h, (const struct retro_controller_info *)data);
     case RETRO_ENVIRONMENT_SET_HW_RENDER:
       return false;  // software rendering only
     case RETRO_ENVIRONMENT_GET_VARIABLE: {
@@ -1341,25 +1609,36 @@ static void execute_job(struct lh_host *h, lh_job *job) {
           h->core.unserialize && h->core.unserialize(job->cbuf, job->size) ? 1
                                                                            : 0;
       break;
+    case JOB_CONTROLLER_DEVICE:
+      if (h->core.set_controller_port_device) {
+        h->core.set_controller_port_device((unsigned)job->port, job->device);
+        h->controller_devices[job->port] = job->device;
+        job->result_ok = 1;
+      }
+      break;
   }
 }
 
 // Runs [job] on the emulation thread and waits, or inline when no loop runs.
 // A full queue or a loop that already exited gives up instead of waiting, since
 // nothing would ever mark the job done.
-static void run_job(struct lh_host *h, lh_job *job) {
+static int run_job(struct lh_host *h, lh_job *job) {
   mutex_lock(&h->jobs_lock);
   if (h->jobs_open) {
     if (h->job_count < LH_MAX_JOBS) {
       h->jobs[h->job_count++] = job;
       while (!job->done) cond_wait(&h->jobs_cond, &h->jobs_lock);
+      mutex_unlock(&h->jobs_lock);
+      return 0;
     }
     mutex_unlock(&h->jobs_lock);
-    return;
+    return -1;
   }
   int loaded = h->core_loaded;
   mutex_unlock(&h->jobs_lock);
-  if (loaded) execute_job(h, job);
+  if (!loaded) return -1;
+  execute_job(h, job);
+  return 0;
 }
 
 static void drain_jobs(struct lh_host *h) {
@@ -1502,6 +1781,8 @@ static void *run_loop(void *arg) {
   if (h->core.deinit) h->core.deinit();
   if (h->core.handle) lib_close(h->core.handle);
   memset(&h->core, 0, sizeof(h->core));
+  clear_controller_info(h);
+  clear_input_descriptors(h);
 
   // Reported last, once nothing in here touches the core any more.
   if (h->shutdown_requested && h->cb.core_shutdown) {
@@ -1566,6 +1847,9 @@ static int resolve_core(lh_core *core) {
   SYM(get_memory_data, "retro_get_memory_data")
   SYM(get_memory_size, "retro_get_memory_size")
 #undef SYM
+  core->set_controller_port_device =
+      (fn_set_controller_port_device)lib_sym(
+          core->handle, "retro_set_controller_port_device");
   return ok;
 }
 
@@ -1581,7 +1865,10 @@ lh_host *lh_create(lh_output_format fmt, lh_callbacks cb) {
   h->fast_forward = 1;
   h->pixel_format = RETRO_PIXEL_FORMAT_0RGB1555;
   h->variables_dirty = 1;
+  reset_controller_devices(h);
   mutex_init(&h->vars_lock);
+  mutex_init(&h->controller_info_lock);
+  mutex_init(&h->input_descriptor_lock);
   mutex_init(&h->core_log_lock);
   mutex_init(&h->video_lock);
   mutex_init(&h->audio_lock);
@@ -1642,6 +1929,8 @@ static void unwind_failed_core(struct lh_host *h) {
 // paths that lh_stop would otherwise own.
 static int load_failed(struct lh_host *h, int code) {
   unwind_failed_core(h);
+  clear_controller_info(h);
+  clear_input_descriptors(h);
   free_load_paths(h);
   g_session = NULL;
   return code;
@@ -1669,6 +1958,8 @@ static int open_core(struct lh_host *h) {
 
   h->pixel_format = RETRO_PIXEL_FORMAT_0RGB1555;
   h->av.rotation = 0;
+  clear_controller_info(h);
+  clear_input_descriptors(h);
   // retro_init (below) and, later, retro_load_game are the two points a core
   // can call SET_VARIABLES from; reset the flag here so a failure from a
   // *previous* load/restart attempt (already handled by that attempt's own
@@ -1791,6 +2082,9 @@ int lh_load(lh_host *h, const char *core_path, const char *rom_path,
             int opt_count, lh_av_info *out_info) {
   if (g_session) return -1;  // one session per process
   h->shutdown_requested = 0;
+  // A fresh load is a new session, so do not carry a choice from a different
+  // core/content forward. Internal restart deliberately does not call this.
+  reset_controller_devices(h);
 
   // FIX 5: game_id names the SRAM file below and ultimately originates from a
   // route parameter seeded by server data (app_router.dart ->
@@ -1915,6 +2209,7 @@ static int restart_core(struct lh_host *h) {
 
   int rc = open_core(h);
   if (rc == 0) rc = load_content(h);
+  if (rc == 0) reapply_controller_devices(h);
   if (rc != 0) {
     // Same unwind load_failed performs for lh_load, but restart_core keeps
     // g_session and the load paths alive (a later restart attempt reuses
@@ -1981,6 +2276,9 @@ void lh_stop(lh_host *h) {
   vars_free_retired(h);
   mutex_unlock(&h->vars_lock);
 
+  clear_controller_info(h);
+  clear_input_descriptors(h);
+  reset_controller_devices(h);
   g_session = NULL;
   free_load_paths(h);
 }
@@ -2004,10 +2302,14 @@ void lh_destroy(lh_host *h) {
   if (!h) return;
   if (h->core_loaded || h->has_thread) lh_stop(h);
   free_options(h);
+  clear_controller_info(h);
+  clear_input_descriptors(h);
   free(h->front.data);
   free(h->back.data);
   free(h->ring);
   mutex_destroy(&h->vars_lock);
+  mutex_destroy(&h->controller_info_lock);
+  mutex_destroy(&h->input_descriptor_lock);
   mutex_destroy(&h->core_log_lock);
   mutex_destroy(&h->video_lock);
   mutex_destroy(&h->audio_lock);
@@ -2136,4 +2438,69 @@ void lh_set_option(lh_host *h, const char *id, const char *value) {
     host_log(h, "Failed to set option %s (allocation failure)", id);
   }
   mutex_unlock(&h->vars_lock);
+}
+
+int lh_controller_type_count(lh_host *h, int port) {
+  if (!h || port < 0) return 0;
+  mutex_lock(&h->controller_info_lock);
+  int count = port < h->controller_port_count
+                  ? (h->controller_ports[port].type_count > INT_MAX
+                         ? INT_MAX
+                         : (int)h->controller_ports[port].type_count)
+                  : 0;
+  mutex_unlock(&h->controller_info_lock);
+  return count;
+}
+
+int lh_get_controller_type(lh_host *h, int port, int index,
+                           lh_controller_type *out) {
+  if (!h || !out || port < 0 || index < 0) return -1;
+  mutex_lock(&h->controller_info_lock);
+  if (port >= h->controller_port_count ||
+      (unsigned)index >= h->controller_ports[port].type_count) {
+    mutex_unlock(&h->controller_info_lock);
+    return -1;
+  }
+  *out = h->controller_ports[port].types[index];
+  mutex_unlock(&h->controller_info_lock);
+  return 0;
+}
+
+int lh_input_descriptor_count(lh_host *h) {
+  if (!h) return 0;
+  mutex_lock(&h->input_descriptor_lock);
+  int count = h->input_descriptor_count;
+  mutex_unlock(&h->input_descriptor_lock);
+  return count;
+}
+
+int lh_get_input_descriptor(lh_host *h, int index, lh_input_descriptor *out) {
+  if (!h || !out || index < 0) return -1;
+  mutex_lock(&h->input_descriptor_lock);
+  if (index >= h->input_descriptor_count) {
+    mutex_unlock(&h->input_descriptor_lock);
+    return -1;
+  }
+  *out = h->input_descriptors[index];
+  mutex_unlock(&h->input_descriptor_lock);
+  return 0;
+}
+
+int lh_set_controller_type(lh_host *h, int port, unsigned device) {
+  if (!h || port < 0 || port >= LH_MAX_PORTS) return -1;
+
+  int fallback = !controller_device_is_advertised(h, port, device);
+  if (fallback) {
+    diagnostic_log(
+        "Controller device port=%d id=%u was not advertised; using Auto (%u)",
+        port, device, RETRO_DEVICE_JOYPAD);
+    device = RETRO_DEVICE_JOYPAD;
+  }
+
+  lh_job job = {0};
+  job.kind = JOB_CONTROLLER_DEVICE;
+  job.port = port;
+  job.device = device;
+  if (run_job(h, &job) != 0 || !job.result_ok) return -1;
+  return fallback ? 1 : 0;
 }
