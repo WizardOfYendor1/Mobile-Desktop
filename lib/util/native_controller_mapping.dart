@@ -239,6 +239,51 @@ Future<NativeControllerMapping> loadControllerMapping(
   }
 }
 
+/// Like [loadControllerMapping], but reports WHY there is nothing.
+///
+/// The two cases are not interchangeable: "this pad has no saved mapping" is a
+/// fact, while "the server could not be reached" is an unknown. Treating the
+/// second as the first shows default bindings, and then the next edit persists
+/// that blank state over the user's real mapping -- losing it. Anything that
+/// may go on to WRITE should use this and refuse to save when [reachable] is
+/// false.
+class ControllerMappingLoad {
+  const ControllerMappingLoad(this.mapping, {required this.reachable});
+
+  final NativeControllerMapping mapping;
+
+  /// False when the read itself failed, so [mapping] is a fallback rather than
+  /// the stored truth.
+  final bool reachable;
+}
+
+Future<ControllerMappingLoad> loadControllerMappingChecked(
+  GamesApi games,
+  String deviceHash,
+) async {
+  try {
+    final blob = await games.getSave(
+      _controllerMappingSaveId(deviceHash),
+      kind: 'settings',
+    );
+    if (blob == null || blob.isEmpty) {
+      return const ControllerMappingLoad(
+        NativeControllerMapping.empty,
+        reachable: true,
+      );
+    }
+    return ControllerMappingLoad(
+      NativeControllerMapping.fromJson(utf8.decode(blob)),
+      reachable: true,
+    );
+  } catch (_) {
+    return const ControllerMappingLoad(
+      NativeControllerMapping.empty,
+      reachable: false,
+    );
+  }
+}
+
 Future<void> saveControllerMapping(
   GamesApi games,
   String deviceHash,

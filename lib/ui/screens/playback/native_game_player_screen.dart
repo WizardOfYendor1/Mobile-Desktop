@@ -1397,7 +1397,8 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
         profileIds
             .where((id) => !mappings.containsKey(id))
             .map(
-              (id) async => MapEntry(id, await loadControllerMapping(api, id)),
+              (id) async =>
+                  MapEntry(id, await loadControllerMappingChecked(api, id)),
             ),
       );
       if (!mounted || generation != _controllerRefreshGeneration) return;
@@ -1406,9 +1407,16 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
         ..clear()
         ..addAll(currentMappings);
       for (final entry in loaded) {
-        if (!currentMappings.containsKey(entry.key)) {
-          mappings[entry.key] = entry.value;
+        if (currentMappings.containsKey(entry.key)) continue;
+        if (!entry.value.reachable) {
+          // The read failed, so we do NOT know this pad's bindings. Leaving it
+          // out means the screen shows nothing to edit rather than showing
+          // defaults that a later edit would persist over the real mapping.
+          _unreadableMappingProfiles.add(entry.key);
+          continue;
         }
+        _unreadableMappingProfiles.remove(entry.key);
+        mappings[entry.key] = entry.value.mapping;
       }
       final coreId = libretroCoreId(widget.core);
       final repairedProfiles = <String>{};
@@ -1560,12 +1568,24 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
         false;
   }
 
+  /// Profiles whose stored mapping could not be READ this session. Writing for
+  /// one of these would overwrite bindings we never managed to see.
+  final Set<String> _unreadableMappingProfiles = <String>{};
+
   Future<void> _updateControllerMapping(
     String deviceId,
     NativeControllerMapping mapping,
   ) async {
     final games = _client.gamesApi;
     if (games == null) return;
+    if (_unreadableMappingProfiles.contains(deviceId)) {
+      // Refusing is the safe half of the trade: the edit applies for this
+      // session, but is not persisted over a mapping we failed to load.
+      _showTransientMessage(
+        'Saved mapping could not be read; not overwriting it.',
+      );
+      return;
+    }
     setState(() {
       _controllerMappings = Map.unmodifiable({
         ..._controllerMappings,
