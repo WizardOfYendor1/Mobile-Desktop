@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:server_core/server_core.dart';
 
+import 'settings_save_retry.dart';
+
 /// The durable "this pad is Player 1" choice, keyed by the privacy-safe profile
 /// id the native side reports for a physical controller.
 ///
@@ -103,11 +105,17 @@ Future<NativeControllerPlayerAssignments> loadControllerPlayerAssignments(
   }
 }
 
+/// Persists [assignments], retrying transient transport failures. Throws when
+/// the write ultimately fails so the caller can report a lost pin.
 Future<void> saveControllerPlayerAssignments(
   GamesApi games,
-  NativeControllerPlayerAssignments assignments,
-) => games.putSave(
-  _assignmentsSaveId,
-  utf8.encode(assignments.toJson()),
-  kind: 'settings',
+  NativeControllerPlayerAssignments assignments, {
+  Future<void> Function(Duration)? retryDelay,
+}) => retryOnTransientFailure(
+  () => games.putSave(
+    _assignmentsSaveId,
+    utf8.encode(assignments.toJson()),
+    kind: 'settings',
+  ),
+  delay: retryDelay,
 );
