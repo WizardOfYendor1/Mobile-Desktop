@@ -154,6 +154,8 @@ class _FakeGamesApi extends GamesApi {
 class _FakeNativeGamePlayer implements NativeGamePlayer {
   final _eventsController = StreamController<Map<String, dynamic>>.broadcast();
   int stopCount = 0;
+  int pauseCount = 0;
+  int resumeCount = 0;
 
   @override
   Stream<Map<String, dynamic>> get events => _eventsController.stream;
@@ -195,9 +197,14 @@ class _FakeNativeGamePlayer implements NativeGamePlayer {
   @override
   Future<void> start() async {}
   @override
-  Future<void> pause() async {}
+  Future<void> pause() async {
+    pauseCount++;
+  }
+
   @override
-  Future<void> resume() async {}
+  Future<void> resume() async {
+    resumeCount++;
+  }
   @override
   Future<void> restart() async {}
   @override
@@ -278,6 +285,15 @@ void main() {
     client = _MockMediaServerClient();
     gamesApi = _FakeGamesApi();
     when(() => client.gamesApi).thenReturn(gamesApi);
+    // Emulator settings are keyed per device, so the screen reads this.
+    when(() => client.deviceInfo).thenReturn(
+      const DeviceInfo(
+        id: 'device-1',
+        name: 'Test Device',
+        appName: 'Moonfin',
+        appVersion: '0.0.0',
+      ),
+    );
     // Both game screens mix in GameAudioOwner, which resolves this.
     GetIt.instance.registerSingleton<PlaybackArbiter>(PlaybackArbiter());
     GetIt.instance.registerSingleton<MediaServerClient>(client);
@@ -498,7 +514,7 @@ void main() {
       try {
         final coreId = libretroCoreId('snes')!;
         final legacyId = 'moonfin-native-$coreId';
-        final gameId = 'moonfin-native-$coreId-game1';
+        final gameId = 'moonfin-native-$coreId-game1-device-1';
         gamesApi.saves[legacyId] = 'other-game-lives=5'.codeUnits;
         // This session's game knows nothing about the other game's option.
         player.currentOptions = const {'this-game-difficulty': 'Hard'};
@@ -572,6 +588,12 @@ void main() {
         // A game with no document of its own still starts from what the
         // core-wide document held, so upgrading does not reset anyone.
         expect(player.loadOptions, {'other-game-lives': '5'});
+        // The pre-per-device document must not be written to either.
+        expect(
+          gamesApi.saves.containsKey('moonfin-native-$coreId-game1'),
+          isFalse,
+          reason: 'writes belong under the per-device id only',
+        );
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }
@@ -585,7 +607,7 @@ void main() {
     try {
       final coreId = libretroCoreId('snes')!;
       gamesApi.saves['moonfin-native-$coreId'] = 'lives=3'.codeUnits;
-      gamesApi.saves['moonfin-native-$coreId-game1'] = 'lives=5'.codeUnits;
+      gamesApi.saves['moonfin-native-$coreId-game1-device-1'] = 'lives=5'.codeUnits;
 
       final router = GoRouter(
         initialLocation: '/game',
@@ -620,6 +642,109 @@ void main() {
       // The core-wide document is a fallback, not a merge: once this game has
       // its own settings, that is what it plays with.
       expect(player.loadOptions, {'lives': '5'});
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('backgrounding the app stops emulating, returning resumes it', (
+    tester,
+  ) async {
+    // The system Home button used to leave the emulation thread running: the
+    // native pause hook is wired to SurfaceProducer.Callback, whose
+    // setCallback is a no-op for this producer type, so nothing fired.
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      final router = GoRouter(
+        initialLocation: '/game',
+        routes: [
+          GoRoute(
+            path: '/game',
+            builder: (context, state) => NativeGamePlayerScreen(
+              libraryId: 'lib1',
+              gameId: 'game1',
+              core: 'snes',
+              startFresh: true,
+              player: player,
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      );
+      for (var i = 0; i < 60 && find.byType(Texture).evaluate().isEmpty; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+      expect(find.byType(Texture), findsOneWidget);
+
+      final pausesBefore = player.pauseCount;
+      final resumesBefore = player.resumeCount;
+
+      // Transient: a system dialog or the volume panel must not pause.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      await tester.pump();
+      expect(player.pauseCount, pausesBefore, reason: 'inactive is transient');
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump();
+      expect(player.pauseCount, pausesBefore + 1);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      expect(player.resumeCount, resumesBefore + 1);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
+
+  testWidgets('backgrounding never saves state', (tester) async {
+    // A save is destructive, so it stays a deliberate choice; a Home button
+    // press is not one.
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      final router = GoRouter(
+        initialLocation: '/game',
+        routes: [
+          GoRoute(
+            path: '/game',
+            builder: (context, state) => NativeGamePlayerScreen(
+              libraryId: 'lib1',
+              gameId: 'game1',
+              core: 'snes',
+              startFresh: true,
+              player: player,
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      );
+      for (var i = 0; i < 60 && find.byType(Texture).evaluate().isEmpty; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
+        );
+        await tester.pump(const Duration(milliseconds: 20));
+      }
+
+      final savesBefore = gamesApi.saves.length;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump();
+      expect(gamesApi.saves.length, savesBefore);
     } finally {
       debugDefaultTargetPlatformOverride = null;
     }

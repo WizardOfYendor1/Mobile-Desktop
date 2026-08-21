@@ -204,4 +204,42 @@ void _dataLossGuardTests() {
       );
     });
   });
+
+  group('stick snap', () {
+    test('round-trips through JSON per game', () {
+      final mapping = NativeControllerMapping.empty
+          .withSnap('burgertime', StickSnapMode.fourWay)
+          .withSnap('gauntlet', StickSnapMode.eightWay);
+      final restored = NativeControllerMapping.fromJson(mapping.toJson());
+
+      expect(restored.snapForGame('burgertime'), StickSnapMode.fourWay);
+      expect(restored.snapForGame('gauntlet'), StickSnapMode.eightWay);
+      expect(restored.snapForGame('unset'), StickSnapMode.off);
+    });
+
+    test('off is stored as absence, not a value', () {
+      final mapping = NativeControllerMapping.empty
+          .withSnap('burgertime', StickSnapMode.fourWay)
+          .withSnap('burgertime', StickSnapMode.off);
+
+      expect(mapping.snapByGame, isEmpty);
+      expect(mapping.toJson().contains('snapByGame'), isFalse);
+    });
+
+    test('survives a binding or controller-type edit', () {
+      final mapping = NativeControllerMapping.empty
+          .withSnap('burgertime', StickSnapMode.fourWay)
+          .withBinding(97, RetroPadButton.a)
+          .withControllerType('fbneo', 5);
+
+      expect(mapping.snapForGame('burgertime'), StickSnapMode.fourWay);
+    });
+
+    test('an unknown wire name falls back to off', () {
+      final restored = NativeControllerMapping.fromJson(
+        '{"snapByGame":{"g":"sideways"}}',
+      );
+      expect(restored.snapForGame('g'), StickSnapMode.off);
+    });
+  });
 }

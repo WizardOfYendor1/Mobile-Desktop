@@ -69,12 +69,31 @@ class CoreControllerType {
 
 const Set<int> _fbNeoControllerTypeIds = {5, 261, 517};
 
+/// How strictly a stick is snapped to fixed directions. Per game and per
+/// controller: a 4-way game needs the weaker axis dropped, an 8-way game needs
+/// diagonals kept.
+enum StickSnapMode {
+  off('off'),
+  eightWay('8way'),
+  fourWay('4way');
+
+  const StickSnapMode(this.wireName);
+
+  final String wireName;
+
+  static StickSnapMode fromWireName(String? name) => values
+      .where((mode) => mode.wireName == name)
+      .firstOrNull ??
+      StickSnapMode.off;
+}
+
 /// Custom physical-keycode bindings for one controller. Missing bindings keep
 /// MainActivity's established RetroPad layout as their default.
 class NativeControllerMapping {
   const NativeControllerMapping(
     this.keycodeToButton, {
     this.controllerTypesByCore = const {},
+    this.snapByGame = const {},
   });
 
   static const empty = NativeControllerMapping({});
@@ -85,6 +104,9 @@ class NativeControllerMapping {
   /// means [retroDeviceJoypad], i.e. Auto (Core default).
   final Map<String, int> controllerTypesByCore;
 
+  /// Stick snap mode by game id; absent means [StickSnapMode.off].
+  final Map<String, StickSnapMode> snapByGame;
+
   /// Returns an independent immutable snapshot of this mapping.
   ///
   /// Mapping values are enums, but the source map may have come from a caller
@@ -94,6 +116,9 @@ class NativeControllerMapping {
     Map.unmodifiable(Map<int, RetroPadButton>.from(keycodeToButton)),
     controllerTypesByCore: Map.unmodifiable(
       Map<String, int>.from(controllerTypesByCore),
+    ),
+    snapByGame: Map.unmodifiable(
+      Map<String, StickSnapMode>.from(snapByGame),
     ),
   );
 
@@ -131,9 +156,21 @@ class NativeControllerMapping {
           }
         }
       }
+      final snaps = <String, StickSnapMode>{};
+      final rawSnaps = decoded['snapByGame'];
+      if (rawSnaps is Map) {
+        for (final entry in rawSnaps.entries) {
+          final gameId = entry.key.toString();
+          final mode = StickSnapMode.fromWireName(entry.value?.toString());
+          if (gameId.isNotEmpty && mode != StickSnapMode.off) {
+            snaps[gameId] = mode;
+          }
+        }
+      }
       return NativeControllerMapping(
         Map.unmodifiable(bindings),
         controllerTypesByCore: Map.unmodifiable(controllerTypes),
+        snapByGame: Map.unmodifiable(snaps),
       );
     } catch (_) {
       return empty;
@@ -147,6 +184,10 @@ class NativeControllerMapping {
       entry.key.toString(): entry.value.retroPadIndex,
     if (controllerTypesByCore.isNotEmpty)
       'controllerTypes': controllerTypesByCore,
+    if (snapByGame.isNotEmpty)
+      'snapByGame': {
+        for (final entry in snapByGame.entries) entry.key: entry.value.wireName,
+      },
   });
 
   NativeControllerMapping withBinding(int keycode, RetroPadButton button) {
@@ -157,6 +198,7 @@ class NativeControllerMapping {
     return NativeControllerMapping(
       Map.unmodifiable(next),
       controllerTypesByCore: controllerTypesByCore,
+      snapByGame: snapByGame,
     );
   }
 
@@ -173,6 +215,24 @@ class NativeControllerMapping {
     return NativeControllerMapping(
       keycodeToButton,
       controllerTypesByCore: Map.unmodifiable(next),
+      snapByGame: snapByGame,
+    );
+  }
+
+  StickSnapMode snapForGame(String gameId) =>
+      snapByGame[gameId] ?? StickSnapMode.off;
+
+  NativeControllerMapping withSnap(String gameId, StickSnapMode mode) {
+    final next = Map<String, StickSnapMode>.from(snapByGame);
+    if (mode == StickSnapMode.off) {
+      next.remove(gameId);
+    } else {
+      next[gameId] = mode;
+    }
+    return NativeControllerMapping(
+      keycodeToButton,
+      controllerTypesByCore: controllerTypesByCore,
+      snapByGame: Map.unmodifiable(next),
     );
   }
 }

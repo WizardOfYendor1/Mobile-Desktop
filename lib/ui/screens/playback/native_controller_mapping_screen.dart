@@ -104,6 +104,7 @@ class NativeControllerMappingScreen extends StatefulWidget {
     this.assignments = NativeControllerPlayerAssignments.empty,
     this.onAssignmentChanged,
     this.inputDescriptors = CoreInputDescriptors.empty,
+    this.gameId = '',
     required this.onClose,
   });
 
@@ -122,6 +123,9 @@ class NativeControllerMappingScreen extends StatefulWidget {
 
   /// What the running core calls each button, when it says so at all.
   final CoreInputDescriptors inputDescriptors;
+
+  /// Keys the per-game stick snap setting.
+  final String gameId;
 
   final VoidCallback onClose;
 
@@ -193,7 +197,8 @@ class NativeControllerMappingScreenState
   /// user to wonder why it does nothing.
   bool get _showsTestRow => _diagnostics != null;
   int get _testRow => _copyRow + 1;
-  int get _resetRow => _testRow + (_showsTestRow ? 1 : 0);
+  int get _snapRow => _testRow + (_showsTestRow ? 1 : 0);
+  int get _resetRow => _snapRow + 1;
   int get _rowCount => _resetRow + 1;
   int get _copyConfirmRow => 0;
   int get _copyCancelRow => 1;
@@ -453,6 +458,10 @@ class NativeControllerMappingScreenState
       _beginCopy();
       return;
     }
+    if (_selected == _snapRow) {
+      _cycleSnap();
+      return;
+    }
     if (_showsTestRow && _selected == _testRow) {
       _beginTestController();
       return;
@@ -679,6 +688,31 @@ class NativeControllerMappingScreenState
       _controllerTypeSelected =
           ((_controllerTypeSelected + delta) % count + count) % count;
     });
+  }
+
+  static const _snapLabels = {
+    StickSnapMode.off: 'Off (analog)',
+    StickSnapMode.eightWay: '8-way',
+    StickSnapMode.fourWay: '4-way',
+  };
+
+  String get _snapSubtitle {
+    final mode = _mapping.snapForGame(widget.gameId);
+    final label = _snapLabels[mode] ?? 'Off (analog)';
+    return mode == StickSnapMode.off
+        ? '$label - this game only'
+        : '$label - this game and controller';
+  }
+
+  void _cycleSnap() {
+    final device = _device;
+    if (device == null || widget.gameId.isEmpty) return;
+    const order = StickSnapMode.values;
+    final current = _mapping.snapForGame(widget.gameId);
+    final next = order[(order.indexOf(current) + 1) % order.length];
+    final mapping = _mapping.withSnap(widget.gameId, next);
+    setState(() => _mapping = mapping);
+    unawaited(widget.onMappingChanged(device.id, mapping));
   }
 
   void _applyControllerType() {
@@ -993,6 +1027,18 @@ class NativeControllerMappingScreenState
               onTap: () {
                 setState(() => _selected = index);
                 _beginTestController();
+              },
+            );
+          }
+          if (index == _snapRow) {
+            return _row(
+              'Stick snap',
+              index,
+              subtitle: _snapSubtitle,
+              trailing: Icons.swap_horiz,
+              onTap: () {
+                setState(() => _selected = index);
+                _cycleSnap();
               },
             );
           }

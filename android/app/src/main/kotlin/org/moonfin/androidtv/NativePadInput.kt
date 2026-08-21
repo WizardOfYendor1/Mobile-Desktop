@@ -10,6 +10,8 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import kotlin.math.abs
 import kotlin.math.hypot
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 import org.json.JSONObject
 
@@ -42,6 +44,7 @@ internal class NativePadInput(
     private val keyboardState = PadState(KEYBOARD_DEVICE_ID, "", 0, DEFAULT_TABLE)
 
     private var customMappings: Map<String, Map<Int, Int>> = emptyMap()
+    private var snapModes: Map<String, StickSnap> = emptyMap()
     private var captureActive = false
     private var captureConnectionId: String? = null
     private var diagnosticsActive = false
@@ -217,6 +220,15 @@ internal class NativePadInput(
         }
     }
 
+    /** Snap mode per controller profile for the loaded game. */
+    fun setStickSnap(modes: Map<String, String>) {
+        snapModes = modes.mapValues { StickSnap.fromWireName(it.value) }
+        for (index in 0 until padStates.size()) {
+            val state = padStates.valueAt(index)
+            state.snap = snapModes[state.profileId] ?: StickSnap.OFF
+        }
+    }
+
     fun setCapture(active: Boolean, connectionId: String?) {
         captureActive = active
         captureConnectionId = connectionId.takeIf { active }
@@ -339,8 +351,12 @@ internal class NativePadInput(
         // picker entirely -- which reads as a frozen screen. While a menu is
         // open the stick always drives digital, whatever the game wants.
         if (!state.coreReadsAnalog || bridge.overlayOpen) {
-            state.stickDirX = stickAxisDirection(rawLx, state.stickDirX)
-            state.stickDirY = stickAxisDirection(rawLy, state.stickDirY)
+            // Menus always navigate unsnapped, or a 4-way game's setting would
+            // make its own settings list unreachable diagonally.
+            val snap = if (bridge.overlayOpen) StickSnap.OFF else state.snap
+            val snapped = snapAxes(rawLx, rawLy, snap)
+            state.stickDirX = stickAxisDirection(snapX(snapped), state.stickDirX)
+            state.stickDirY = stickAxisDirection(snapY(snapped), state.stickDirY)
         }
         // The hat wins while it is held; the stick supplies the direction the
         // rest of the time (when it is still allowed to, see above).
@@ -387,8 +403,8 @@ internal class NativePadInput(
 
         // Packed into a Long rather than a Pair: this is per motion event on
         // every pad, and a Pair would be a heap allocation each time.
-        val left = analogAxisPair(rawLx, rawLy)
-        val right = analogAxisPair(rawRx, rawRy)
+        val left = analogAxisPair(rawLx, rawLy, state.snap)
+        val right = analogAxisPair(rawRx, rawRy, state.snap)
         publishPadState(
             state,
             axisX(left), axisY(left),
@@ -820,6 +836,7 @@ internal class NativePadInput(
         // on this port; see setCoreReadsAnalog. Resets to false whenever a new
         // PadState is constructed, i.e. every game load.
         var coreReadsAnalog: Boolean = false,
+        var snap: StickSnap = StickSnap.OFF,
     )
 
     private companion object {
@@ -1011,19 +1028,89 @@ internal const val STICK_RELEASE = 0.20f
  *  actually report, vs the 0.125 they declare. See the design doc. */
 internal const val ANALOG_DEAD_ZONE = 0.02f
 
+/** Snap tolerance for [StickSnap.OFF]: corrects small drift only. */
+internal const val SNAP_DEGREES = 10f
+
+private const val SNAP_CARDINAL_RATIO = 0.176327f   // tan(10)
+private const val SNAP_DIAGONAL_RATIO = 0.700208f   // tan(35)
+private const val SNAP_EIGHT_WAY_RATIO = 0.414214f  // tan(22.5)
+private const val DIAGONAL_COMPONENT = 0.707107f    // cos(45)
+
+/** How strictly a stick is constrained to fixed directions. */
+internal enum class StickSnap(val wireName: String) {
+    OFF("off"),
+    EIGHT_WAY("8way"),
+    FOUR_WAY("4way");
+
+    companion object {
+        fun fromWireName(name: String?): StickSnap =
+            entries.firstOrNull { it.wireName == name } ?: OFF
+    }
+}
+
 /**
- * Radial dead zone plus rescale: values inside the dead zone are exactly
- * centre, and everything outside is rescaled so full deflection still reaches
- * the rails instead of clipping short. Returns the pair as packed ints in
+ * Constrains (x, y) to fixed directions, preserving magnitude. Works on the
+ * minor/major ratio so the hot path stays free of trigonometry.
+ */
+internal fun snapAxes(x: Float, y: Float, mode: StickSnap): Long {
+    val ax = abs(x)
+    val ay = abs(y)
+    val major = max(ax, ay)
+    if (major == 0f) return packFloats(x, y)
+    val ratio = min(ax, ay) / major
+    val cardinal: Boolean
+    val diagonal: Boolean
+    when (mode) {
+        StickSnap.FOUR_WAY -> { cardinal = true; diagonal = false }
+        StickSnap.EIGHT_WAY -> {
+            cardinal = ratio <= SNAP_EIGHT_WAY_RATIO
+            diagonal = !cardinal
+        }
+        StickSnap.OFF -> {
+            cardinal = ratio <= SNAP_CARDINAL_RATIO
+            diagonal = ratio >= SNAP_DIAGONAL_RATIO
+        }
+    }
+    if (cardinal) {
+        return if (ax >= ay) packFloats(x, 0f) else packFloats(0f, y)
+    }
+    if (diagonal) {
+        val component = hypot(x, y) * DIAGONAL_COMPONENT
+        return packFloats(
+            if (x < 0f) -component else component,
+            if (y < 0f) -component else component,
+        )
+    }
+    return packFloats(x, y)
+}
+
+private fun packFloats(x: Float, y: Float): Long =
+    (x.toRawBits().toLong() shl 32) or (y.toRawBits().toLong() and 0xffffffffL)
+
+internal fun snapX(packed: Long): Float = Float.fromBits((packed shr 32).toInt())
+internal fun snapY(packed: Long): Float = Float.fromBits(packed.toInt())
+
+/**
+ * Radial dead zone, rescale, then [snapAxes]. Returns the pair packed in
  * -32767..32767.
  */
-internal fun analogAxisPair(rawX: Float, rawY: Float): Long {
+internal fun analogAxisPair(
+    rawX: Float,
+    rawY: Float,
+    mode: StickSnap = StickSnap.OFF,
+): Long {
     val magnitude = hypot(rawX, rawY)
     if (magnitude <= ANALOG_DEAD_ZONE || magnitude == 0f) return packAxes(0, 0)
     val scale = ((magnitude - ANALOG_DEAD_ZONE) / (1f - ANALOG_DEAD_ZONE)) / magnitude
-    val x = (rawX * scale).coerceIn(-1f, 1f)
-    val y = (rawY * scale).coerceIn(-1f, 1f)
-    return packAxes((x * 32767f).roundToInt(), (y * 32767f).roundToInt())
+    val snapped = snapAxes(
+        (rawX * scale).coerceIn(-1f, 1f),
+        (rawY * scale).coerceIn(-1f, 1f),
+        mode,
+    )
+    return packAxes(
+        (snapX(snapped).coerceIn(-1f, 1f) * 32767f).roundToInt(),
+        (snapY(snapped).coerceIn(-1f, 1f) * 32767f).roundToInt(),
+    )
 }
 
 /**
