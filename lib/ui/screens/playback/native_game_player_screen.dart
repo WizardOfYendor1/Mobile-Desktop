@@ -63,7 +63,7 @@ class NativeGamePlayerScreen extends StatefulWidget {
 }
 
 class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
-    with GameAudioOwner {
+    with GameAudioOwner, WidgetsBindingObserver {
   final MediaServerClient _client = GetIt.instance<MediaServerClient>();
   late final NativeGamePlayer _player;
   late final CoreDownloadService _cores = CoreDownloadService(
@@ -175,6 +175,11 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
   @override
   void initState() {
     super.initState();
+    // Without this the emulation thread keeps running after the system Home
+    // button. The native side has a pause hook on SurfaceProducer.Callback,
+    // but setCallback is a documented no-op for SurfaceTextureSurfaceProducer
+    // (see buglog), so that hook never fires and nothing else was listening.
+    WidgetsBinding.instance.addObserver(this);
     _player = widget.player ?? NativeGamePlayer.create();
     _acquireGameplayArtworkBlock();
     _acquireScreensaverBlock();
@@ -240,6 +245,7 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _releaseGameplayArtworkBlock();
     _releaseScreensaverBlock();
     releaseGameAudio();
@@ -938,19 +944,22 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     }
   }
 
-  /// This game's emulator settings, falling back to the core-wide document
-  /// written before settings were scoped per game.
+  /// This game's emulator settings for this device, falling back through the
+  /// documents written before each narrowing of scope: per game, then the
+  /// core-wide one.
   ///
-  /// The legacy document is inherited in memory but never written back to: it
-  /// holds every game's options for this core, so copying it into this game's
-  /// document would carry another game's dipswitches along. The first write
-  /// here stores this game's options under its own id, which is the migration.
+  /// Older documents are inherited in memory but never written back to. The
+  /// core-wide one holds every game's options for this core, so copying it
+  /// forward would carry another game's dipswitches along. The first write
+  /// stores this game's options under the current id, which is the migration.
   Future<Map<String, String>?> _loadSettings(
     GamesApi games,
     String coreId,
   ) async {
     final own = await _readSettings(games, _gameOptionsSaveId(coreId));
     if (own != null) return own;
+    final perGame = await _readSettings(games, _legacyGameOptionsSaveId(coreId));
+    if (perGame != null) return perGame;
     return _readSettings(games, _legacyCoreOptionsSaveId(coreId));
   }
 
@@ -959,6 +968,9 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     String saveId,
   ) async {
     final blob = await games.getSave(saveId, kind: 'settings');
+    debugPrint(
+      '[moonfin_settings] read $saveId -> ${blob == null || blob.isEmpty ? 'absent' : '${blob.length} bytes'}',
+    );
     if (blob == null || blob.isEmpty) return null;
     final text = String.fromCharCodes(blob);
     final map = <String, String>{};
@@ -1027,6 +1039,35 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
       _confirmingExit = false;
       _selected = 0;
     });
+  }
+
+  /// Stops emulating while the app is in the background, and picks up again on
+  /// return.
+  ///
+  /// Deliberately does NOT save state: a save is destructive and belongs to a
+  /// choice the user made, not to a Home button press.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Nothing is running before the texture exists, and resuming then would
+    // start a session the load path has not finished setting up.
+    if (_textureId == null || _exiting) return;
+    switch (state) {
+      case AppLifecycleState.resumed:
+        // The overlay is the one pause the user can see, so it decides
+        // whether coming back to the app should start the game moving again.
+        debugPrint('[moonfin_life] resumed overlayOpen=$_overlayOpen');
+        if (!_overlayOpen) _player.resume();
+      case AppLifecycleState.inactive:
+        // Transient and common (a system dialog, the volume panel). Pausing
+        // here would flicker the game for events the user never left for.
+        break;
+      case AppLifecycleState.paused:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.detached:
+        debugPrint('[moonfin_life] backgrounded ($state) - pausing');
+        _player.pause();
+    }
   }
 
   void _toggleOverlay() {
@@ -1168,7 +1209,23 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
   /// exiting Spy Hunter, with no setting changed there, because that exit
   /// rewrote the shared document from Spy Hunter's options alone. Per-game ids
   /// remove the sharing rather than arbitrate it.
-  String _gameOptionsSaveId(String coreId) =>
+  /// Emulator settings are per game AND per device.
+  ///
+  /// Per device because they are not all portable: a colour depth or frame
+  /// skip that is right on the Shield can be wrong on weaker hardware, and a
+  /// setting that follows the user onto a slower box makes that box worse.
+  /// Game-configuration options (dipswitches) would be safe to share, but
+  /// libretro gives no way to tell the two classes apart, so the whole
+  /// document stays local rather than guessing wrong in the harmful direction.
+  String _gameOptionsSaveId(String coreId) {
+    final deviceId = _client.deviceInfo.id;
+    final base = 'moonfin-native-$coreId-${widget.gameId}';
+    return deviceId.isEmpty ? base : '$base-$deviceId';
+  }
+
+  /// The pre-per-device id. Read as a fallback so settings saved before this
+  /// split still apply; never written to.
+  String _legacyGameOptionsSaveId(String coreId) =>
       'moonfin-native-$coreId-${widget.gameId}';
 
   /// The pre-per-game id, read for its values when a game has no document of
@@ -1198,6 +1255,7 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     if (!_coreOptionsReadable) {
       throw StateError('emulator settings were not readable this session');
     }
+    debugPrint('[moonfin_settings] write ${_gameOptionsSaveId(coreId)}');
     return retryOnTransientFailure(
       () => games.putSave(
         _gameOptionsSaveId(coreId),
@@ -1556,6 +1614,10 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
   Future<void> _syncControllerMappings() async {
     if (!PlatformDetection.isAndroid) return;
     await AndroidGamepadChannel.setControllerMapping(_controllerMappingsJson());
+    await AndroidGamepadChannel.setStickSnap({
+      for (final entry in _controllerMappings.entries)
+        entry.key: entry.value.snapForGame(widget.gameId).wireName,
+    });
   }
 
   /// Reads every advertisement for Moonfin's routable ports, including device
@@ -2311,6 +2373,7 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
         onCopyMapping: _copyControllerMapping,
         assignments: _controllerAssignments,
         inputDescriptors: _inputDescriptors,
+        gameId: widget.gameId,
         onAssignmentChanged: PlatformDetection.isAndroid
             ? _onControllerAssignmentsChanged
             : null,

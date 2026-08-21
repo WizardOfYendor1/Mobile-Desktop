@@ -114,6 +114,12 @@ class AndroidGamepadChannel {
   /// Tells NativePadInput whether the in-game pause overlay is showing, so
   /// Start switches between its gameplay gesture and overlay navigation, and
   /// LibretroBridge only sends "button" EventChannel messages while paused.
+  /// Stick snap mode per controller profile id, for the loaded game.
+  static Future<void> setStickSnap(Map<String, String> modes) async {
+    if (!PlatformDetection.isAndroid) return;
+    await _channel.invokeMethod('setStickSnap', {'modes': modes});
+  }
+
   static Future<void> setOverlayOpen(bool open) async {
     if (!PlatformDetection.isAndroid) return;
     await _channel.invokeMethod('setOverlayOpen', {'open': open});

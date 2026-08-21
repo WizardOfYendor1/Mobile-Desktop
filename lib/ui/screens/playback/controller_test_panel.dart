@@ -226,6 +226,17 @@ class _StickField extends StatelessWidget {
             fontFeatures: [FontFeature.tabularFigures()],
           ),
         ),
+        if (stick?.snapX != null && stick?.snapY != null)
+          Text(
+            'snap ${stick!.snapX!.toStringAsFixed(2)}/'
+            '${stick!.snapY!.toStringAsFixed(2)}'
+            '${stick!.snapMode == null ? '' : ' (${stick!.snapMode!})'}',
+            style: const TextStyle(
+              color: ControllerTestPanel._accent,
+              fontSize: 12,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
         Text(
           ControllerTestPanel._verdictLabel(verdict),
           style: const TextStyle(

@@ -177,7 +177,8 @@ void main() {
     );
     await tester.pump();
 
-    for (var i = 0; i < 17; i++) {
+    // Rows: stick snap, 16 buttons, then copy.
+    for (var i = 0; i < 18; i++) {
       key.currentState!.handleButton(5, true);
     }
     key.currentState!.handleButton(0, true);
@@ -289,7 +290,8 @@ void main() {
     final key = GlobalKey<NativeControllerMappingScreenState>();
     await tester.pumpWidget(harness([deviceA], key));
 
-    // Row 1 is the first button; activating it arms capture.
+    // Row 1 is stick snap, row 2 the first button; activating it arms capture.
+    key.currentState!.handleButton(5, true);
     key.currentState!.handleButton(5, true);
     key.currentState!.handleButton(0, true);
     await tester.pump();

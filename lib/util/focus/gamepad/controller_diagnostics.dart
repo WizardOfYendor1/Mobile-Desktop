@@ -30,11 +30,20 @@ class StickChannel extends ControllerChannel {
   final double y;
   final DiagnosticVerdict verdict;
 
+  /// What the game's stick snap setting makes of [x]/[y], for the test panel.
+  /// Null when the platform reports no snapped value.
+  final double? snapX;
+  final double? snapY;
+  final String? snapMode;
+
   const StickChannel({
     required this.id,
     required this.x,
     required this.y,
     required this.verdict,
+    this.snapX,
+    this.snapY,
+    this.snapMode,
   });
 
   StickChannel copyWith({double? x, double? y, DiagnosticVerdict? verdict}) =>

@@ -340,7 +340,14 @@ class AndroidControllerDiagnosticsFolder {
   bool foldAxes(Map<String, dynamic> payload) {
     if (payload['connectionId']?.toString() != connectionId) return false;
 
-    _foldStick('left', payload['lx'], payload['ly']);
+    _foldStick(
+      'left',
+      payload['lx'],
+      payload['ly'],
+      snapX: (payload['snapLx'] as num?)?.toDouble(),
+      snapY: (payload['snapLy'] as num?)?.toDouble(),
+      snapMode: payload['snap']?.toString(),
+    );
     _foldStick('right', payload['rx'], payload['ry']);
     _foldStick('hat', payload['hatX'], payload['hatY']);
     _foldTrigger('l2', payload['l2']);
@@ -363,7 +370,14 @@ class AndroidControllerDiagnosticsFolder {
     return true;
   }
 
-  void _foldStick(String id, dynamic rawX, dynamic rawY) {
+  void _foldStick(
+    String id,
+    dynamic rawX,
+    dynamic rawY, {
+    double? snapX,
+    double? snapY,
+    String? snapMode,
+  }) {
     final x = (rawX as num?)?.toDouble() ?? 0.0;
     final y = (rawY as num?)?.toDouble() ?? 0.0;
     _axisTrackers.putIfAbsent(_trackerKey(id, true), AxisVerdictTracker.new).sample(x);
@@ -376,6 +390,9 @@ class AndroidControllerDiagnosticsFolder {
         _axisTrackers[_trackerKey(id, true)],
         _axisTrackers[_trackerKey(id, false)],
       ),
+      snapX: snapX,
+      snapY: snapY,
+      snapMode: snapMode,
     );
   }
 

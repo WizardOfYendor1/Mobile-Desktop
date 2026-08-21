@@ -338,6 +338,11 @@ class MainActivity : AudioServiceActivity(), GamepadsCompatibleActivity {
                     nativePad?.setControllerAssignments(call.argument<String>("assignments") ?: "{}")
                     result.success(true)
                 }
+                "setStickSnap" -> {
+                    val modes = call.argument<Map<String, String>>("modes") ?: emptyMap()
+                    nativePad?.setStickSnap(modes)
+                    result.success(true)
+                }
                 "setControllerMappingCapture" -> {
                     nativePad?.setCapture(
                         call.argument<Boolean>("active") ?: false,
