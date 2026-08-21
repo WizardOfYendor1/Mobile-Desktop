@@ -83,4 +83,71 @@ class AnalogConversionTest {
         assertEquals(MotionEvent.AXIS_LTRIGGER, axes.left)
         assertEquals(MotionEvent.AXIS_RTRIGGER, axes.right)
     }
+
+    // --- gentle 8-way snap (SNAP_DEGREES) ---
+
+    private fun atDegrees(degrees: Double, magnitude: Float = 0.9f): Long {
+        val r = Math.toRadians(degrees)
+        return analogAxisPair(
+            (Math.cos(r) * magnitude).toFloat(),
+            (Math.sin(r) * magnitude).toFloat(),
+        )
+    }
+
+    @Test
+    fun `input just off a cardinal snaps onto it`() {
+        // Measured on device: holding "up" sits a median ~14 degrees off axis.
+        // Inside the 10 degree window the minor component must vanish.
+        val packed = atDegrees(95.0)
+        assertEquals("minor component should be dropped", 0, axisX(packed))
+        assertTrue("major component should survive", axisY(packed) > 20000)
+    }
+
+    @Test
+    fun `input well off a cardinal is left alone`() {
+        // 20 degrees off is outside the window: this is a real diagonal-ish
+        // push and must not be flattened, or an 8-way game loses input.
+        val packed = atDegrees(70.0)
+        assertTrue("expected the minor component to survive", axisX(packed) > 1000)
+    }
+
+    @Test
+    fun `input just off a diagonal snaps onto it`() {
+        val packed = atDegrees(40.0)
+        val x = axisX(packed)
+        val y = axisY(packed)
+        assertTrue("expected equal components, got $x/$y", Math.abs(x - y) <= 2)
+    }
+
+    @Test
+    fun `a snapped diagonal keeps its magnitude and stays inside the rails`() {
+        val packed = analogAxisPair(1f, 1f)
+        val x = axisX(packed)
+        val y = axisY(packed)
+        assertTrue("x out of range: $x", x in 22000..32767)
+        assertTrue("y out of range: $y", y in 22000..32767)
+    }
+
+    @Test
+    fun `the snap preserves sign in every quadrant`() {
+        for (degrees in listOf(95.0, 175.0, 265.0, 355.0, 40.0, 130.0, 220.0, 310.0)) {
+            val r = Math.toRadians(degrees)
+            val rawX = (Math.cos(r) * 0.9).toFloat()
+            val rawY = (Math.sin(r) * 0.9).toFloat()
+            val packed = analogAxisPair(rawX, rawY)
+            val x = axisX(packed)
+            val y = axisY(packed)
+            if (Math.abs(rawX) > 0.2f) {
+                assertTrue("x sign flipped at $degrees", (x > 0) == (rawX > 0))
+            }
+            if (Math.abs(rawY) > 0.2f) {
+                assertTrue("y sign flipped at $degrees", (y > 0) == (rawY > 0))
+            }
+        }
+    }
+
+    @Test
+    fun `the snap never resurrects a dead-zone value`() {
+        assertEquals(packAxes(0, 0), analogAxisPair(0.014f, 0.014f))
+    }
 }

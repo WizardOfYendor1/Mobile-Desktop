@@ -10,6 +10,8 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import kotlin.math.abs
 import kotlin.math.hypot
+import kotlin.math.max
+import kotlin.math.min
 import kotlin.math.roundToInt
 import org.json.JSONObject
 
@@ -1012,18 +1014,65 @@ internal const val STICK_RELEASE = 0.20f
 internal const val ANALOG_DEAD_ZONE = 0.02f
 
 /**
- * Radial dead zone plus rescale: values inside the dead zone are exactly
- * centre, and everything outside is rescaled so full deflection still reaches
- * the rails instead of clipping short. Returns the pair as packed ints in
+ * How close to one of the 8 principal directions counts as "meant to be that
+ * direction". Deliberately gentle: measured on device, holding a stick "up"
+ * sits a median of ~14 degrees off axis, so this corrects the small drift
+ * without flattening genuinely diagonal input. Games with real snap points
+ * (4-way arcade titles) need a more aggressive mode; that is a separate,
+ * per-game setting rather than a bigger number here.
+ */
+internal const val SNAP_DEGREES = 10f
+
+/** tan(10) -- minor/major ratio at the cardinal snap boundary. */
+private const val SNAP_CARDINAL_RATIO = 0.176327f
+
+/** tan(45 - 10) -- minor/major ratio at the diagonal snap boundary. */
+private const val SNAP_DIAGONAL_RATIO = 0.700208f
+
+/** cos(45), the per-axis component of a unit diagonal. */
+private const val DIAGONAL_COMPONENT = 0.707107f
+
+/**
+ * Radial dead zone, rescale, then a gentle snap to the nearest of the 8
+ * principal directions. Values inside the dead zone are exactly centre, and
+ * everything outside is rescaled so full deflection still reaches the rails
+ * instead of clipping short. Returns the pair as packed ints in
  * -32767..32767.
+ *
+ * The snap works on the minor/major ratio rather than an angle so the hot
+ * path stays free of trigonometry: near a cardinal the minor component is
+ * dropped, near a diagonal the two are equalised, and anything in between is
+ * passed through untouched.
  */
 internal fun analogAxisPair(rawX: Float, rawY: Float): Long {
     val magnitude = hypot(rawX, rawY)
     if (magnitude <= ANALOG_DEAD_ZONE || magnitude == 0f) return packAxes(0, 0)
     val scale = ((magnitude - ANALOG_DEAD_ZONE) / (1f - ANALOG_DEAD_ZONE)) / magnitude
-    val x = (rawX * scale).coerceIn(-1f, 1f)
-    val y = (rawY * scale).coerceIn(-1f, 1f)
-    return packAxes((x * 32767f).roundToInt(), (y * 32767f).roundToInt())
+    var x = (rawX * scale).coerceIn(-1f, 1f)
+    var y = (rawY * scale).coerceIn(-1f, 1f)
+
+    val ax = abs(x)
+    val ay = abs(y)
+    val major = max(ax, ay)
+    val minor = min(ax, ay)
+    if (major > 0f) {
+        val ratio = minor / major
+        if (ratio <= SNAP_CARDINAL_RATIO) {
+            // Drop the minor component rather than growing the major one:
+            // the magnitude loss at 10 degrees is under 2%, and growing it
+            // could push a full deflection past the rail.
+            if (ax >= ay) y = 0f else x = 0f
+        } else if (ratio >= SNAP_DIAGONAL_RATIO) {
+            val component = hypot(x, y) * DIAGONAL_COMPONENT
+            x = if (x < 0f) -component else component
+            y = if (y < 0f) -component else component
+        }
+    }
+
+    return packAxes(
+        (x.coerceIn(-1f, 1f) * 32767f).roundToInt(),
+        (y.coerceIn(-1f, 1f) * 32767f).roundToInt(),
+    )
 }
 
 /**
