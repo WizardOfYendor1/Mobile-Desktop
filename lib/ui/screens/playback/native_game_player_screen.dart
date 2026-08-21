@@ -23,6 +23,7 @@ import '../../../util/core_input_descriptors.dart';
 import '../../../util/native_controller_mapping.dart';
 import '../../../util/native_controller_player_assignments.dart';
 import '../../../util/platform_detection.dart';
+import '../../../util/settings_save_retry.dart';
 import '../../../util/focus/gamepad/android_gamepad_channel.dart';
 import '../../../util/focus/gamepad/gamepad_suppressor.dart';
 import '../../screensaver/screensaver_controller.dart';
@@ -759,10 +760,16 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
         return;
       }
 
-      final settingsJson = await _loadSettings(
-        games,
-        coreId,
-      ).catchError((_) => null);
+      Map<String, String>? settingsJson;
+      try {
+        settingsJson = await _loadSettings(games, coreId);
+        _coreOptionsReadable = true;
+      } catch (_) {
+        // Unreachable is not the same as absent. Starting on defaults is
+        // recoverable; persisting those defaults over settings we never
+        // managed to read is not, so writes stay disabled for this session.
+        _coreOptionsReadable = false;
+      }
       // Last check before starting the one-per-process native session: if the
       // screen was unmounted while settings were loading, starting it now
       // would leave a session running with nothing left to tear it down.
@@ -931,14 +938,27 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     }
   }
 
+  /// This game's emulator settings, falling back to the core-wide document
+  /// written before settings were scoped per game.
+  ///
+  /// The legacy document is inherited in memory but never written back to: it
+  /// holds every game's options for this core, so copying it into this game's
+  /// document would carry another game's dipswitches along. The first write
+  /// here stores this game's options under its own id, which is the migration.
   Future<Map<String, String>?> _loadSettings(
     GamesApi games,
     String coreId,
   ) async {
-    final blob = await games.getSave(
-      'moonfin-native-$coreId',
-      kind: 'settings',
-    );
+    final own = await _readSettings(games, _gameOptionsSaveId(coreId));
+    if (own != null) return own;
+    return _readSettings(games, _legacyCoreOptionsSaveId(coreId));
+  }
+
+  Future<Map<String, String>?> _readSettings(
+    GamesApi games,
+    String saveId,
+  ) async {
+    final blob = await games.getSave(saveId, kind: 'settings');
     if (blob == null || blob.isEmpty) return null;
     final text = String.fromCharCodes(blob);
     final map = <String, String>{};
@@ -1140,18 +1160,74 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     unawaited(_persistOptions());
   }
 
+  /// Emulator settings are stored per game, not per core.
+  ///
+  /// Cores publish per-game options -- FBNeo's dipswitches are per driver -- so
+  /// a single document per core cannot hold two games' settings at once.
+  /// Confirmed on device: BurgerTime's lives reverted after merely loading and
+  /// exiting Spy Hunter, with no setting changed there, because that exit
+  /// rewrote the shared document from Spy Hunter's options alone. Per-game ids
+  /// remove the sharing rather than arbitrate it.
+  String _gameOptionsSaveId(String coreId) =>
+      'moonfin-native-$coreId-${widget.gameId}';
+
+  /// The pre-per-game id, read for its values when a game has no document of
+  /// its own. Never written to; see [_loadSettings].
+  static String _legacyCoreOptionsSaveId(String coreId) =>
+      'moonfin-native-$coreId';
+
+  /// False when this game's settings could not be READ this session, which
+  /// would make a write a blind overwrite of settings we never saw.
+  bool _coreOptionsReadable = true;
+
+  /// The one place emulator settings are written, so the retry policy and the
+  /// save id cannot drift between the menu path and the exit path.
+  ///
+  /// A whole-document write is correct here because the document belongs to
+  /// one game and [options] is that game's complete option set -- both callers
+  /// enumerate what the core published for the loaded content.
+  ///
+  /// [backoff] is shortened on exit: a user leaving the game should not wait
+  /// out a full retry ladder for a settings write.
+  Future<void> _writeOptions(
+    GamesApi games,
+    String coreId,
+    Iterable<MapEntry<String, String>> options, {
+    List<Duration> backoff = defaultSettingsSaveBackoff,
+  }) {
+    if (!_coreOptionsReadable) {
+      throw StateError('emulator settings were not readable this session');
+    }
+    return retryOnTransientFailure(
+      () => games.putSave(
+        _gameOptionsSaveId(coreId),
+        options.map((e) => '${e.key}=${e.value}').join('\n').codeUnits,
+        kind: 'settings',
+      ),
+      backoff: backoff,
+    );
+  }
+
   Future<void> _persistOptions() async {
     final games = _client.gamesApi;
     final coreId = libretroCoreId(widget.core);
     if (games == null || coreId == null || _options.isEmpty) return;
-    final blob = _options
-        .map((o) => '${o.id}=${o.current}')
-        .join('\n')
-        .codeUnits;
+    if (!_coreOptionsReadable) {
+      _showTransientMessage(
+        'Saved settings could not be read; not overwriting them.',
+      );
+      return;
+    }
     try {
-      await games.putSave('moonfin-native-$coreId', blob, kind: 'settings');
-    } on Exception {
-      // A settings write is not worth interrupting the game for.
+      await _writeOptions(
+        games,
+        coreId,
+        _options.map((o) => MapEntry(o.id, o.current)),
+      );
+    } catch (_) {
+      // The option is live in the core either way, but it will be back to its
+      // old value next launch, and only the user can decide to redo it.
+      _showTransientMessage('Setting applied for now, but not saved.');
     }
   }
 
@@ -1368,11 +1444,15 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
       try {
         await saveControllerPlayerAssignments(games, assignments);
       } catch (error) {
-        // The assignment is live for this session even if it could not be
-        // stored; surfacing a failure mid-game would be worse than losing the
-        // pin at the next launch.
+        // The assignment is live for this session. This edit is made from the
+        // controller menu, not mid-game, so a transient line there is the
+        // cheaper surprise -- cheaper than the pin being silently gone at the
+        // next launch.
         debugPrint(
           '[NativeGamePlayerScreen] Could not save player assignment: $error',
+        );
+        _showTransientMessage(
+          'Player assignment applied for now, but not saved to the server.',
         );
       }
     }
@@ -1397,7 +1477,8 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
         profileIds
             .where((id) => !mappings.containsKey(id))
             .map(
-              (id) async => MapEntry(id, await loadControllerMapping(api, id)),
+              (id) async =>
+                  MapEntry(id, await loadControllerMappingChecked(api, id)),
             ),
       );
       if (!mounted || generation != _controllerRefreshGeneration) return;
@@ -1406,9 +1487,16 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
         ..clear()
         ..addAll(currentMappings);
       for (final entry in loaded) {
-        if (!currentMappings.containsKey(entry.key)) {
-          mappings[entry.key] = entry.value;
+        if (currentMappings.containsKey(entry.key)) continue;
+        if (!entry.value.reachable) {
+          // The read failed, so we do NOT know this pad's bindings. Leaving it
+          // out means the screen shows nothing to edit rather than showing
+          // defaults that a later edit would persist over the real mapping.
+          _unreadableMappingProfiles.add(entry.key);
+          continue;
         }
+        _unreadableMappingProfiles.remove(entry.key);
+        mappings[entry.key] = entry.value.mapping;
       }
       final coreId = libretroCoreId(widget.core);
       final repairedProfiles = <String>{};
@@ -1560,12 +1648,24 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
         false;
   }
 
+  /// Profiles whose stored mapping could not be READ this session. Writing for
+  /// one of these would overwrite bindings we never managed to see.
+  final Set<String> _unreadableMappingProfiles = <String>{};
+
   Future<void> _updateControllerMapping(
     String deviceId,
     NativeControllerMapping mapping,
   ) async {
     final games = _client.gamesApi;
     if (games == null) return;
+    if (_unreadableMappingProfiles.contains(deviceId)) {
+      // Refusing is the safe half of the trade: the edit applies for this
+      // session, but is not persisted over a mapping we failed to load.
+      _showTransientMessage(
+        'Saved mapping could not be read; not overwriting it.',
+      );
+      return;
+    }
     setState(() {
       _controllerMappings = Map.unmodifiable({
         ..._controllerMappings,
@@ -1576,8 +1676,9 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     try {
       await saveControllerMapping(games, deviceId, mapping);
     } catch (_) {
-      // The mapping is active for this session even if the best-effort sync
-      // fails; the next successful change will persist the latest value.
+      // The mapping is active for this session, but it will not survive the
+      // exit, and only the user can decide whether to redo it later.
+      _showTransientMessage('Button saved for now, but not to the server.');
     }
   }
 
@@ -1603,8 +1704,11 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     try {
       await saveControllerMapping(games, deviceId, next);
     } catch (_) {
-      // The selected layout stays applied during this session if persistence
-      // fails, matching the existing button-remap behavior.
+      // The layout stays applied for this session; say so rather than let the
+      // user find it reverted at the next launch.
+      _showTransientMessage(
+        'Controller type applied for now, but not saved to the server.',
+      );
     }
   }
 
@@ -1661,16 +1765,27 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     }
     await _syncControllerMappings();
     await _syncControllerTypes();
+    // One profile failing to persist must not prevent other pads from
+    // receiving the active-session mapping, so failures are counted rather
+    // than thrown, and reported once instead of once per pad.
+    var failed = 0;
     await Future.wait(
       targetIds.map((id) async {
         try {
           await saveControllerMapping(games, id, next[id]!);
         } catch (_) {
-          // One profile failing to persist must not prevent other pads from
-          // receiving the active-session mapping.
+          failed++;
         }
       }),
     );
+    if (failed > 0) {
+      _showTransientMessage(
+        failed == targetIds.length
+            ? 'Copied for now, but not saved to the server.'
+            : 'Copied, but $failed of ${targetIds.length} pads were not saved '
+                  'to the server.',
+      );
+    }
   }
 
   void _openControllerMapping() {
@@ -1696,13 +1811,16 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
           await games.putSave(_stateKey, state);
         }
         final options = await _player.getCurrentOptions();
-        if (options.isNotEmpty) {
-          final coreId = libretroCoreId(widget.core);
-          final blob = options.entries
-              .map((e) => '${e.key}=${e.value}')
-              .join('\n')
-              .codeUnits;
-          await games.putSave('moonfin-native-$coreId', blob, kind: 'settings');
+        final coreId = libretroCoreId(widget.core);
+        if (options.isNotEmpty && coreId != null) {
+          // One short retry only: the user is leaving, so a long ladder here
+          // would read as a hung exit.
+          await _writeOptions(
+            games,
+            coreId,
+            options.entries,
+            backoff: const [Duration(milliseconds: 250)],
+          );
         }
       }
     } catch (_) {

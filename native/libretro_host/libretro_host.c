@@ -370,6 +370,25 @@ struct lh_host {
   atomic_uint input_level[LH_MAX_PORTS];
   atomic_uint input_pending[LH_MAX_PORTS];
   uint16_t input_frame[LH_MAX_PORTS];
+
+  // Analog is a level, not an edge, so it deliberately does NOT use the
+  // OR-latch above. X and Y share one 32-bit word so a diagonal cannot tear:
+  // cores read each axis many times per frame (measured ~7x), and two
+  // independent atomics would be read at different instants.
+  atomic_uint analog_level[LH_MAX_PORTS][2];   // [port][0=left,1=right]
+  uint32_t analog_frame[LH_MAX_PORTS][2];      // emulation thread only
+  // l2 packed in the high 16 bits, r2 in the low, for the same reason.
+  atomic_uint trigger_level[LH_MAX_PORTS];
+  uint32_t trigger_frame[LH_MAX_PORTS];        // emulation thread only
+
+  // Bit N set once the core has queried RETRO_DEVICE_ANALOG on port N, since
+  // the current content was loaded. Written from the emulation thread inside
+  // input_state_cb, read from the platform thread via lh_analog_queried_ports,
+  // so it is atomic. Per-game, not per-core (see the design doc: Stella
+  // queries analog on Breakout but not on a joystick game), so it is reset on
+  // every lh_load and every restart_core, alongside the other per-session
+  // input state.
+  atomic_uint analog_queried_ports;
 };
 
 // libretro's callbacks carry no user pointer, so the single live host is global.
@@ -996,6 +1015,23 @@ static bool copy_input_descriptors(struct lh_host *h,
   return true;
 }
 
+// Clears every analog word for a fresh session. The digital mask is zeroed by
+// the platform on session change (its reset path writes a zero mask), but that
+// path is mask-only and never touches these words -- so without this a stick
+// left deflected when one game exits would still be deflected for the first
+// frames of the next, before any motion event arrives to overwrite it.
+static void reset_analog_state(struct lh_host *h) {
+  for (int p = 0; p < LH_MAX_PORTS; p++) {
+    atomic_store(&h->analog_level[p][0], 0u);
+    atomic_store(&h->analog_level[p][1], 0u);
+    atomic_store(&h->trigger_level[p], 0u);
+    h->analog_frame[p][0] = 0;
+    h->analog_frame[p][1] = 0;
+    h->trigger_frame[p] = 0;
+  }
+  atomic_store(&h->analog_queried_ports, 0u);
+}
+
 static void reset_controller_devices(struct lh_host *h) {
   for (int port = 0; port < LH_MAX_PORTS; port++) {
     h->controller_devices[port] = RETRO_DEVICE_JOYPAD;
@@ -1524,6 +1560,15 @@ static void RETRO_CALLCONV audio_sample_cb(int16_t left, int16_t right) {
 // Input.
 // ---------------------------------------------------------------------------
 
+// Packing helpers for the analog and trigger atomics: two int16 halves share
+// one 32-bit word so a diagonal (or an L2/R2 pair) read many times per frame
+// can never tear across two independently-updated atomics.
+static inline uint32_t pack_axes(int16_t x, int16_t y) {
+  return ((uint32_t)(uint16_t)x << 16) | (uint16_t)y;
+}
+static inline int16_t unpack_x(uint32_t v) { return (int16_t)(v >> 16); }
+static inline int16_t unpack_y(uint32_t v) { return (int16_t)(v & 0xffff); }
+
 // The one implementation of the OR-latch: every platform writer calls
 // lh_set_input, and this is the only place that ever drains it. Called once
 // per real libretro poll from input_poll_cb (on the emulation thread), and
@@ -1547,6 +1592,14 @@ static void latch_input(struct lh_host *h) {
     unsigned level = atomic_load(&h->input_level[p]);
     h->input_frame[p] = (uint16_t)(observed | level);
   }
+
+  // Analog is a level, not an edge: no OR-latch, just a plain snapshot of
+  // whatever was last written. See the struct comment on analog_level.
+  for (int p = 0; p < LH_MAX_PORTS; p++) {
+    h->analog_frame[p][0] = atomic_load(&h->analog_level[p][0]);
+    h->analog_frame[p][1] = atomic_load(&h->analog_level[p][1]);
+    h->trigger_frame[p]   = atomic_load(&h->trigger_level[p]);
+  }
 }
 
 // Was a no-op: the core polled input by immediately re-reading whatever the
@@ -1560,9 +1613,50 @@ static void RETRO_CALLCONV input_poll_cb(void) {
 
 static int16_t RETRO_CALLCONV input_state_cb(unsigned port, unsigned device,
                                              unsigned index, unsigned id) {
-  (void)index;
   struct lh_host *h = g_session;
-  if (!h || device != RETRO_DEVICE_JOYPAD || port >= LH_MAX_PORTS) return 0;
+  if (!h || port >= LH_MAX_PORTS) return 0;
+
+  if (device == RETRO_DEVICE_ANALOG) {
+    // Record that this port has been queried at all, so the platform can stop
+    // converting the stick to digital bits for it (see lh_analog_queried_ports).
+    // Measured at ~56 ANALOG reads/frame for some cores, so this has to stay
+    // cheap: a relaxed load first, and only the (rare) first-query-on-this-port
+    // call pays for the atomic RMW.
+    {
+      unsigned bit = 1u << port;
+      if (!(atomic_load_explicit(&h->analog_queried_ports, memory_order_relaxed) &
+            bit)) {
+        atomic_fetch_or_explicit(&h->analog_queried_ports, bit,
+                                 memory_order_relaxed);
+      }
+    }
+    // Latched by input_poll_cb above, not a fresh read - see the digital
+    // comment below for why that matters (torn diagonals here, instead of
+    // torn button combinations).
+    if (index == RETRO_DEVICE_INDEX_ANALOG_LEFT ||
+        index == RETRO_DEVICE_INDEX_ANALOG_RIGHT) {
+      uint32_t packed = h->analog_frame[port][index];
+      if (id == RETRO_DEVICE_ID_ANALOG_X) return unpack_x(packed);
+      if (id == RETRO_DEVICE_ID_ANALOG_Y) return unpack_y(packed);
+      return 0;
+    }
+    if (index == RETRO_DEVICE_INDEX_ANALOG_BUTTON) {
+      if (id == RETRO_DEVICE_ID_JOYPAD_L2) {
+        return unpack_x((uint32_t)h->trigger_frame[port]);
+      }
+      if (id == RETRO_DEVICE_ID_JOYPAD_R2) {
+        return unpack_y((uint32_t)h->trigger_frame[port]);
+      }
+      // Derived, not stored: every other analog-button id just reflects the
+      // matching digital bit at full deflection, so a core reading this
+      // plane instead of JOYPAD directly still sees the button.
+      if (id >= 16) return 0;
+      return (h->input_frame[port] & (1u << id)) ? 0x7fff : 0;
+    }
+    return 0;
+  }
+
+  if (device != RETRO_DEVICE_JOYPAD) return 0;
   // Latched by input_poll_cb above, not a fresh read: every id read during
   // this frame sees the same snapshot, so composing e.g. up and left from two
   // different instants of the same frame (a torn read) can't happen.
@@ -1887,6 +1981,37 @@ void lh_set_input(lh_host *host, int port, uint16_t mask) {
   atomic_store(&host->input_level[port], (unsigned)mask);
 }
 
+void lh_set_pad_state(lh_host *host, int port, uint16_t mask, int16_t lx,
+                      int16_t ly, int16_t rx, int16_t ry, uint16_t l2,
+                      uint16_t r2) {
+  if (!host || port < 0 || port >= LH_MAX_PORTS) return;
+  // Analog first, digital second, deliberately.
+  //
+  // These are separate words, so a poll landing between them shows the core one
+  // domain a frame ahead of the other. The window is a few instructions against
+  // a 16.7ms poll, so it is rare either way -- but it is not symmetric in which
+  // direction is preferable. Writing analog first means that when the button
+  // mask lands, the stick position accompanying it is already current: a
+  // direction never arrives later than the button pressed with it, which is the
+  // ordering that matters for direction+button inputs.
+  atomic_store(&host->analog_level[port][0], pack_axes(lx, ly));
+  atomic_store(&host->analog_level[port][1], pack_axes(rx, ry));
+  atomic_store(&host->trigger_level[port],
+              pack_axes((int16_t)l2, (int16_t)r2));
+
+  // Same digital ordering as lh_set_input, and for the same reason - see its
+  // comment. lh_set_input stays a separate entry point (other platforms and
+  // tests call it directly) and leaves the analog words above untouched.
+  atomic_fetch_or(&host->input_pending[port], (unsigned)mask);
+  atomic_store(&host->input_level[port], (unsigned)mask);
+}
+
+unsigned lh_analog_queried_ports(lh_host *host) {
+  if (!host) return 0;
+  return atomic_load_explicit(&host->analog_queried_ports,
+                              memory_order_relaxed);
+}
+
 void lh_test_poll_input(lh_host *host) {
   if (host) latch_input(host);
 }
@@ -1894,6 +2019,20 @@ void lh_test_poll_input(lh_host *host) {
 uint16_t lh_test_read_input(lh_host *host, int port) {
   if (!host || port < 0 || port >= LH_MAX_PORTS) return 0;
   return host->input_frame[port];
+}
+
+int16_t lh_test_read_analog(lh_host *host, int port, int index, int axis) {
+  if (!host || port < 0 || port >= LH_MAX_PORTS || index < 0 || index > 1) {
+    return 0;
+  }
+  uint32_t packed = host->analog_frame[port][index];
+  return axis == 0 ? unpack_x(packed) : unpack_y(packed);
+}
+
+uint16_t lh_test_read_trigger(lh_host *host, int port, int which) {
+  if (!host || port < 0 || port >= LH_MAX_PORTS) return 0;
+  uint32_t packed = host->trigger_frame[port];
+  return which == 0 ? (uint16_t)unpack_x(packed) : (uint16_t)unpack_y(packed);
 }
 
 static void free_load_paths(struct lh_host *h) {
@@ -2085,6 +2224,10 @@ int lh_load(lh_host *h, const char *core_path, const char *rom_path,
   // A fresh load is a new session, so do not carry a choice from a different
   // core/content forward. Internal restart deliberately does not call this.
   reset_controller_devices(h);
+  // Analog-queried is per-game, not per-core (see the struct comment): clear
+  // it, and the analog values with it, so neither a stale "reads analog"
+  // signal nor a stale stick deflection leaks into new content.
+  reset_analog_state(h);
 
   // FIX 5: game_id names the SRAM file below and ultimately originates from a
   // route parameter seeded by server data (app_router.dart ->
@@ -2197,6 +2340,12 @@ static int restart_core(struct lh_host *h) {
   if (h->core.handle) lib_close(h->core.handle);
   memset(&h->core, 0, sizeof(h->core));
   h->core_loaded = 0;
+
+  // Same reasoning as lh_load: the design treats analog-queried as per-game,
+  // so a restart clears it -- and the analog values with it -- even though it
+  // keeps most other state (e.g. controller_devices, reapplied below) alive
+  // across the new core instance.
+  reset_analog_state(h);
 
   mutex_lock(&h->vars_lock);
   free_option_definitions(h);
@@ -2484,6 +2633,27 @@ int lh_get_input_descriptor(lh_host *h, int index, lh_input_descriptor *out) {
   *out = h->input_descriptors[index];
   mutex_unlock(&h->input_descriptor_lock);
   return 0;
+}
+
+unsigned lh_analog_descriptor_ports(lh_host *h) {
+  if (!h) return 0;
+  unsigned ports = 0;
+  mutex_lock(&h->input_descriptor_lock);
+  for (int i = 0; i < h->input_descriptor_count; i++) {
+    const lh_input_descriptor *d = &h->input_descriptors[i];
+    // Only STICK descriptors decide the stick's mode. An analog BUTTON
+    // descriptor (index 2, i.e. trigger pressure) says nothing about whether
+    // the game wants an analog stick -- counting it would switch the stick to
+    // analog for a game whose movement is digital, which is exactly the
+    // BurgerTime failure this signal exists to avoid.
+    if (d->device == RETRO_DEVICE_ANALOG && d->port < LH_MAX_PORTS &&
+        (d->index == RETRO_DEVICE_INDEX_ANALOG_LEFT ||
+         d->index == RETRO_DEVICE_INDEX_ANALOG_RIGHT)) {
+      ports |= (1u << d->port);
+    }
+  }
+  mutex_unlock(&h->input_descriptor_lock);
+  return ports;
 }
 
 int lh_set_controller_type(lh_host *h, int port, unsigned device) {
