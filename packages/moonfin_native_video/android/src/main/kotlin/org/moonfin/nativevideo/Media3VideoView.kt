@@ -809,6 +809,11 @@ class Media3VideoView(
     // setSource payload and kept current by onAudioInputFormatChanged so
     // mid-play track switches re-gate tunneling.
     private var currentAudioIsLossless = false
+    // What the track selector asked for. Requesting tunneling is not proof the
+    // platform granted it, so this is the flag to consult when reacting to an
+    // AudioTrack failure - at that point there is no confirmed config to read.
+    private var tunnelingRequested = false
+    // Whether the AudioTrack actually opened tunneled, per AudioTrackConfig.
     private var tunnelingActive = false
     private var audioRekickRunnable: Runnable? = null
     private var suppressStateEmissionsForRekick = false
@@ -1254,6 +1259,7 @@ class Media3VideoView(
             eventTime: AnalyticsListener.EventTime,
             audioTrackConfig: AudioSink.AudioTrackConfig,
         ) {
+            tunnelingActive = audioTrackConfig.tunneling
             // Ground truth for whether bitstreaming engaged: a non-PCM
             // encoding on the AudioTrack is passthrough by definition.
             Media3Bridge.emitEvent(
@@ -1268,6 +1274,7 @@ class Media3VideoView(
                     // count is the channel count the sink actually opened.
                     "outputChannels" to Integer.bitCount(audioTrackConfig.channelConfig),
                     "tunneling" to audioTrackConfig.tunneling,
+                    "tunnelingRequested" to tunnelingRequested,
                     "offload" to audioTrackConfig.offload,
                     "bufferSize" to audioTrackConfig.bufferSize,
                 ),
@@ -1574,6 +1581,7 @@ class Media3VideoView(
 
     private fun createPlayer(): ExoPlayer {
         emitFfmpegDecoderDiagnosticsOnce()
+        tunnelingActive = false
         // Fresh selector for every player; see the trackSelector field comment.
         trackSelector = DefaultTrackSelector(context)
         audioDelayProcessor.setDelayMs(audioDelayMs)
@@ -2647,7 +2655,9 @@ class Media3VideoView(
                 audioDelayMs == 0L &&
                 !skipSilenceEnabled
 
-        tunnelingActive = shouldEnableTunneling
+        tunnelingRequested = shouldEnableTunneling
+        // Clear the previous result until the sink reports what it opened.
+        tunnelingActive = false
 
         val offloadMode = if (isAudioContent && !audioOffloadDisabled) {
             TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
@@ -3479,7 +3489,7 @@ class Media3VideoView(
             error.errorCode == PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED
 
         if (!isRetryableError ||
-            !tunnelingActive ||
+            !tunnelingRequested ||
             sessionTunnelingDisabled ||
             tunnelingRetryAttemptedForCurrentSource
         ) {
