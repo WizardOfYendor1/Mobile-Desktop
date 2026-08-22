@@ -2633,7 +2633,19 @@ class Media3VideoView(
                 // Tunneled TrueHD/MLP passthrough can be silent with no sink
                 // exception on some AVR chains. Tunneling is only a latency
                 // optimization, so drop it whenever a lossless track is active.
-                !currentAudioIsLossless
+                !currentAudioIsLossless &&
+                // DefaultAudioSink requires that audio processors under
+                // tunneling emit output of the same duration as their input,
+                // immediately after that input is queued. The HW_AV_SYNC header
+                // is written from the *input* buffer's presentation time and is
+                // never re-derived from what the pipeline actually emitted, so a
+                // processor that changes duration silently desyncs A/V.
+                // audioDelayProcessor inserts silence or trims bytes, and
+                // silence skipping drops audio outright; both break that
+                // contract. Channel mixing preserves duration, so the stereo
+                // downmix deliberately stays tunneling-compatible.
+                audioDelayMs == 0L &&
+                !skipSilenceEnabled
 
         tunnelingActive = shouldEnableTunneling
 
@@ -2761,6 +2773,9 @@ class Media3VideoView(
         }
         audioDelayMs = nextDelayMs
         audioDelayProcessor.setDelayMs(nextDelayMs)
+        // A non-zero delay makes the processor duration-changing, which is
+        // incompatible with tunneling; re-gate before the flush below.
+        applyTrackSelectorForCurrentSource()
         // Trigger a buffer flush so the new delay takes effect immediately
         // rather than waiting for the next natural seek or track change.
         // Only do this when the player has an active, prepared item; skip
@@ -2834,6 +2849,8 @@ class Media3VideoView(
         }
         skipSilenceEnabled = nextEnabled
         player.skipSilenceEnabled = nextEnabled
+        // Silence skipping is duration-changing and incompatible with tunneling.
+        applyTrackSelectorForCurrentSource()
         emitState()
     }
 
