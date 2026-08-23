@@ -102,8 +102,9 @@ class SiriRemoteGlide {
 
     final direction = horizontal
         ? (travel > 0 ? GamepadNavKey.right : GamepadNavKey.left)
-        // The pad reports up as positive y.
-        : (travel > 0 ? GamepadNavKey.up : GamepadNavKey.down);
+        // The pad reports up as negative y, so travelling positive is a
+        // finger moving down the surface.
+        : (travel > 0 ? GamepadNavKey.down : GamepadNavKey.up);
     _step(direction);
     _steppedThisGesture = true;
     if (horizontal) {

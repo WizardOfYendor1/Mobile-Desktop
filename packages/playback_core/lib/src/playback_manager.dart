@@ -1939,17 +1939,17 @@ class PlaybackManager implements AudioOwnable {
 
   Future<void> previous() async {
     if (await _maybeIntercept(TransportAction.previous)) return;
-    if (state.position.inSeconds > 3) {
+    // A press this far in restarts the item, and so does one with nothing to
+    // step back to.
+    if (state.position.inSeconds > 3 || !queueService.hasPrevious) {
       await seekTo(Duration.zero);
       return;
     }
     _mediaSourceId = null;
     await _stopAndReportCurrent(skipQueueChange: true);
     _resetBackendSelectionLock();
-    final hadPrevious = queueService.previous();
-    if (hadPrevious) {
-      await _playCurrentItem();
-    }
+    queueService.previous();
+    await _playCurrentItem();
   }
 
   Future<void> playFromQueue(int index) async {

@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_tvos/flutter_tvos.dart'
-    show TvRemoteController, TvRemoteConfig;
+    show TvRemoteController, TvRemoteConfig, FlutterTvosPlatform;
 import 'package:get_it/get_it.dart';
 import 'package:go_router/go_router.dart';
 import 'package:playback_core/playback_core.dart';
@@ -85,6 +85,15 @@ class _MoonfinAppState extends State<MoonfinApp> {
     _prefs.addListener(_syncGlassFromPrefs);
     if (PlatformDetection.isAppleTV) {
       TopShelfService().startDeepLinkListener(navigateWhenReady);
+      if (!FlutterTvosPlatform.isTvos) {
+        // The package gates init on Platform.operatingSystem being tvos and
+        // this build reports ios, so init returns early and leaves the remote
+        // unconfigured and never forwarding touches. Our own check is a build
+        // time define and is the one to trust here, and flipping the test hook
+        // is the only way past that guard.
+        // ignore: invalid_use_of_visible_for_testing_member
+        TvRemoteController.debugForceTvosForTesting = true;
+      }
       TvRemoteController.instance.init();
       // Both engine swipe detectors are pushed out of reach so SiriRemoteGlide
       // can drive focus from the raw touch stream instead. Clicks stay native,
