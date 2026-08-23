@@ -813,8 +813,13 @@ class Media3VideoView(
     // platform granted it, so this is the flag to consult when reacting to an
     // AudioTrack failure - at that point there is no confirmed config to read.
     private var tunnelingRequested = false
-    // Whether the AudioTrack actually opened tunneled, per AudioTrackConfig.
-    private var tunnelingActive = false
+    // Whether the sink actually opened tunneled is deliberately not cached.
+    // AudioTrackConfig.tunneling is read straight from the callback that
+    // reports it, so there is no copy to fall out of date.
+    // Surfaced on audioTrackInitialized for diagnosing tunneling failures by
+    // which decoders were actually in play.
+    private var currentVideoDecoderName: String? = null
+    private var currentAudioDecoderName: String? = null
     private var audioRekickRunnable: Runnable? = null
     private var suppressStateEmissionsForRekick = false
     private var skipSilenceEnabled = false
@@ -878,7 +883,16 @@ class Media3VideoView(
 
     private fun scheduleAudioRekickAfterSeek() {
         if (!player.playWhenReady) return
-        if (!currentAudioIsBitstream && !tunnelingActive) return
+        // Deliberately what was requested, not what the sink confirmed. This
+        // gate predates the requested/confirmed split and was written when the
+        // one flag meant "requested", so reading tunnelingRequested keeps the
+        // rekick firing on exactly the seeks it always did. Gating on the
+        // confirmed state instead would silently stop rekicking on every
+        // device that asks for tunneling and is refused - which is all of them
+        // for codecs whose only tunneled decoder is secure-only - and would
+        // also miss seeks landing before the sink reports back. Narrowing this
+        // is a separate decision, not a side effect of that split.
+        if (!currentAudioIsBitstream && !tunnelingRequested) return
         cancelPendingAudioRekick()
         val runnable = Runnable {
             audioRekickRunnable = null
@@ -1231,6 +1245,7 @@ class Media3VideoView(
             initializedTimestampMs: Long,
             initializationDurationMs: Long,
         ) {
+            currentVideoDecoderName = decoderName
             Media3Bridge.emitEvent(
                 mapOf(
                     "event" to "videoDecoderInit",
@@ -1245,6 +1260,7 @@ class Media3VideoView(
             initializedTimestampMs: Long,
             initializationDurationMs: Long,
         ) {
+            currentAudioDecoderName = decoderName
             // An ffmpeg* name means the extension renderer took the track and
             // c2.*/OMX.* a platform decoder. Passthrough emits no decoder init.
             Media3Bridge.emitEvent(
@@ -1259,7 +1275,6 @@ class Media3VideoView(
             eventTime: AnalyticsListener.EventTime,
             audioTrackConfig: AudioSink.AudioTrackConfig,
         ) {
-            tunnelingActive = audioTrackConfig.tunneling
             // Ground truth for whether bitstreaming engaged: a non-PCM
             // encoding on the AudioTrack is passthrough by definition.
             Media3Bridge.emitEvent(
@@ -1277,6 +1292,9 @@ class Media3VideoView(
                     "tunnelingRequested" to tunnelingRequested,
                     "offload" to audioTrackConfig.offload,
                     "bufferSize" to audioTrackConfig.bufferSize,
+                    "videoDecoder" to currentVideoDecoderName,
+                    "audioDecoder" to currentAudioDecoderName,
+                    "sessionId" to currentAudioSessionId,
                 ),
             )
         }
@@ -1581,7 +1599,8 @@ class Media3VideoView(
 
     private fun createPlayer(): ExoPlayer {
         emitFfmpegDecoderDiagnosticsOnce()
-        tunnelingActive = false
+        currentVideoDecoderName = null
+        currentAudioDecoderName = null
         // Fresh selector for every player; see the trackSelector field comment.
         trackSelector = DefaultTrackSelector(context)
         audioDelayProcessor.setDelayMs(audioDelayMs)
@@ -2642,22 +2661,40 @@ class Media3VideoView(
                 // exception on some AVR chains. Tunneling is only a latency
                 // optimization, so drop it whenever a lossless track is active.
                 !currentAudioIsLossless &&
-                // DefaultAudioSink requires that audio processors under
-                // tunneling emit output of the same duration as their input,
-                // immediately after that input is queued. The HW_AV_SYNC header
-                // is written from the *input* buffer's presentation time and is
-                // never re-derived from what the pipeline actually emitted, so a
-                // processor that changes duration silently desyncs A/V.
-                // audioDelayProcessor inserts silence or trims bytes, and
-                // silence skipping drops audio outright; both break that
-                // contract. Channel mixing preserves duration, so the stereo
-                // downmix deliberately stays tunneling-compatible.
+                // DefaultAudioSink's contract: under tunneling, audio
+                // processors must emit output of the same duration as their
+                // input. The HW_AV_SYNC timestamp is the *input* buffer's
+                // presentation time and is never re-derived from what the
+                // pipeline actually emitted, so a duration-changing processor
+                // silently desyncs A/V. audioDelayProcessor inserts silence or
+                // trims bytes, and Media3 cannot know that about a processor we
+                // supplied, so this gate is ours to enforce. Channel mixing
+                // preserves duration, so the stereo downmix stays
+                // tunneling-compatible.
                 audioDelayMs == 0L &&
+                // Skip silence is the reverse: DefaultAudioSink already forces
+                // it off while tunneling, so leaving both on just makes a
+                // user-facing toggle do nothing. Drop tunneling - a latency
+                // optimization - so the requested feature actually works.
                 !skipSilenceEnabled
 
         tunnelingRequested = shouldEnableTunneling
-        // Clear the previous result until the sink reports what it opened.
-        tunnelingActive = false
+
+        // Tunneling problems are always device-specific and only ever reported
+        // after the fact, so record which gate produced the decision.
+        Media3Bridge.emitEvent(
+            mapOf(
+                "event" to "tunnelingRequestEvaluated",
+                "model" to Build.MODEL,
+                "mediaType" to currentMediaType,
+                "hasExternalSubtitle" to hasExternalSubtitle,
+                "sessionTunnelingDisabled" to sessionTunnelingDisabled,
+                "currentAudioIsLossless" to currentAudioIsLossless,
+                "audioDelayMs" to audioDelayMs,
+                "skipSilenceEnabled" to skipSilenceEnabled,
+                "shouldEnableTunneling" to shouldEnableTunneling,
+            ),
+        )
 
         val offloadMode = if (isAudioContent && !audioOffloadDisabled) {
             TrackSelectionParameters.AudioOffloadPreferences.AUDIO_OFFLOAD_MODE_ENABLED
