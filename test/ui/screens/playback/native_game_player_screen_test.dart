@@ -168,6 +168,14 @@ class _FakeNativeGamePlayer implements NativeGamePlayer {
     _eventsController.add({'event': 'menuPressed'});
   }
 
+  void emitControllersChanged(int count, {bool navigationOnly = false}) {
+    _eventsController.add({
+      'event': 'controllersChanged',
+      'count': count,
+      'navigationOnly': navigationOnly,
+    });
+  }
+
   void dispose() => _eventsController.close();
 
   /// The settings the screen resolved for this game and handed to the core.
@@ -749,4 +757,77 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     }
   });
+
+  testWidgets(
+    'a navigationOnly controllersChanged event shows the remote notice once',
+    (tester) async {
+      // The blocking "connect a controller" panel is additionally gated on
+      // !usesKeyboardInput && !usesOnScreenControls, both platform checks
+      // that only read false on Android TV/tvOS -- a platform this harness
+      // cannot reach a live texture on without faking the whole
+      // download-manager/ABI resolution path the other tests here
+      // deliberately avoid by running on macOS. This test therefore covers
+      // the notice itself (platform-independent, since _showCoreMessage
+      // does not consult those checks) rather than the panel's visibility;
+      // the panel's condition is untouched by this change and was verified
+      // by inspection at native_game_player_screen.dart:2017-2029.
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        final router = GoRouter(
+          initialLocation: '/game',
+          routes: [
+            GoRoute(
+              path: '/game',
+              builder: (context, state) => NativeGamePlayerScreen(
+                libraryId: 'lib1',
+                gameId: 'game1',
+                core: 'snes',
+                startFresh: true,
+                player: player,
+              ),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        );
+        for (
+          var i = 0;
+          i < 60 && find.byType(Texture).evaluate().isEmpty;
+          i++
+        ) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 20)),
+          );
+          await tester.pump(const Duration(milliseconds: 20));
+        }
+        expect(find.byType(Texture), findsOneWidget);
+
+        player.emitControllersChanged(0, navigationOnly: true);
+        await tester.pump();
+
+        expect(find.textContaining('playing with the remote'), findsOneWidget);
+
+        // Let the banner's own 6-second auto-dismiss timer fire.
+        await tester.pump(const Duration(seconds: 7));
+        expect(find.textContaining('playing with the remote'), findsNothing);
+
+        // A second navigationOnly event (e.g. the remote's Bluetooth link
+        // napping and waking) must not re-show the notice for this session.
+        player.emitControllersChanged(1, navigationOnly: false);
+        await tester.pump();
+        player.emitControllersChanged(0, navigationOnly: true);
+        await tester.pump();
+
+        expect(find.textContaining('playing with the remote'), findsNothing);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    },
+  );
 }

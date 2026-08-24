@@ -50,6 +50,11 @@ class LibretroBridge(
   private val methodMasks = IntArray(MAX_PORTS)
   private val publishedMasks = IntArray(MAX_PORTS)
   private var physicalControllerCount = 0
+  // Whether physicalControllerCount is standing in for a portless
+  // remote/keyboard rather than a real controller holding a port. Dart uses
+  // it to show a brief notice instead of the blocking "connect a
+  // controller" panel. See setControllerCount.
+  private var navigationOnly = false
   // Populated once nativeLoad has initialized the core. Controller metadata is
   // control-plane state; it never participates in the per-event input path.
   private var advertisedControllerTypes: List<NativeControllerType> = emptyList()
@@ -280,11 +285,20 @@ class LibretroBridge(
     }
   }
 
-  fun setControllerCount(count: Int, force: Boolean = false) {
+  fun setControllerCount(count: Int, navigationOnly: Boolean = false, force: Boolean = false) {
     val clamped = count.coerceIn(0, MAX_PORTS)
-    if (physicalControllerCount == clamped && !force) return
+    if (physicalControllerCount == clamped && this.navigationOnly == navigationOnly && !force) return
     physicalControllerCount = clamped
-    if (isActive) eventSink?.success(mapOf("event" to "controllersChanged", "count" to clamped))
+    this.navigationOnly = navigationOnly
+    if (isActive) {
+      eventSink?.success(
+        mapOf(
+          "event" to "controllersChanged",
+          "count" to clamped,
+          "navigationOnly" to navigationOnly,
+        ),
+      )
+    }
   }
 
   private fun startAudio(sampleRate: Int) {

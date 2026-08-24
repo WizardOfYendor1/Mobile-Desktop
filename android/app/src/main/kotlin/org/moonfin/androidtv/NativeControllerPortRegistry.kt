@@ -133,6 +133,9 @@ internal class NativeControllerPortRegistry {
 
     fun assignedCount(): Int = connections.values.count { it.supported }
 
+    /** Portless remote/keyboard connections -- the devices that feed the composed Player 1 navigation source. */
+    fun navigationSourceCount(): Int = connections.values.count { !it.supported && !it.isGamepad }
+
     /**
      * Session-start allocation. Pins first, then fill, then the empty-Player-1
      * guard, then overflow.

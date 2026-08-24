@@ -223,6 +223,60 @@ class NativeControllerPortRegistryTest {
         assertEquals(1, connections.single { it.profileId == "a" }.port)
     }
 
+    @Test
+    fun `a remote counts toward navigationSourceCount`() {
+        val registry = NativeControllerPortRegistry()
+
+        registry.activate(
+            listOf(candidate(1, "remote", NativeInputDeviceClass.REMOTE)),
+        )
+
+        assertEquals(1, registry.navigationSourceCount())
+    }
+
+    @Test
+    fun `a ported pad does not count toward navigationSourceCount`() {
+        val registry = NativeControllerPortRegistry()
+
+        registry.activate(listOf(candidate(1, "pad")))
+
+        assertEquals(0, registry.navigationSourceCount())
+    }
+
+    @Test
+    fun `an overflow fifth gamepad does not count toward navigationSourceCount`() {
+        val registry = NativeControllerPortRegistry()
+
+        registry.activate((1..5).map { candidate(it, "p$it") })
+
+        // p5 is portless (fifth gamepad) but is still a gamepad, not a
+        // navigation source, so it is consumed and goes nowhere.
+        assertEquals(0, registry.navigationSourceCount())
+    }
+
+    @Test
+    fun `an unpinned keyboard counts toward navigationSourceCount`() {
+        val registry = NativeControllerPortRegistry()
+
+        registry.activate(
+            listOf(candidate(1, "kbd", NativeInputDeviceClass.KEYBOARD)),
+        )
+
+        assertEquals(1, registry.navigationSourceCount())
+    }
+
+    @Test
+    fun `a pinned keyboard does not count toward navigationSourceCount`() {
+        val registry = NativeControllerPortRegistry()
+        registry.setPins(mapOf("kbd" to 0))
+
+        registry.activate(
+            listOf(candidate(1, "kbd", NativeInputDeviceClass.KEYBOARD)),
+        )
+
+        assertEquals(0, registry.navigationSourceCount())
+    }
+
     private fun candidate(
         deviceId: Int,
         profileId: String,

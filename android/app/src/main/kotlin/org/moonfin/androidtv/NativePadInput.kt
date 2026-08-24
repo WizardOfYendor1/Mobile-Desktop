@@ -199,7 +199,11 @@ internal class NativePadInput(
         } else {
             registry.deactivate(discoverCandidates())
         }
-        bridge.setControllerCount(if (value) registry.assignedCount() else 0)
+        bridge.setControllerCount(
+            if (value) playableCount() else 0,
+            navigationOnly = if (value) navigationOnly() else false,
+            force = value,
+        )
     }
 
     /**
@@ -213,7 +217,7 @@ internal class NativePadInput(
         val connections = registry.setPins(pins)
         if (!active) return
         for (connection in connections) addPadState(connection)
-        bridge.setControllerCount(registry.assignedCount(), force = true)
+        bridge.setControllerCount(playableCount(), navigationOnly = navigationOnly(), force = true)
     }
 
     fun setControllerMappings(json: String) {
@@ -584,7 +588,7 @@ internal class NativePadInput(
         val candidate = candidateFor(deviceId) ?: return
         val connection = registry.addOrUpdate(candidate)
         if (active && connection.supported && padStates.get(deviceId) == null) addPadState(connection)
-        if (active) bridge.setControllerCount(registry.assignedCount(), force = true)
+        if (active) bridge.setControllerCount(playableCount(), navigationOnly = navigationOnly(), force = true)
     }
 
     private fun onDeviceRemoved(deviceId: Int) {
@@ -595,7 +599,7 @@ internal class NativePadInput(
         // No promotion pass here: reallocating would move live players.
         if (captureConnectionId == connection.connectionId) setCapture(false, null)
         if (diagnosticsConnectionId == connection.connectionId) setDiagnostics(false, null)
-        if (active) bridge.setControllerCount(registry.assignedCount(), force = true)
+        if (active) bridge.setControllerCount(playableCount(), navigationOnly = navigationOnly(), force = true)
     }
 
     private fun onDeviceChanged(deviceId: Int) {
@@ -615,8 +619,21 @@ internal class NativePadInput(
         } else {
             padStates.get(deviceId)?.let { state -> state.table = tableFor(connection.profileId) }
         }
-        if (active) bridge.setControllerCount(registry.assignedCount(), force = true)
+        if (active) bridge.setControllerCount(playableCount(), navigationOnly = navigationOnly(), force = true)
     }
+
+    /**
+     * How many devices can actually drive gameplay, not how many hold a port.
+     * A portless remote/keyboard feeds Player 1 through keyboardState, so it
+     * counts -- otherwise Dart's "no controller" gate covers the game and pauses
+     * the core for someone who is perfectly able to play with a remote.
+     */
+    private fun playableCount(): Int =
+        (registry.assignedCount() + if (registry.navigationSourceCount() > 0) 1 else 0)
+            .coerceAtMost(NativeControllerPortRegistry.MAX_PORTS)
+
+    private fun navigationOnly(): Boolean =
+        registry.assignedCount() == 0 && registry.navigationSourceCount() > 0
 
     private fun refreshInactiveSnapshot() {
         registry.refreshInactive(discoverCandidates())

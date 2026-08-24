@@ -80,6 +80,10 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
   int? _textureId;
   double _aspect = 4 / 3;
   int _controllers = 1;
+  // Guards the "playing with the remote" notice so it shows once per
+  // session rather than every time the remote's Bluetooth link naps and
+  // wakes, which would otherwise re-fire controllersChanged repeatedly.
+  bool _notifiedNavigationOnly = false;
   bool _exiting = false;
   // True once the native session has been told to stop. Separate from
   // _exiting so a fatal error can tear the core down without also
@@ -279,6 +283,9 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
         }
       case 'controllersChanged':
         final count = (event['count'] as num?)?.toInt() ?? 0;
+        // Defaults to false so an older native build that never sends this
+        // key behaves exactly as before: no notice, same blocking gate.
+        final navigationOnly = event['navigationOnly'] as bool? ?? false;
         if (mounted) setState(() => _controllers = count);
         // The native registry can change independently of the overlay. Refresh
         // profile metadata as a best-effort snapshot; gameplay never waits on
@@ -292,6 +299,12 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
           } else {
             _player.resume();
           }
+        }
+        if (navigationOnly && !_notifiedNavigationOnly) {
+          _notifiedNavigationOnly = true;
+          _showCoreMessage(
+            'No game controller connected — playing with the remote.',
+          );
         }
       case 'menuPressed':
         _toggleOverlay();
@@ -795,6 +808,7 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
       }
       _aspect = info.aspect > 0 ? info.aspect : 4 / 3;
       _controllers = await _player.controllerCount();
+      _notifiedNavigationOnly = false;
       await _loadControllerTypes(coreId, games);
 
       await _player.start();
