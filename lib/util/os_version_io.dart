@@ -5,3 +5,5 @@ int osMajorVersion() {
   if (match == null) return 0;
   return int.tryParse(match.group(0)!) ?? 0;
 }
+
+String osVersionRaw() => Platform.operatingSystemVersion;

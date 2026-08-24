@@ -463,7 +463,7 @@ abstract class AppLocalizations {
   /// Label for the media detail screen layout style setting
   ///
   /// In en, this message translates to:
-  /// **'Detail screen style'**
+  /// **'Details Screen Style'**
   String get detailScreenStyle;
 
   /// Explanation under the detail screen style setting
@@ -573,6 +573,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Material'**
   String get interfaceStyleMaterial;
+
+  /// Setting to override which UI layout the app uses
+  ///
+  /// In en, this message translates to:
+  /// **'Interface Layout'**
+  String get interfaceLayout;
+
+  /// Subtitle for the interface layout setting
+  ///
+  /// In en, this message translates to:
+  /// **'Override the detected layout when this device is read wrong. Restart Moonfin for changes to take effect.'**
+  String get interfaceLayoutSubtitle;
+
+  /// Interface layout option: detect from the device
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get interfaceLayoutAutomatic;
+
+  /// Interface layout option: 10-foot TV layout
+  ///
+  /// In en, this message translates to:
+  /// **'TV'**
+  String get interfaceLayoutTv;
+
+  /// Interface layout option: desktop layout
+  ///
+  /// In en, this message translates to:
+  /// **'Desktop'**
+  String get interfaceLayoutDesktop;
+
+  /// Interface layout option: phone layout
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get interfaceLayoutPhone;
 
   /// Label for the glass rendering quality setting
   ///
@@ -2488,6 +2524,12 @@ abstract class AppLocalizations {
   /// **'DIRECTOR'**
   String get director;
 
+  /// Metadata label for the leading cast
+  ///
+  /// In en, this message translates to:
+  /// **'STARRING'**
+  String get starring;
+
   /// Metadata label for directors
   ///
   /// In en, this message translates to:
@@ -3430,6 +3472,30 @@ abstract class AppLocalizations {
   /// **'Unable to create recording'**
   String get unableToCreateRecording;
 
+  /// Button label to record every showing of a live TV series
+  ///
+  /// In en, this message translates to:
+  /// **'Record Series'**
+  String get recordSeries;
+
+  /// Snackbar confirmation after scheduling a live TV series recording
+  ///
+  /// In en, this message translates to:
+  /// **'Series set to record'**
+  String get seriesSetToRecord;
+
+  /// Snackbar confirmation after cancelling a live TV series recording
+  ///
+  /// In en, this message translates to:
+  /// **'Series recording cancelled'**
+  String get seriesRecordingCancelled;
+
+  /// Error when creating a live TV series recording fails
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to create series recording'**
+  String get unableToCreateSeriesRecording;
+
   /// Button label to start watching a channel
   ///
   /// In en, this message translates to:
@@ -4054,6 +4120,12 @@ abstract class AppLocalizations {
   /// **'Always'**
   String get always;
 
+  /// Option: only show the label on rows holding both movies and series
+  ///
+  /// In en, this message translates to:
+  /// **'Mixed rows only'**
+  String get mixedRowsOnly;
+
   /// Option: hide unwatched indicators
   ///
   /// In en, this message translates to:
@@ -4342,6 +4414,18 @@ abstract class AppLocalizations {
   /// **'Disabled'**
   String get disabled;
 
+  /// Option: manual
+  ///
+  /// In en, this message translates to:
+  /// **'Manual'**
+  String get manual;
+
+  /// Option: detect the value automatically
+  ///
+  /// In en, this message translates to:
+  /// **'Auto Detect'**
+  String get autoDetect;
+
   /// Refresh rate option: scale on TV
   ///
   /// In en, this message translates to:
@@ -4389,6 +4473,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show a lock button that blocks touch input until long-pressed'**
   String get osdLockButtonDescription;
+
+  /// Setting for player swipe gestures
+  ///
+  /// In en, this message translates to:
+  /// **'Volume and Brightness Swipes'**
+  String get playerSwipeGestures;
+
+  /// Description for player swipe gestures
+  ///
+  /// In en, this message translates to:
+  /// **'Slide up or down on the player to change brightness on the left and volume on the right'**
+  String get playerSwipeGesturesDescription;
 
   /// Settings screen for choosing which buttons the player shows
   ///
@@ -6106,6 +6202,30 @@ abstract class AppLocalizations {
   /// **'Off'**
   String get mediaBarModeOff;
 
+  /// Media bar style option: Bookshelf
+  ///
+  /// In en, this message translates to:
+  /// **'Bookshelf'**
+  String get mediaBarModeBookshelf;
+
+  /// Media bar style option: Gallery
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery'**
+  String get mediaBarModeGallery;
+
+  /// Media bar style option: Banner
+  ///
+  /// In en, this message translates to:
+  /// **'Banner'**
+  String get mediaBarModeBanner;
+
+  /// Media bar style option: Aya
+  ///
+  /// In en, this message translates to:
+  /// **'Aya'**
+  String get mediaBarModeAya;
+
   /// Setting for enabling media bar
   ///
   /// In en, this message translates to:
@@ -6123,6 +6243,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Content Type'**
   String get contentType;
+
+  /// Setting for which titles the media bar draws from
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get mediaBarSourceType;
+
+  /// Media bar source: any eligible title
+  ///
+  /// In en, this message translates to:
+  /// **'Random'**
+  String get mediaBarSourceRandom;
 
   /// Content type: movies and TV shows
   ///
@@ -6262,6 +6394,18 @@ abstract class AppLocalizations {
   /// **'Recently Released'**
   String get recentlyReleased;
 
+  /// Setting for sorting series in recently released series row
+  ///
+  /// In en, this message translates to:
+  /// **'Recently Released Series Sort By'**
+  String get recentlyReleasedSeriesType;
+
+  /// Description for recently released series type setting
+  ///
+  /// In en, this message translates to:
+  /// **'Sort Recently Released Series home rows by series, latest season, or latest episode air date'**
+  String get recentlyReleasedSeriesTypeDescription;
+
   /// Home section: my media
   ///
   /// In en, this message translates to:
@@ -6309,6 +6453,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Live TV'**
   String get liveTV;
+
+  /// Home row: favourited live TV channels
+  ///
+  /// In en, this message translates to:
+  /// **'Favorite Channels'**
+  String get favoriteChannels;
 
   /// Settings title for home sections
   ///
@@ -18832,6 +18982,12 @@ abstract class AppLocalizations {
   /// **'Rated'**
   String get personalRatingRated;
 
+  /// Label under the viewer's own rating in the ratings row.
+  ///
+  /// In en, this message translates to:
+  /// **'My Rating'**
+  String get personalRatingMine;
+
   /// Error shown when saving a personal rating fails.
   ///
   /// In en, this message translates to:
@@ -18861,6 +19017,300 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{rating} / 5'**
   String personalRatingOutOfFive(String rating);
+
+  /// Library filter for items the viewer has started but not finished.
+  ///
+  /// In en, this message translates to:
+  /// **'In Progress'**
+  String get filterInProgress;
+
+  /// Series status filter for shows that have not started airing.
+  ///
+  /// In en, this message translates to:
+  /// **'Unreleased'**
+  String get filterUnreleased;
+
+  /// Library filter for items that have a trailer.
+  ///
+  /// In en, this message translates to:
+  /// **'Trailers'**
+  String get filterTrailers;
+
+  /// Library filter for items that have bonus features.
+  ///
+  /// In en, this message translates to:
+  /// **'Extras'**
+  String get filterExtras;
+
+  /// Library filter for items that have a theme song.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme Songs'**
+  String get filterThemeSongs;
+
+  /// Library filter for items that have a theme video.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme Videos'**
+  String get filterThemeVideos;
+
+  /// Heading for the disc source filters in the library filter picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get source;
+
+  /// Heading for the release year filters in the library filter picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Years'**
+  String get years;
+
+  /// Heading for the audio language filters in the library filter picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio Language'**
+  String get audioLanguage;
+
+  /// Heading for the subtitle language filters in the library filter picker.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtitle Language'**
+  String get subtitleLanguage;
+
+  /// Action that turns every library filter back off.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Filters'**
+  String get clearFilters;
+
+  /// Title of the Seerr shortcuts row that jumps to Discover, Movies, Series, Requests and Issues.
+  ///
+  /// In en, this message translates to:
+  /// **'Seerr Browse'**
+  String get seerrShortcutsRow;
+
+  /// Heading for the release window filter in the Seerr browse dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Released'**
+  String get seerrReleased;
+
+  /// Heading for the TMDB score floor filter in the Seerr browse dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum Rating'**
+  String get seerrMinRating;
+
+  /// Heading for the TMDB vote count floor filter in the Seerr browse dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Minimum Votes'**
+  String get seerrMinVotes;
+
+  /// Heading for the original language filter in the Seerr browse dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Original Language'**
+  String get seerrOriginalLanguage;
+
+  /// Heading for the runtime window filter in the Seerr browse dialog.
+  ///
+  /// In en, this message translates to:
+  /// **'Runtime'**
+  String get seerrRuntime;
+
+  /// Toggle for a second subtitle appearance used only while HDR is playing.
+  ///
+  /// In en, this message translates to:
+  /// **'Separate HDR Style'**
+  String get subtitleHdrSeparate;
+
+  /// Explains why a separate HDR subtitle style is worth setting.
+  ///
+  /// In en, this message translates to:
+  /// **'White is much brighter in HDR than in SDR, so a dimmer style here avoids the glare'**
+  String get subtitleHdrSeparateSubtitle;
+
+  /// Title of the desktop setting that scales mouse wheel scrolling.
+  ///
+  /// In en, this message translates to:
+  /// **'Scroll Sensitivity'**
+  String get scrollSensitivity;
+
+  /// Explains the desktop scroll sensitivity slider.
+  ///
+  /// In en, this message translates to:
+  /// **'How far one mouse wheel notch scrolls'**
+  String get scrollSensitivitySubtitle;
+
+  /// Section header for media details and spoiler settings
+  ///
+  /// In en, this message translates to:
+  /// **'Media Details and Spoilers'**
+  String get mediaDetailsAndSpoilers;
+
+  /// Setting title to hide media description on details screen
+  ///
+  /// In en, this message translates to:
+  /// **'Hide Media Description on Details Page'**
+  String get hideDetailsMediaDescription;
+
+  /// Description for setting to hide media description on details page
+  ///
+  /// In en, this message translates to:
+  /// **'Hide the movie or episode descriptive text.'**
+  String get hideDetailsMediaDescriptionSubtitle;
+
+  /// Setting title to replace thumbnails on Classic details page with series thumbnail
+  ///
+  /// In en, this message translates to:
+  /// **'Use Series Thumbnails on Details Page'**
+  String get detailUseSeriesThumbnails;
+
+  /// Description for setting to use series thumbnails on Classic details page
+  ///
+  /// In en, this message translates to:
+  /// **'Replace all thumbnails on Classic details page with series thumbnail'**
+  String get detailUseSeriesThumbnailsSubtitle;
+
+  /// Setting title to hide media description on home screen
+  ///
+  /// In en, this message translates to:
+  /// **'Hide Media Description on Home Screen'**
+  String get hideHomeMediaDescription;
+
+  /// Description for setting to hide media description on home screen
+  ///
+  /// In en, this message translates to:
+  /// **'Hide the movie or episode descriptive text.'**
+  String get hideHomeMediaDescriptionSubtitle;
+
+  /// Header for settings section containing Continue Watching and Next Up options
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Watching and Next Up'**
+  String get continueWatchingAndNextUpHeader;
+
+  /// Leaves the first-run setup wizard without answering anything
+  ///
+  /// In en, this message translates to:
+  /// **'Skip setup'**
+  String get setupSkip;
+
+  /// Setup question asking where the navigation bar should sit
+  ///
+  /// In en, this message translates to:
+  /// **'Where should navigation go?'**
+  String get setupNavbarQuestion;
+
+  /// Setup wizard question for the media bar style
+  ///
+  /// In en, this message translates to:
+  /// **'How should the top of your Home screen look?'**
+  String get setupMediaBarQuestion;
+
+  /// Setup wizard question for the home row style
+  ///
+  /// In en, this message translates to:
+  /// **'How should your rows look?'**
+  String get setupHomeRowsQuestion;
+
+  /// Setup wizard question for the detail screen style
+  ///
+  /// In en, this message translates to:
+  /// **'How should a movie or show look when you open it?'**
+  String get setupDetailQuestion;
+
+  /// Heading of the final setup wizard screen
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re set. Here\'s what else is in here.'**
+  String get setupTourQuestion;
+
+  /// Name of the original layout, offered in the setup wizard
+  ///
+  /// In en, this message translates to:
+  /// **'Classic'**
+  String get setupStyleClassic;
+
+  /// Name of the newer layout, offered in the setup wizard
+  ///
+  /// In en, this message translates to:
+  /// **'Modern'**
+  String get setupStyleModern;
+
+  /// What the classic home row style gives you
+  ///
+  /// In en, this message translates to:
+  /// **'Compact. More rows on screen at once.'**
+  String get setupRowsClassicHint;
+
+  /// What the modern home row style gives you
+  ///
+  /// In en, this message translates to:
+  /// **'Larger cards with titles underneath.'**
+  String get setupRowsModernHint;
+
+  /// What the classic detail screen style gives you
+  ///
+  /// In en, this message translates to:
+  /// **'Everything centred in one stack.'**
+  String get setupDetailClassicHint;
+
+  /// What the modern detail screen style gives you
+  ///
+  /// In en, this message translates to:
+  /// **'Cinematic, with tabs for cast and extras.'**
+  String get setupDetailModernHint;
+
+  /// Label above the theme swatches on the final setup screen
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a look'**
+  String get setupPickALook;
+
+  /// Heading of the closing setup screen block that lists features found in settings
+  ///
+  /// In en, this message translates to:
+  /// **'There is more waiting in Settings'**
+  String get setupTourMoreHeader;
+
+  /// Bullet on the closing setup screen for the Seerr request feature
+  ///
+  /// In en, this message translates to:
+  /// **'Seerr requests'**
+  String get setupTourBulletRequests;
+
+  /// Bullet on the closing setup screen for SyncPlay
+  ///
+  /// In en, this message translates to:
+  /// **'SyncPlay watch parties'**
+  String get setupTourBulletSyncPlay;
+
+  /// Bullet on the closing setup screen for custom themes
+  ///
+  /// In en, this message translates to:
+  /// **'Custom themes'**
+  String get setupTourBulletThemes;
+
+  /// Bullet on the closing setup screen for downloads
+  ///
+  /// In en, this message translates to:
+  /// **'Offline downloads'**
+  String get setupTourBulletDownloads;
+
+  /// Closing bullet on the setup screen settings list
+  ///
+  /// In en, this message translates to:
+  /// **'And plenty more'**
+  String get setupTourBulletMore;
+
+  /// Starts the first-run setup wizard again from settings
+  ///
+  /// In en, this message translates to:
+  /// **'Run setup again'**
+  String get runSetupAgain;
 }
 
 class _AppLocalizationsDelegate

@@ -16,7 +16,14 @@ void configureServerDio(Dio dio) {
 
       client.badCertificateCallback = (_, _, _) => true;
 
-      client.connectionTimeout = const Duration(seconds: 30);
+      // A fixed 30 seconds here outlived callers that give up sooner, so a
+      // stalled server left connects nobody was waiting for holding the 15
+      // per host slots, and every retry refilled them. Following the caller
+      // frees the slot when it gives up, and the margin leaves the reporting
+      // to Dio.
+      client.connectionTimeout =
+          (dio.options.connectTimeout ?? const Duration(seconds: 30)) +
+          const Duration(seconds: 2);
       client.idleTimeout = const Duration(seconds: 120);
 
       client.maxConnectionsPerHost = 15;

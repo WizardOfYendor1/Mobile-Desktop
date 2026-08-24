@@ -214,6 +214,13 @@ class Media3PlayerBackend extends PlayerBackend {
       case 'tracksChanged':
         _tracksKnown = true;
         _textTrackCount = _toInt(map['textTrackCount']);
+        // An empty track list after prepare is the black screen signature,
+        // so the counts are worth logging even when everything is normal.
+        _diag(
+          'Media3: tracks changed (video ${_toInt(map['videoTrackCount'])}, '
+          'audio ${_toInt(map['audioTrackCount'])}, '
+          'text ${_toInt(map['textTrackCount'])})',
+        );
         _embeddedCaptionTracks = EmbeddedCaptionTrack.listFromWire(
           map['closedCaptionTracks'],
         );
@@ -301,6 +308,12 @@ class Media3PlayerBackend extends PlayerBackend {
           level: how == 'positionalAfterUrlMiss'
               ? LogLevel.warning
               : LogLevel.debug,
+        );
+      case 'nativeErrorRetry':
+        _diag(
+          'Media3: retrying in place after ${map['errorCodeName'] ?? ''} '
+          '${map['message'] ?? ''}',
+          level: LogLevel.warning,
         );
       case 'audioSinkError':
         _diag(
@@ -441,6 +454,26 @@ class Media3PlayerBackend extends PlayerBackend {
           ? LogLevel.warning
           : LogLevel.info,
     );
+
+    // A stand-down before the first sample decided anything sends the raw
+    // profile 7 stream to a decoder that can't play it, which reads as a
+    // silent black screen. Raising it as a recoverable video error routes
+    // playback into the transcode fallback instead.
+    if (reason == 'disarmed' && applied == 'none') {
+      _diag(
+        'Media3: raising a recoverable video error for the untouched P7 '
+        'stream so playback can fall back',
+        level: LogLevel.warning,
+      );
+      _errorStream.add({
+        'event': 'playerError',
+        'recoverable': true,
+        'kind': 'unsupported_video',
+        'message':
+            'DoVi P7 rewriting stood down before playback could start'
+            '${detail == null ? '' : ': $detail'}',
+      });
+    }
   }
 
   void _onTunnelingDiscontinuity() {
@@ -651,6 +684,7 @@ class Media3PlayerBackend extends PlayerBackend {
     Duration startPosition = Duration.zero,
   }) async {
     final payload = mediaItem is Map ? mediaItem : const <String, dynamic>{};
+    final autoPlay = payload['autoPlay'] != false;
     final url = mediaItem is String
         ? mediaItem
         : payload['url']?.toString() ?? '';
@@ -736,11 +770,12 @@ class Media3PlayerBackend extends PlayerBackend {
     await _invoke<void>('setSource', {
       'url': url,
       'headers': headers,
-      'autoPlay': true,
+      'autoPlay': autoPlay,
       'startPositionMs': startPosition.inMilliseconds,
       'container': container,
       'videoRangeType': videoRangeType,
       'mediaType': mediaType,
+      'videoFrameRate': (payload['videoFrameRate'] as num?)?.toDouble(),
       'isLive': payload['isLive'] == true,
       'normalizationGainDb': normalizationGainDb,
       'skipSilenceEnabled': _skipSilenceEnabled,
@@ -774,7 +809,9 @@ class Media3PlayerBackend extends PlayerBackend {
     await _invoke<void>('setSubtitleRendererMode', {
       'mode': _modeToWire(_requestedSubtitleRendererMode),
     });
-    await _invoke<void>('play');
+    if (autoPlay) {
+      await _invoke<void>('play');
+    }
   }
 
   @override
@@ -802,6 +839,11 @@ class Media3PlayerBackend extends PlayerBackend {
   }
 
   Future<void> _teardown(String command) async {
+    // The watchdogs guard a single item's bring-up, so stopping has to stop
+    // the timer too or it keeps warning about a player that was told to stop.
+    _watchdogTimer?.cancel();
+    _watchdogTimer = null;
+    _loadRequestedAtMs = 0;
     await _invoke<void>(command);
     if (_isPlaying) {
       _isPlaying = false;

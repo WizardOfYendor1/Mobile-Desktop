@@ -118,13 +118,20 @@ class _VideoPlaybackScreen extends StatelessWidget {
                   60000: l10n.settingsSixtySeconds,
                 },
               ),
-              if (PlatformDetection.useMobileUi)
+              if (PlatformDetection.useMobileUi) ...[
                 SwitchPreferenceTile(
                   preference: UserPreferences.osdLockEnabled,
                   title: l10n.osdLockButton,
                   subtitle: l10n.osdLockButtonDescription,
                   icon: Icons.lock,
                 ),
+                SwitchPreferenceTile(
+                  preference: UserPreferences.playerSwipeGestures,
+                  title: l10n.playerSwipeGestures,
+                  subtitle: l10n.playerSwipeGesturesDescription,
+                  icon: Icons.swipe_vertical,
+                ),
+              ],
               _TvSettingsListTile(
                 leading: const Icon(Icons.tune),
                 title: Text(l10n.osdButtons),

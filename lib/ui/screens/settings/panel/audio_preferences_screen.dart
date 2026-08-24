@@ -118,6 +118,17 @@ class _AudioPreferencesScreenState extends State<_AudioPreferencesScreen> {
     ];
   }
 
+  String _fallbackCodecLabel(AppLocalizations l10n, AudioFallbackCodec codec) =>
+      switch (codec) {
+        AudioFallbackCodec.auto => l10n.settingsAudioFallbackCodecAuto,
+        AudioFallbackCodec.aac => l10n.settingsAudioFallbackCodecAac,
+        AudioFallbackCodec.ac3 => l10n.settingsAudioFallbackCodecAc3,
+        AudioFallbackCodec.eac3 => l10n.settingsAudioFallbackCodecEac3,
+        AudioFallbackCodec.mp3 => l10n.settingsAudioFallbackCodecMp3,
+        AudioFallbackCodec.opus => l10n.settingsAudioFallbackCodecOpus,
+        AudioFallbackCodec.flac => l10n.settingsAudioFallbackCodecFlac,
+      };
+
   String _capabilitySubtitle(
     AppLocalizations l10n, {
     required String baseSubtitle,
@@ -268,7 +279,14 @@ class _AudioPreferencesScreenState extends State<_AudioPreferencesScreen> {
                   title: l10n.settingsAudioPassthroughMode,
                   description: l10n.settingsAudioPassthroughModeDescription,
                   icon: Icons.surround_sound,
+                  // The chip has room for the value, not the explanation, so
+                  // that stays on the picker rows.
                   labelOf: (mode) => switch (mode) {
+                    AudioPassthroughMode.disabled => l10n.disabled,
+                    AudioPassthroughMode.auto => l10n.auto,
+                    AudioPassthroughMode.manual => l10n.manual,
+                  },
+                  dialogLabelOf: (mode) => switch (mode) {
                     AudioPassthroughMode.disabled =>
                       l10n.settingsAudioPassthroughModeDisabled,
                     AudioPassthroughMode.auto =>
@@ -353,7 +371,7 @@ class _AudioPreferencesScreenState extends State<_AudioPreferencesScreen> {
                   description: l10n.settingsMaxAudioChannelsDescription,
                   icon: Icons.speaker_group,
                   options: <int, String>{
-                    0: l10n.settingsMaxAudioChannelsAuto,
+                    0: l10n.autoDetect,
                     1: l10n.settingsMaxAudioChannelsMono,
                     2: l10n.settingsMaxAudioChannelsStereo,
                     3: l10n.settingsMaxAudioChannels3_0,
@@ -363,28 +381,21 @@ class _AudioPreferencesScreenState extends State<_AudioPreferencesScreen> {
                     7: l10n.settingsMaxAudioChannels6_1,
                     8: l10n.settingsMaxAudioChannels7_1,
                   },
+                  dialogOptions: <int, String>{
+                    0: l10n.settingsMaxAudioChannelsAuto,
+                  },
                 ),
                 EnumPreferenceTile<AudioFallbackCodec>(
                   preference: UserPreferences.audioFallbackCodec,
                   title: l10n.settingsAudioFallbackCodec,
                   description: l10n.settingsAudioFallbackCodecDescription,
                   icon: Icons.hearing,
-                  labelOf: (v) => switch (v) {
-                    AudioFallbackCodec.auto =>
-                      l10n.settingsAudioFallbackCodecAuto,
-                    AudioFallbackCodec.aac =>
-                      l10n.settingsAudioFallbackCodecAac,
-                    AudioFallbackCodec.ac3 =>
-                      l10n.settingsAudioFallbackCodecAc3,
-                    AudioFallbackCodec.eac3 =>
-                      l10n.settingsAudioFallbackCodecEac3,
-                    AudioFallbackCodec.mp3 =>
-                      l10n.settingsAudioFallbackCodecMp3,
-                    AudioFallbackCodec.opus =>
-                      l10n.settingsAudioFallbackCodecOpus,
-                    AudioFallbackCodec.flac =>
-                      l10n.settingsAudioFallbackCodecFlac,
-                  },
+                  labelOf: (v) => v == AudioFallbackCodec.auto
+                      ? l10n.autoDetect
+                      : _fallbackCodecLabel(l10n, v),
+                  dialogLabelOf: (v) => v == AudioFallbackCodec.auto
+                      ? l10n.settingsAudioFallbackCodecAuto
+                      : _fallbackCodecLabel(l10n, v),
                 ),
               ],
             ),

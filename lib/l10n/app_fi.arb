@@ -33,7 +33,7 @@
     "@quickConnectInstruction": {
         "description": "Instruction text for Quick Connect code entry"
     },
-    "waitingForAuthorization": "Odotetaan valtuutusta...",
+    "waitingForAuthorization": "Odotetaan valtuutusta…",
     "@waitingForAuthorization": {
         "description": "Quick Connect polling status text"
     },
@@ -49,7 +49,7 @@
     "@loginFailed": {
         "description": "Generic login failure message"
     },
-    "quickConnectUnavailable": "QuickConnect ei ole käytettävissä: {detail}",
+    "quickConnectUnavailable": "Pikayhteys ei käytettävissä: {detail}",
     "@quickConnectUnavailable": {
         "description": "Quick Connect generic error message",
         "placeholders": {
@@ -58,7 +58,7 @@
             }
         }
     },
-    "quickConnectUnavailableWithStatus": "QuickConnect ei ole käytettävissä ({status}): {detail}",
+    "quickConnectUnavailableWithStatus": "Pikayhteys ei käytettävissä ({status}): {detail}",
     "@quickConnectUnavailableWithStatus": {
         "description": "Quick Connect error message with HTTP status info",
         "placeholders": {
@@ -224,11 +224,11 @@
     "@embyConnectNetworkError": {
         "description": "Generic network error during Emby Connect flow"
     },
-    "loadingLinkedServers": "Ladataan linkitettyjä palvelimia...",
+    "loadingLinkedServers": "Ladataan linkitettyjä palvelimia…",
     "@loadingLinkedServers": {
         "description": "Status text while fetching Emby Connect server list"
     },
-    "connectingToServerEllipsis": "Yhdistetään palvelimeen...",
+    "connectingToServerEllipsis": "Yhdistetään palvelimeen…",
     "@connectingToServerEllipsis": {
         "description": "Status text while connecting to a selected server"
     },
@@ -7310,7 +7310,7 @@
     "whenFullscreen": "Kun koko näyttö",
     "transcodingLimits": "Transkoodausrajat",
     "settingsSupportMoonfinSubtitle": "Lahjoita kahvi kehittäjälle",
-    "accountPreferences": "TILIASETUKSET",
+    "accountPreferences": "TILIN ASETUKSET",
     "@accountPreferences": {
         "description": "Section header for account preferences settings"
     },
@@ -7318,7 +7318,7 @@
     "@interfaceLanguage": {
         "description": "Label for the app interface language setting"
     },
-    "systemLanguageDefault": "Järjestelmän oletus",
+    "systemLanguageDefault": "Järjestelmän oletusasetus",
     "@systemLanguageDefault": {
         "description": "Label for using the system default language in settings"
     },
@@ -9373,5 +9373,53 @@
     "collectionsRowSortOrderDescription": "Lajittele Kokoelmat-taulukon rivit nousevaan tai laskevaan järjestykseen.",
     "collectionsRowShowEpisodes": "Näytä yksittäiset jaksot",
     "collectionsRowShowEpisodesSubtitle": "Laajenna TV-sarjoja, jotta jokainen jakso näkyy erikseen.",
-    "genresRowSortOrderDescription": "Lajittele ”Genret”-rivit nousevaan tai laskevaan järjestykseen."
+    "genresRowSortOrderDescription": "Lajittele ”Genret”-rivit nousevaan tai laskevaan järjestykseen.",
+    "personalRatingStars": "5 tähteä",
+    "@personalRatingStars": {
+        "description": "Personal rating style using a five-star scale."
+    },
+    "like": "Tykkää",
+    "@like": {
+        "description": "Personal rating action for a positive rating."
+    },
+    "groupByStudio": "Studio",
+    "@groupByStudio": {
+        "description": "Option to group library items by production studio"
+    },
+    "showAlphabeticalFilters": "Näytä aakkoset",
+    "@showAlphabeticalFilters": {
+        "description": "Checkbox label for toggling alphabetical picker visibility in Sort and Filter options"
+    },
+    "personalRatingStyle": "Henkilökohtainen arviointityyli",
+    "@personalRatingStyle": {
+        "description": "Selects how personal ratings are displayed and entered on media details."
+    },
+    "personalRatingThumbs": "Tykkää / ei tykkää",
+    "@personalRatingThumbs": {
+        "description": "Personal rating style using like and dislike actions."
+    },
+    "personalRatingNumeric": "Pisteet asteikolla 1–10",
+    "@personalRatingNumeric": {
+        "description": "Personal rating style using a numeric score out of ten."
+    },
+    "rate": "Arvosana",
+    "@rate": {
+        "description": "Action that opens the personal rating control."
+    },
+    "dislike": "En tykkää",
+    "@dislike": {
+        "description": "Personal rating action for a negative rating."
+    },
+    "personalRatingClear": "Arvostelun tyhjentäminen",
+    "@personalRatingClear": {
+        "description": "Action that removes the personal rating from the media item."
+    },
+    "personalRatingRated": "Arvosana",
+    "@personalRatingRated": {
+        "description": "Tooltip for a media item that has a numeric personal rating."
+    },
+    "personalRatingSaveFailed": "Arvostelua ei voitu tallentaa",
+    "@personalRatingSaveFailed": {
+        "description": "Error shown when saving a personal rating fails."
+    }
 }

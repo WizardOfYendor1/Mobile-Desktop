@@ -420,7 +420,9 @@ class _FavoritesScreenState extends State<FavoritesScreen> with GridFocusNodeMix
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              _vm.errorMessage ?? AppLocalizations.of(context).failedToLoadFavorites,
+              _vm.isNetworkError
+                  ? AppLocalizations.of(context).unableToConnectToServer
+                  : _vm.errorMessage ?? AppLocalizations.of(context).failedToLoadFavorites,
               style: const TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
@@ -621,6 +623,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> with GridFocusNodeMix
           item.id,
           serverId: item.serverId,
           type: item.type,
+          channelId: item.channelId,
         ),
       ),
     );
@@ -756,6 +759,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> with GridFocusNodeMix
                         item.id,
                         serverId: item.serverId,
                         type: item.type,
+                        channelId: item.channelId,
                       ),
                     ),
                   );
@@ -975,6 +979,7 @@ class _FocusedItemHud extends StatelessWidget {
                     ratings: ratings,
                     communityRating: item!.communityRating,
                     criticRating: item!.criticRating,
+                    personalRating: item!.personalRating,
                     enableAdditionalRatings: enableAdditionalRatings,
                     enabledRatings: enabledRatings,
                     showLabels: showLabels,

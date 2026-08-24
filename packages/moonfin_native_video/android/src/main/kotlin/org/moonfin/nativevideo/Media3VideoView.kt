@@ -18,6 +18,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Gravity
 import android.view.Display
 import android.view.Surface
@@ -86,10 +87,10 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.platform.PlatformView
 import io.github.peerless2012.ass.media.AssHandler
+import io.github.peerless2012.ass.media.AssHandlerConfig
 import io.github.peerless2012.ass.media.kt.withAssSupport
 import io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory
 import io.github.peerless2012.ass.media.type.AssRenderType
-import io.github.peerless2012.ass.media.widget.AssSubtitleView
 import java.io.File
 import java.nio.ByteBuffer
 import kotlin.math.roundToInt
@@ -522,6 +523,13 @@ class Media3VideoView(
         private const val TS_SEARCH_BYTES_DEFAULT = TsExtractor.DEFAULT_TIMESTAMP_SEARCH_BYTES
         private const val EXTERNAL_SUBTITLE_ID_BASE = 10000
         private const val STREAMING_MAX_BUFFER_MS = 120_000
+        // How long a television gets to blank, renegotiate the link and come
+        // back before a failure stops counting as part of the mode switch.
+        private const val DISPLAY_MODE_SWITCH_RECOVERY_MS = 10_000L
+        // A television that steps through an intermediate mode drops the
+        // surface more than once, so one retry is not always enough. The
+        // recovery window is what stops this running on.
+        private const val DISPLAY_MODE_SWITCH_MAX_RETRIES = 3
         private const val MAX_TARGET_BUFFER_BYTES = 384L * 1024 * 1024
         // Broadcast captions ride inside the video as CEA-608 messages rather
         // than as their own stream, and the extractor only looks for them when
@@ -538,6 +546,8 @@ class Media3VideoView(
 
         private const val ASS_FALLBACK_FONT_ASSET = "fonts/NotoSans-Regular.ttf"
         private const val ASS_FALLBACK_FONT_NAME = "Noto Sans"
+        private const val ASS_MAX_CACHE_SIZE_MB = 128
+        private const val ASS_MIN_CACHE_SIZE_MB = 16
         private val FONT_EXTENSIONS = setOf("ttf", "otf", "ttc")
         private val ASS_SYSTEM_CJK_FONTS = listOf(
             "NotoSansCJK-Regular.ttc",
@@ -630,6 +640,9 @@ class Media3VideoView(
     private var videoView: View = newVideoView()
     private var lastSourceArguments: Map<*, *>? = null
     private var lastPlaybackPositionMs: Long = 0L
+    private var displayModeSwitchAtMs = 0L
+    private var wasPlayingBeforeDisplayModeSwitch = false
+    private var displayModeSwitchRetriesForCurrentSource = 0
 
     private fun newVideoView(): View =
         if (useSurfaceView) {
@@ -742,6 +755,11 @@ class Media3VideoView(
 
     private var player: ExoPlayer
 
+    // Renders the ASS overlay for the current player and owns the thread that
+    // calls libass. Torn down before the player, so an in-flight render never
+    // outlives the native objects it reads.
+    private var assOverlayView: MoonfinAssOverlayView? = null
+
     // True once a source has been loaded into the current player. Reusing the
     // same ExoPlayer instance + surface for a second source hangs in buffering
     // on some Android TVs (e.g. Sony BRAVIA after a cinema-mode intro), so the
@@ -781,6 +799,7 @@ class Media3VideoView(
     private var originalPreferredDisplayModeId: Int? = null
     private var activePreferredDisplayModeId: Int? = null
     private var detectedFrameRate: Float? = null
+    private var sourceFrameRateHint: Float? = null
     private var audioOffloadDisabled = false
     private var audioOffloadRetryAttemptedForCurrentSource = false
     private var sessionTunnelingDisabled = Media3Bridge.sessionTunnelingDisabledEnabled()
@@ -931,6 +950,11 @@ class Media3VideoView(
             ) {
                 revealVideo()
             }
+            if (displayModeSwitchInFlight() && playbackState == Player.STATE_READY) {
+                if (wasPlayingBeforeDisplayModeSwitch && !player.playWhenReady) {
+                    player.playWhenReady = true
+                }
+            }
             emitState()
             if (playbackState == Player.STATE_ENDED) {
                 Media3Bridge.emitEvent(
@@ -946,15 +970,42 @@ class Media3VideoView(
             emitState()
         }
 
+        override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+            // The HDMI switch drops the audio route and the player pauses
+            // itself. A pause the user asked for has to survive the switch, so
+            // only the system's own is worth undoing.
+            if (!playWhenReady && displayModeSwitchInFlight()) {
+                if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) {
+                    endDisplayModeSwitchRecovery()
+                } else {
+                    wasPlayingBeforeDisplayModeSwitch = true
+                }
+            }
+            emitState()
+        }
+
         override fun onPlayerError(error: PlaybackException) {
-            // Recovery order matters: an init failure under tunneling is
-            // retried untunneled before any downmix so a tunnel failure
-            // can't stick the whole session to stereo. The downmix retry
-            // stays last and handles 7.1 PCM that the device can't open as
-            // an 8-channel AudioTrack.
-            val nativeRetryTriggered = retryAudioWithoutOffloadIfNeeded(error) ||
+            // Recovery order matters: an error while a display mode switch is
+            // in flight is most likely the dropped surface, so that retry gets
+            // the first look. An init failure under tunneling is retried
+            // untunneled before any downmix so a tunnel failure can't stick
+            // the whole session to stereo. The downmix retry stays last and
+            // handles 7.1 PCM that the device can't open as an 8-channel
+            // AudioTrack.
+            val nativeRetryTriggered = retryPlaybackOnDisplayModeSwitchErrorIfNeeded(error) ||
+                retryAudioWithoutOffloadIfNeeded(error) ||
                 retryAudioWithoutTunnelingIfNeeded(error) ||
                 retryAudioWithStereoDownmixIfNeeded(error)
+            if (nativeRetryTriggered) {
+                Media3Bridge.emitEvent(
+                    mapOf(
+                        "event" to "nativeErrorRetry",
+                        "errorCodeName" to error.errorCodeName,
+                        "message" to (error.localizedMessage ?: ""),
+                    ),
+                )
+                return
+            }
             emitRecoverablePlayerError(error, nativeRetryTriggered)
             Media3Bridge.emitEvent(
                 mapOf(
@@ -1021,8 +1072,8 @@ class Media3VideoView(
             videoHeightPx = videoSize.height
             videoPixelRatio = videoSize.pixelWidthHeightRatio
             applyVideoLayout()
-            if (detectedFrameRate == null) {
-                resolveSelectedVideoFrameRate()?.let { frameRate ->
+            resolveSelectedVideoFrameRate()?.let { frameRate ->
+                if (detectedFrameRate != frameRate) {
                     maybeApplyFrameRateSwitching(frameRate)
                 }
             }
@@ -1077,8 +1128,8 @@ class Media3VideoView(
                     "positionMs" to player.currentPosition,
                 ),
             )
-            if (detectedFrameRate == null) {
-                resolveSelectedVideoFrameRate()?.let { frameRate ->
+            resolveSelectedVideoFrameRate()?.let { frameRate ->
+                if (detectedFrameRate != frameRate) {
                     maybeApplyFrameRateSwitching(frameRate)
                 }
             }
@@ -1092,7 +1143,7 @@ class Media3VideoView(
             format: Format,
             decoderReuseEvaluation: DecoderReuseEvaluation?,
         ) {
-            val frameRate = format.frameRate
+            val frameRate = resolveSelectedVideoFrameRate() ?: format.frameRate
             if (frameRate.isFinite() && frameRate > 0f) {
                 maybeApplyFrameRateSwitching(frameRate)
             }
@@ -1323,6 +1374,7 @@ class Media3VideoView(
         currentAudioSessionId = C.AUDIO_SESSION_ID_UNSET
         restorePreferredDisplayMode()
         detectedFrameRate = null
+        releaseAssOverlay()
         player.removeListener(listener)
         player.removeAnalyticsListener(analyticsListener)
         audioPipeline.release()
@@ -1556,9 +1608,17 @@ class Media3VideoView(
             .setConnectTimeoutMs(120_000)
             .setReadTimeoutMs(120_000)
         val bootDataSourceFactory = DefaultDataSource.Factory(context, httpDataSourceFactory)
-        val assHandler = AssHandler(AssRenderType.OVERLAY_CANVAS)
+        val assHandler = AssHandler(
+            AssRenderType.OVERLAY_CANVAS,
+            AssHandlerConfig(cacheSize = assCacheSizeMb()),
+        )
         registerAssFonts(assHandler)
-        val assParserFactory = AssSubtitleParserFactory(assHandler)
+        // Serializes track creation and dialogue reads against the overlay's
+        // render thread.
+        val assParserFactory = MoonfinAssParserFactory(
+            AssSubtitleParserFactory(assHandler),
+            assHandler,
+        )
         val bootMediaSourceFactory = DefaultMediaSourceFactory(
             bootDataSourceFactory,
             // The DoVi wrapper sits outermost so it sees the extractors every
@@ -1586,7 +1646,12 @@ class Media3VideoView(
             .build()
             .also {
                 attachAssOverlay(assHandler)
+                // init() sets up the handler's looper and registers it as a
+                // listener. Its callbacks reach libass unlocked, so the
+                // forwarder takes that seat instead.
                 assHandler.init(it)
+                it.removeListener(assHandler)
+                it.addListener(MoonfinAssPlayerListener(assHandler))
                 if (currentMediaType != "audio") {
                     if (useSurfaceView) {
                         it.setVideoSurfaceView(videoView as SurfaceView)
@@ -1642,13 +1707,38 @@ class Media3VideoView(
         }
     }
 
+    // libass caches rasterized glyphs in native memory, and ass-media asks for
+    // 128MB on every device. That's more than the whole Java heap on the low
+    // memory boxes this ships to, so the ask scales with the heap instead.
+    private fun assCacheSizeMb(): Int {
+        val quarterHeapMb = Runtime.getRuntime().maxMemory() / (4L * 1024L * 1024L)
+        return quarterHeapMb
+            .coerceIn(ASS_MIN_CACHE_SIZE_MB.toLong(), ASS_MAX_CACHE_SIZE_MB.toLong())
+            .toInt()
+    }
+
     private fun attachAssOverlay(assHandler: AssHandler) {
-        for (i in subtitleView.childCount - 1 downTo 0) {
-            if (subtitleView.getChildAt(i) is AssSubtitleView) {
-                subtitleView.removeViewAt(i)
-            }
+        releaseAssOverlay()
+        val overlay = MoonfinAssOverlayView(context, assHandler)
+        subtitleView.addView(
+            overlay,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            ),
+        )
+        assOverlayView = overlay
+    }
+
+    // Stops the render thread and waits for the frame inside libass to finish.
+    // Runs before the player goes, because releasing the player is what drops
+    // the last references to the handler's native objects.
+    private fun releaseAssOverlay() {
+        assOverlayView?.let { overlay ->
+            subtitleView.removeView(overlay)
+            overlay.release()
         }
-        subtitleView.withAssSupport(assHandler)
+        assOverlayView = null
     }
 
     private fun rebuildPlayerForDecoderPreference() {
@@ -1656,6 +1746,7 @@ class Media3VideoView(
         currentAudioSessionId = C.AUDIO_SESSION_ID_UNSET
         restorePreferredDisplayMode()
         detectedFrameRate = null
+        releaseAssOverlay()
         player.removeListener(listener)
         player.removeAnalyticsListener(analyticsListener)
         player.clearVideoSurface()
@@ -2056,9 +2147,16 @@ class Media3VideoView(
         val url = args["url"]?.toString() ?: return
         val startPositionMs = (args["startPositionMs"] as? Number)?.toLong() ?: 0L
         val autoPlay = args["autoPlay"] as? Boolean ?: false
+        displayModeSwitchRetriesForCurrentSource = 0
 
         restorePreferredDisplayMode()
         detectedFrameRate = null
+        // Most containers, mkv and ts among them, come out of the extractor
+        // with no frame rate on the Format, so the rate the server reported
+        // rides along as the answer of last resort.
+        sourceFrameRateHint = (args["videoFrameRate"] as? Number)
+            ?.toFloat()
+            ?.takeIf { it.isFinite() && it > 0f }
 
         val nextMediaType = args["mediaType"]?.toString()?.lowercase() ?: "video"
         val isAudio = nextMediaType == "audio"
@@ -2326,7 +2424,9 @@ class Media3VideoView(
 
         val preferredMode = choosePreferredDisplayMode(display, normalizedFrameRate) ?: return
         val preferredModeId = preferredMode.modeId
-        if (activePreferredDisplayModeId == preferredModeId) {
+        val currentModeId = window.attributes.preferredDisplayModeId
+        if (currentModeId == preferredModeId || activePreferredDisplayModeId == preferredModeId) {
+            activePreferredDisplayModeId = preferredModeId
             emitFrameRateState(
                 detectedFrameRate = normalizedFrameRate,
                 appliedFrameRate = preferredMode.refreshRate,
@@ -2335,6 +2435,9 @@ class Media3VideoView(
             )
             return
         }
+
+        displayModeSwitchAtMs = SystemClock.elapsedRealtime()
+        wasPlayingBeforeDisplayModeSwitch = player.playWhenReady
 
         val updatedLayoutParams = window.attributes
         updatedLayoutParams.preferredDisplayModeId = preferredModeId
@@ -2350,6 +2453,11 @@ class Media3VideoView(
     }
 
     private fun stopPlaybackAndRestoreDisplayMode() {
+        // A canonical stop ends ownership of this source. Clear it before
+        // touching the player because appPaused may already have released it,
+        // and an immediately queued appResumed must not restore stale media.
+        lastSourceArguments = null
+        lastPlaybackPositionMs = 0L
         player.stop()
         player.clearMediaItems()
         restorePreferredDisplayMode()
@@ -2359,6 +2467,7 @@ class Media3VideoView(
 
     private fun restorePreferredDisplayMode() {
         clearSurfaceFrameRateHint()
+        endDisplayModeSwitchRecovery()
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             return
         }
@@ -2388,10 +2497,21 @@ class Media3VideoView(
         }
 
         runCatching {
-            targetSurface.setFrameRate(
-                frameRate,
-                Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // Without this the hint means switch only when seamless, and a
+                // television mode change rarely is, so the system quietly drops
+                // it. Saying always lets the non seamless switch happen.
+                targetSurface.setFrameRate(
+                    frameRate,
+                    Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
+                    Surface.CHANGE_FRAME_RATE_ALWAYS,
+                )
+            } else {
+                targetSurface.setFrameRate(
+                    frameRate,
+                    Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE,
+                )
+            }
         }
     }
 
@@ -2428,7 +2548,7 @@ class Media3VideoView(
                 }
             }
         }
-        return null
+        return sourceFrameRateHint
     }
 
     private fun emitFrameRateState(
@@ -3418,6 +3538,36 @@ class Media3VideoView(
         return true
     }
 
+    // Setting the window's preferred mode only asks for the switch. The
+    // television renegotiates the link well after the player is ready again,
+    // and the surface it drops on the way through is what kills playback, so
+    // the recovery has to stay armed until the transition has had time to land.
+    private fun displayModeSwitchInFlight(): Boolean =
+        displayModeSwitchAtMs != 0L &&
+            SystemClock.elapsedRealtime() - displayModeSwitchAtMs < DISPLAY_MODE_SWITCH_RECOVERY_MS
+
+    private fun endDisplayModeSwitchRecovery() {
+        displayModeSwitchAtMs = 0L
+        wasPlayingBeforeDisplayModeSwitch = false
+    }
+
+    private fun retryPlaybackOnDisplayModeSwitchErrorIfNeeded(error: PlaybackException): Boolean {
+        if (!displayModeSwitchInFlight() ||
+            displayModeSwitchRetriesForCurrentSource >= DISPLAY_MODE_SWITCH_MAX_RETRIES
+        ) {
+            return false
+        }
+        val mediaItem = player.currentMediaItem ?: return false
+        displayModeSwitchRetriesForCurrentSource++
+        val retryPositionMs = player.currentPosition.coerceAtLeast(0L)
+        val playWhenReady = wasPlayingBeforeDisplayModeSwitch || player.playWhenReady
+
+        player.setMediaItem(mediaItem, retryPositionMs)
+        player.prepare()
+        player.playWhenReady = playWhenReady
+        return true
+    }
+
     /** The user's downmix preference, or the state a failure proved necessary. */
     private fun effectiveStereoDownmix(): Boolean =
         downmixToStereoPreference || deviceRequiresStereoDownmix
@@ -3890,6 +4040,7 @@ class Media3VideoView(
         Media3Bridge.emitEvent(
             mapOf(
                 "event" to "tracksChanged",
+                "videoTrackCount" to trackCount(C.TRACK_TYPE_VIDEO),
                 "audioTrackCount" to trackCount(C.TRACK_TYPE_AUDIO),
                 "textTrackCount" to trackCount(C.TRACK_TYPE_TEXT),
                 "closedCaptionTracks" to closedCaptionTrackOptions(),

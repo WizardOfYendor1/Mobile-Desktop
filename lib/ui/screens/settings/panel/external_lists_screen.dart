@@ -58,6 +58,15 @@ class _ExternalListsScreenState extends State<_ExternalListsScreen> {
     super.dispose();
   }
 
+  String _mediaTypeBadgeBehaviorLabel(
+    AppLocalizations l10n,
+    MediaTypeBadgeBehavior behavior,
+  ) => switch (behavior) {
+    MediaTypeBadgeBehavior.always => l10n.always,
+    MediaTypeBadgeBehavior.mixedRowsOnly => l10n.mixedRowsOnly,
+    MediaTypeBadgeBehavior.never => l10n.never,
+  };
+
   Future<void> _refreshAllEnabledLists() async {
     final prefs = GetIt.instance<UserPreferences>();
     
@@ -195,6 +204,24 @@ class _ExternalListsScreenState extends State<_ExternalListsScreen> {
                           title: const Text('Refresh All Enabled Lists'),
                           subtitle: const Text('Force a full update of TMDB and fully custom lists cache.'),
                           onTap: _refreshAllEnabledLists,
+                        ),
+                      ],
+                    ),
+                    const _SectionHeader('External Home Row Display'),
+                    adaptiveListSection(
+                      children: [
+                        EnumPreferenceTile<MediaTypeBadgeBehavior>(
+                          preference: UserPreferences.mediaTypeBadgeBehavior,
+                          title: 'Media type badges',
+                          description:
+                              'Show MOVIE / SERIES labels on external home-row cards',
+                          icon: Icons.info_outline,
+                          labelOf: (behavior) =>
+                              _mediaTypeBadgeBehaviorLabel(l10n, behavior),
+                          onChanged: () {
+                            if (!mounted) return;
+                            setState(() {});
+                          },
                         ),
                       ],
                     ),
@@ -1203,21 +1230,6 @@ class _SeerrListsScreenState extends State<_SeerrListsScreen> {
     if (mounted) setState(() {});
   }
 
-  String _rowLabel(SeerrRowType type, AppLocalizations l10n) => switch (type) {
-    SeerrRowType.recentRequests => l10n.recentRequests,
-    SeerrRowType.yourWatchlist => l10n.yourWatchlist,
-    SeerrRowType.recentlyAdded => l10n.recentlyAdded,
-    SeerrRowType.trending => l10n.trending,
-    SeerrRowType.popularMovies => l10n.popularMovies,
-    SeerrRowType.movieGenres => l10n.movieGenres,
-    SeerrRowType.upcomingMovies => l10n.upcomingMovies,
-    SeerrRowType.studios => l10n.studios,
-    SeerrRowType.popularSeries => l10n.popularSeries,
-    SeerrRowType.seriesGenres => l10n.seriesGenres,
-    SeerrRowType.upcomingSeries => l10n.upcomingSeries,
-    SeerrRowType.networks => l10n.networks,
-  };
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -1242,7 +1254,7 @@ class _SeerrListsScreenState extends State<_SeerrListsScreen> {
                     final row = entry.value;
                     return _SeerrRowSwitchTile(
                       focusNode: rowIndex == 0 ? _firstFocusNode : null,
-                      title: _rowLabel(row.type, l10n),
+                      title: localizeSeerrRowTitle(row.type, l10n),
                       value: row.enabled,
                       onChanged: (enabled) {
                         setState(() {

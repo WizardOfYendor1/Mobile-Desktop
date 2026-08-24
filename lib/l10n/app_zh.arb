@@ -33,7 +33,7 @@
     "@quickConnectInstruction": {
         "description": "Instruction text for Quick Connect code entry"
     },
-    "waitingForAuthorization": "正在等待授权...",
+    "waitingForAuthorization": "正在等待授权…",
     "@waitingForAuthorization": {
         "description": "Quick Connect polling status text"
     },
@@ -224,11 +224,11 @@
     "@embyConnectNetworkError": {
         "description": "Generic network error during Emby Connect flow"
     },
-    "loadingLinkedServers": "正在加载关联服务器...",
+    "loadingLinkedServers": "正在加载关联服务器…",
     "@loadingLinkedServers": {
         "description": "Status text while fetching Emby Connect server list"
     },
-    "connectingToServerEllipsis": "正在连接到服务器...",
+    "connectingToServerEllipsis": "正在连接到服务器…",
     "@connectingToServerEllipsis": {
         "description": "Status text while connecting to a selected server"
     },
@@ -1229,7 +1229,7 @@
             }
         }
     },
-    "downloadingTitle": "正在下载 {title}（{count} 个媒体项）...",
+    "downloadingTitle": "正在下载 {title}（{count} 个媒体项）…",
     "@downloadingTitle": {
         "description": "Snackbar message when downloading album tracks",
         "placeholders": {
@@ -9358,5 +9358,103 @@
     "showAlphabeticalFilters": "显示字母表",
     "@showAlphabeticalFilters": {
         "description": "Checkbox label for toggling alphabetical picker visibility in Sort and Filter options"
-    }
+    },
+    "ascending": "升序",
+    "sortOrder": "排序顺序",
+    "personalRatingNumeric": "10 分制数字评分",
+    "@personalRatingNumeric": {
+        "description": "Personal rating style using a numeric score out of ten."
+    },
+    "favoritesRowSortOrderDescription": "对收藏行执行升序或降序排序。",
+    "genresRowSortOrderDescription": "对类型行执行升序或降序排序。",
+    "deselectAllStudios": "取消全选",
+    "unselectedStudiosFilter": "未选制作公司",
+    "audioRowsSortOrderDescription": "对音频行执行升序或降序排序。",
+    "studiosRowSortingDescription": "制作公司行可按名称、最近添加及更多条件排序。",
+    "studiosRowSortOrderDescription": "制作公司行可按名称、最近添加及更多条件排序。",
+    "selectStudiosToInclude": "选择要包含的制作公司",
+    "movieStudiosFilter": "电影制作公司",
+    "settingsSkipButtonAutoHideDescription": "数秒后自动关闭片头片尾跳过按钮。",
+    "displayStudiosRows": "显示制作公司行",
+    "displayStudiosRowsSubtitle": "在首页分区显示制作公司行。",
+    "studiosRowSorting": "制作公司行排序",
+    "tvStudiosFilter": "剧集制作公司",
+    "selectedStudiosFilter": "已选制作公司",
+    "filtersHeader": "筛选",
+    "showHeader": "显示",
+    "playlistsRowSortOrderDescription": "对播放列表行执行升序或降序排序。",
+    "personalRatingSaveFailed": "无法保存评分",
+    "@personalRatingSaveFailed": {
+        "description": "Error shown when saving a personal rating fails."
+    },
+    "increase": "增加",
+    "@increase": {
+        "description": "Action that increases a numeric personal rating."
+    },
+    "decrease": "减少",
+    "@decrease": {
+        "description": "Action that decreases a numeric personal rating."
+    },
+    "personalRatingOutOfTen": "{rating} / 10",
+    "@personalRatingOutOfTen": {
+        "description": "Numeric personal rating displayed on a scale out of ten.",
+        "placeholders": {
+            "rating": {
+                "type": "String"
+            }
+        }
+    },
+    "personalRatingOutOfFive": "{rating} / 5",
+    "@personalRatingOutOfFive": {
+        "description": "Personal rating displayed on a five-star scale.",
+        "placeholders": {
+            "rating": {
+                "type": "String"
+            }
+        }
+    },
+    "settingsSkipButtonAutoHide": "自动隐藏跳过按钮",
+    "@settingsSkipButtonAutoHide": {
+        "description": "Setting label for automatically dismissing the skip intro and outro button after a delay"
+    },
+    "personalRatingStyle": "个人评分样式",
+    "@personalRatingStyle": {
+        "description": "Selects how personal ratings are displayed and entered on media details."
+    },
+    "collectionsRowSortOrderDescription": "对合集行执行升序或降序排序。",
+    "selectStudiosToIncludeDescription": "选择哪些制作公司应显示在首页行中。",
+    "selectAllStudios": "全选",
+    "personalRatingClear": "清除评分",
+    "@personalRatingClear": {
+        "description": "Action that removes the personal rating from the media item."
+    },
+    "personalRatingRated": "已评分",
+    "@personalRatingRated": {
+        "description": "Tooltip for a media item that has a numeric personal rating."
+    },
+    "seerrSeriesContinuing": "剧集连载中・可申请后续季数",
+    "@seerrSeriesContinuing": {
+        "description": "Banner in the Seerr request dialog for a continuing series whose aired seasons are all in the library"
+    },
+    "personalRatingStars": "5 星",
+    "@personalRatingStars": {
+        "description": "Personal rating style using a five-star scale."
+    },
+    "personalRatingThumbs": "喜欢 / 不喜欢",
+    "@personalRatingThumbs": {
+        "description": "Personal rating style using like and dislike actions."
+    },
+    "rate": "评分",
+    "@rate": {
+        "description": "Action that opens the personal rating control."
+    },
+    "dislike": "不喜欢",
+    "@dislike": {
+        "description": "Personal rating action for a negative rating."
+    },
+    "like": "喜欢",
+    "@like": {
+        "description": "Personal rating action for a positive rating."
+    },
+    "descending": "降序"
 }

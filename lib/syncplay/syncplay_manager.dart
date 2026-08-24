@@ -11,6 +11,7 @@ import '../data/services/media_server_client_factory.dart';
 import '../preference/user_preferences.dart';
 import '../ui/navigation/app_router.dart';
 import '../ui/navigation/destinations.dart';
+import 'sync_correction_policy.dart';
 import 'syncplay_state.dart';
 import 'time_sync_manager.dart';
 
@@ -33,6 +34,11 @@ class SyncPlayManager extends ChangeNotifier {
   static const int _handshakeRetryDelayMs = 1200;
   static const int _maxHandshakeRetries = 3;
   static const double _defaultSpeed = 1.0;
+  static const int _maxReadyStabilityRetries = 4;
+  // A Ready that never lands leaves the group waiting on this client, so the
+  // report is repeated for a while rather than sent once and forgotten.
+  static const int _readyWatchdogIntervalMs = 2500;
+  static const int _maxReadyWatchdogReports = 5;
 
   final PlaybackManager _playbackManager;
   final UserPreferences _preferences;
@@ -53,7 +59,16 @@ class SyncPlayManager extends ChangeNotifier {
   Timer? _driftTimer;
   Timer? _seekDebounceTimer;
   Timer? _queueSyncDebounceTimer;
+  Timer? _speedToSyncTimer;
+  Timer? _readyWatchdogTimer;
   Duration? _pendingSeekTarget;
+  int _readyWatchdogReports = 0;
+
+  final SyncCorrectionPolicy _syncCorrection = SyncCorrectionPolicy();
+  /// Whether the rate currently on the player is one SyncPlay put there. The
+  /// player's own speed control writes straight to the backend on some
+  /// platforms, so shared speed state cannot be trusted for this.
+  bool _speedToSyncApplied = false;
 
   StreamSubscription<bool>? _bufferingSub;
   StreamSubscription<void>? _queueChangedSub;
@@ -287,6 +302,7 @@ class SyncPlayManager extends ChangeNotifier {
     _lastCommandKey = null;
     _lastSyncPositionMs = 0;
     _lastSyncTimeMs = 0;
+    _syncCorrection.reset();
     _restorePlaybackRate();
     notifyListeners();
   }
@@ -478,6 +494,13 @@ class SyncPlayManager extends ChangeNotifier {
       case SyncPlayGroupUpdateType.stateUpdate:
         final payload = update.payload as SyncPlayStateUpdatePayload;
         _state.groupState = payload.update.state;
+        if (_state.groupState == SyncPlayGroupState.waiting) {
+          // Waiting can also be entered on someone else's buffering or an item
+          // switch, and the group stays there until we confirm we are ready.
+          _startReadyHandshake();
+        } else {
+          _stopReadyHandshake();
+        }
         notifyListeners();
         break;
       case SyncPlayGroupUpdateType.playQueue:
@@ -529,6 +552,10 @@ class SyncPlayManager extends ChangeNotifier {
         reason == SyncPlayQueueUpdateReason.previousItem ||
         previousPlaylistItemId != _state.currentPlaylistItemId;
     if (!isItemSwitch) return;
+
+    // Seek latency and convergence are per-stream, and a give-up must not
+    // outlive the item that caused it.
+    _syncCorrection.reset();
 
     final targetPlaylistItemId = _state.currentPlaylistItemId;
     final targetItemId = (idx >= 0 && idx < update.playlist.length)
@@ -652,6 +679,7 @@ class SyncPlayManager extends ChangeNotifier {
   }
 
   void _handleUnpause(SyncPlayCommand command) {
+    _stopReadyHandshake();
     final tsm = _timeSync;
     if (tsm == null) return;
     final serverNow = tsm.getServerTimeNow();
@@ -662,6 +690,8 @@ class SyncPlayManager extends ChangeNotifier {
         _clampedPositionMs(SyncPlayUtils.ticksToMs(command.positionTicks));
     _lastSyncPositionMs = positionMs;
     _lastSyncTimeMs = targetMs;
+    // A fresh sync point, so don't inherit a skip streak from before the pause.
+    _syncCorrection.onSyncPointChanged(DateTime.now().millisecondsSinceEpoch);
 
     if (!advancedCorrectionEnabled) {
       if (delayMs > 0) {
@@ -685,6 +715,7 @@ class SyncPlayManager extends ChangeNotifier {
   }
 
   void _handlePause(SyncPlayCommand command) {
+    _stopReadyHandshake();
     final positionMs =
         _clampedPositionMs(SyncPlayUtils.ticksToMs(command.positionTicks));
     _performPause(positionMs);
@@ -705,10 +736,17 @@ class SyncPlayManager extends ChangeNotifier {
     final positionMs = _clampedPositionMs(adjusted);
     _lastSyncPositionMs = positionMs;
     _lastSyncTimeMs = serverNow;
+    _syncCorrection.onSyncPointChanged(DateTime.now().millisecondsSinceEpoch);
     _performSeek(positionMs);
+    // Seek only ever arrives from the waiting state, which has just flagged
+    // every session as buffering. A seek that lands inside the buffer never
+    // stalls the pipeline, so waiting on a buffering edge to report Ready
+    // would leave the group waiting on a stall that is never coming.
+    _startReadyHandshake(restart: true);
   }
 
   void _handleStop() {
+    _stopReadyHandshake();
     _applyingRemoteCommand = true;
     try {
       _playbackManager.stop(userInitiated: false);
@@ -723,6 +761,7 @@ class SyncPlayManager extends ChangeNotifier {
     _state.groupState = SyncPlayGroupState.idle;
     _lastSyncPositionMs = 0;
     _lastSyncTimeMs = 0;
+    _syncCorrection.reset();
     notifyListeners();
   }
 
@@ -753,6 +792,18 @@ class SyncPlayManager extends ChangeNotifier {
         _armBufferingSuppression();
         _playbackManager.seekTo(Duration(milliseconds: positionMs));
       }
+    } finally {
+      _applyingRemoteCommand = false;
+    }
+  }
+
+  /// Pauses the player without routing back through the interceptor, for the
+  /// cases where the group has no command to send us.
+  void _applyLocalPause() {
+    _restorePlaybackRate();
+    _applyingRemoteCommand = true;
+    try {
+      _playbackManager.pause();
     } finally {
       _applyingRemoteCommand = false;
     }
@@ -794,8 +845,21 @@ class SyncPlayManager extends ChangeNotifier {
     return v > durationMs ? durationMs : v;
   }
 
+  /// Undoes a speed-to-sync nudge, and only that. Writing the rate when
+  /// SyncPlay never changed it is not free: on the Apple TV path a rate write
+  /// is play intent (`avPlayer.rate = value`), so an unconditional
+  /// restore-to-1.0 resumes a player the group wants paused.
   void _restorePlaybackRate() {
+    _speedToSyncTimer?.cancel();
+    _speedToSyncTimer = null;
+    if (!_speedToSyncApplied) return;
+    _speedToSyncApplied = false;
     _playbackManager.setPlaybackSpeed(_defaultSpeed);
+  }
+
+  void _applyPlaybackRate(double speed) {
+    _speedToSyncApplied = true;
+    _playbackManager.setPlaybackSpeed(speed);
   }
 
   void _scheduleAction(int delayMs, void Function() action) {
@@ -812,41 +876,71 @@ class SyncPlayManager extends ChangeNotifier {
     _driftTimer = Timer(const Duration(seconds: 2), _performDriftCorrection);
   }
 
+  SyncCorrectionSettings get _syncCorrectionSettings => SyncCorrectionSettings(
+        useSkipToSync: useSkipToSync,
+        useSpeedToSync: useSpeedToSync,
+        minDelaySkipToSyncMs: minDelaySkipToSync,
+        minDelaySpeedToSyncMs: minDelaySpeedToSync,
+        maxDelaySpeedToSyncMs: maxDelaySpeedToSync,
+        speedToSyncDurationMs: speedToSyncDuration,
+        extraTimeOffsetMs: extraTimeOffset,
+      );
+
   void _performDriftCorrection() {
     final tsm = _timeSync;
     if (tsm == null ||
         _state.groupState != SyncPlayGroupState.playing ||
-        _lastSyncTimeMs == 0) {
+        _lastSyncTimeMs == 0 ||
+        _syncCorrection.hasGivenUp) {
       return;
     }
     final pm = _playbackManager;
-    final currentMs = pm.state.position.inMilliseconds;
-    final serverNow = tsm.getServerTimeNow();
-    final expectedMs =
-        _lastSyncPositionMs + (serverNow - _lastSyncTimeMs) + extraTimeOffset;
+    final decision = _syncCorrection.evaluate(
+      nowMs: DateTime.now().millisecondsSinceEpoch,
+      serverNowMs: tsm.getServerTimeNow(),
+      currentPositionMs: pm.state.position.inMilliseconds,
+      lastSyncPositionMs: _lastSyncPositionMs,
+      lastSyncTimeMs: _lastSyncTimeMs,
+      isBuffering: pm.state.isBuffering || _isBuffering,
+      isPlaying: pm.state.isPlaying,
+      clockJitterMs: tsm.offsetJitterMs,
+      settings: _syncCorrectionSettings,
+    );
 
-    final delay = currentMs - expectedMs;
-    final absDelay = delay.abs();
-
-    if (useSkipToSync && absDelay > minDelaySkipToSync) {
-      _performSeek(expectedMs);
-      _scheduleDriftCorrection();
-      return;
-    }
-
-    if (useSpeedToSync &&
-        absDelay > minDelaySpeedToSync &&
-        absDelay < maxDelaySpeedToSync) {
-      final speed = delay > 0 ? 0.95 : 1.05;
-      pm.setPlaybackSpeed(speed);
-      Timer(Duration(milliseconds: speedToSyncDuration), () {
+    switch (decision.action) {
+      // Leaves the rate alone: the pipeline is stalled or paused here.
+      case SyncCorrectionAction.defer:
+        _scheduleDriftCorrection();
+      // Absorbs the seek's own cost so it is never mistaken for drift.
+      case SyncCorrectionAction.rebaseline:
+        _lastSyncPositionMs += decision.measuredDelayMs;
+        _scheduleDriftCorrection();
+      case SyncCorrectionAction.hold:
         _restorePlaybackRate();
         _scheduleDriftCorrection();
-      });
-      return;
+      case SyncCorrectionAction.skip:
+        _restorePlaybackRate();
+        _performSeek(_clampedPositionMs(decision.targetPositionMs));
+        _scheduleDriftCorrection();
+      case SyncCorrectionAction.speed:
+        _applyPlaybackRate(decision.speed);
+        _speedToSyncTimer?.cancel();
+        _speedToSyncTimer = Timer(
+          Duration(milliseconds: decision.speedDurationMs),
+          () {
+            _restorePlaybackRate();
+            _scheduleDriftCorrection();
+          },
+        );
+      case SyncCorrectionAction.giveUp:
+        _restorePlaybackRate();
+        _logger.w(
+          'SyncPlay: sync correction disabled for this item after '
+          '${_syncCorrection.consecutiveSkips} skips failed to converge '
+          '(residual ${decision.measuredDelayMs}ms, latency allowance '
+          '${_syncCorrection.seekLatencyAllowanceMs}ms)',
+        );
     }
-
-    _scheduleDriftCorrection();
   }
 
   void _attachPlaybackObservers() {
@@ -868,11 +962,14 @@ class SyncPlayManager extends ChangeNotifier {
     _bufferingTimer = null;
     _readyTimer?.cancel();
     _readyTimer = null;
+    _stopReadyHandshake();
     _seekDebounceTimer?.cancel();
     _seekDebounceTimer = null;
     _pendingSeekTarget = null;
     _queueSyncDebounceTimer?.cancel();
     _queueSyncDebounceTimer = null;
+    _speedToSyncTimer?.cancel();
+    _speedToSyncTimer = null;
     _suppressedBufferingRecheckTimer?.cancel();
     _suppressedBufferingRecheckTimer = null;
     _suppressBufferingUntilMs = 0;
@@ -891,6 +988,13 @@ class SyncPlayManager extends ChangeNotifier {
         await requestUnpause();
         return true;
       case TransportAction.pause:
+        // Handing the press to the group swallows the local pause, and a
+        // waiting group has no Pause command to send back, so the press would
+        // land nowhere. Pausing here is safe because the command that does
+        // arrive once everyone is ready carries the group's own position.
+        if (_state.groupState == SyncPlayGroupState.waiting) {
+          _applyLocalPause();
+        }
         await requestPause();
         return true;
       case TransportAction.seek:
@@ -970,15 +1074,68 @@ class SyncPlayManager extends ChangeNotifier {
     );
   }
 
-  void _queueReadyReport() {
+  void _queueReadyReport({int attempt = 0}) {
     _readyTimer?.cancel();
     _readyTimer = Timer(
       const Duration(milliseconds: _readyDebounceMs),
       () async {
-        if (!await _isPlaybackPositionStable()) return;
+        if (!_state.enabled || !syncPlayEnabled) return;
+        if (!await _isPlaybackPositionStable()) {
+          // Dropping this report strands the whole group in Waiting, so retry
+          // and report anyway once the attempts run out.
+          if (attempt < _maxReadyStabilityRetries) {
+            _queueReadyReport(attempt: attempt + 1);
+            return;
+          }
+        }
         _sendReadyWithRetry();
       },
     );
+  }
+
+  /// Answers the Waiting handshake the server holds the whole group in. It
+  /// leaves that state only once every session has reported Ready, and while it
+  /// waits it replies to a pause request with a state update and no command at
+  /// all, so a group left waiting on this client has no working transport.
+  void _startReadyHandshake({bool restart = false}) {
+    if (!_state.enabled || !syncPlayEnabled) return;
+    if (_readyWatchdogTimer != null && !restart) return;
+    _readyWatchdogTimer?.cancel();
+    _readyWatchdogReports = 0;
+    _reportReadyIfSettled();
+    _readyWatchdogTimer = Timer.periodic(
+      const Duration(milliseconds: _readyWatchdogIntervalMs),
+      (_) {
+        if (!_state.enabled ||
+            !syncPlayEnabled ||
+            _state.groupState != SyncPlayGroupState.waiting ||
+            _readyWatchdogReports >= _maxReadyWatchdogReports) {
+          _stopReadyHandshake();
+          return;
+        }
+        _readyWatchdogReports++;
+        // A buffering flag that never clears would hold the group forever, and
+        // rejoining late beats leaving everyone without controls.
+        _reportReadyIfSettled(
+          force: _readyWatchdogReports >= _maxReadyWatchdogReports,
+        );
+      },
+    );
+  }
+
+  /// Reports Ready only when the player really is. A real stall already has a
+  /// Buffering report out that the server is right to wait on, and the recovery
+  /// that ends it queues a Ready of its own.
+  void _reportReadyIfSettled({bool force = false}) {
+    if (_playbackManager.currentResolution == null) return;
+    if (!force && (_playbackManager.state.isBuffering || _isBuffering)) return;
+    _queueReadyReport();
+  }
+
+  void _stopReadyHandshake() {
+    _readyWatchdogTimer?.cancel();
+    _readyWatchdogTimer = null;
+    _readyWatchdogReports = 0;
   }
 
   Future<bool> _isPlaybackPositionStable() async {
@@ -1061,7 +1218,14 @@ class SyncPlayManager extends ChangeNotifier {
       if (!_state.enabled || !syncPlayEnabled) return;
       final api = _api;
       final playlistItemId = _currentPlaylistItemId();
-      if (api == null || playlistItemId == null) return;
+      if (api == null) return;
+      if (playlistItemId == null) {
+        _logger.w(
+          'SyncPlay: no playlist item to report Ready for, group '
+          '${_state.groupState.name} is left waiting on this client',
+        );
+        return;
+      }
       final pm = _playbackManager;
       final positionTicks =
           SyncPlayUtils.msToTicks(pm.state.position.inMilliseconds);

@@ -11,6 +11,7 @@ class AppDelegate: FlutterAppDelegate {
     private var themeMusicChannel: AppleTvThemeMusicChannel?
     private var sfSymbolChannel: AppleTvSfSymbolChannel?
     private var gameChannel: AppleTvGameChannel?
+    private var pressGate: SiriRemotePressGate?
 
     override func application(
         _ application: UIApplication,
@@ -21,6 +22,9 @@ class AppDelegate: FlutterAppDelegate {
         window.rootViewController = flutterViewController
         window.makeKeyAndVisible()
         self.window = window
+        // The engine installs its press recognizers in viewDidLoad, which
+        // reading the view forces before the gate looks for them.
+        pressGate = SiriRemotePressGate.install(on: flutterViewController.view)
 
         GeneratedPluginRegistrant.register(with: self)
 

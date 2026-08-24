@@ -357,9 +357,11 @@ class _MediaBarSettingsScreenState extends State<MediaBarSettingsScreen> {
                     UserPreferences.mediaBarModeMoonfin:
                         l10n.mediaBarModeMoonfin,
                     UserPreferences.mediaBarModeMakd: l10n.mediaBarModeMakd,
-                    UserPreferences.mediaBarModeBookshelf: 'Bookshelf',
-                    UserPreferences.mediaBarModeGallery: 'Gallery',
-                    UserPreferences.mediaBarModeBanner: 'Banner',
+                    UserPreferences.mediaBarModeBookshelf:
+                        l10n.mediaBarModeBookshelf,
+                    UserPreferences.mediaBarModeGallery: l10n.mediaBarModeGallery,
+                    UserPreferences.mediaBarModeBanner: l10n.mediaBarModeBanner,
+                    UserPreferences.mediaBarModeAya: l10n.mediaBarModeAya,
                     UserPreferences.mediaBarModeOff: l10n.mediaBarModeOff,
                   },
                   onChanged: _pushSync,
@@ -372,6 +374,20 @@ class _MediaBarSettingsScreenState extends State<MediaBarSettingsScreen> {
                     'both': l10n.moviesAndTvShows,
                     'movies': l10n.moviesOnly,
                     'tvshows': l10n.tvShowsOnly,
+                  },
+                  onChanged: _pushSync,
+                ),
+                StringPickerPreferenceTile(
+                  preference: UserPreferences.mediaBarSourceType,
+                  title: l10n.mediaBarSourceType,
+                  icon: Icons.auto_awesome_motion,
+                  options: {
+                    UserPreferences.mediaBarSourceRandom:
+                        l10n.mediaBarSourceRandom,
+                    UserPreferences.mediaBarSourceRecentlyAdded:
+                        l10n.recentlyAdded,
+                    UserPreferences.mediaBarSourceRecentlyReleased:
+                        l10n.recentlyReleased,
                   },
                   onChanged: _pushSync,
                 ),

@@ -25,6 +25,7 @@ class UserPreferences extends ChangeNotifier {
   static const mediaBarModeBookshelf = 'bookshelf';
   static const mediaBarModeGallery = 'gallery';
   static const mediaBarModeBanner = 'banner';
+  static const mediaBarModeAya = 'aya';
   static const mediaBarModeOff = 'off';
   static const mediaBarModeValues = <String>{
     mediaBarModeMoonfin,
@@ -32,8 +33,16 @@ class UserPreferences extends ChangeNotifier {
     mediaBarModeBookshelf,
     mediaBarModeGallery,
     mediaBarModeBanner,
+    mediaBarModeAya,
     mediaBarModeOff,
   };
+
+  // Where the bar draws its titles from. Every source still passes through the
+  // library, collection, content type and genre filters, and still picks its
+  // slides at random out of what comes back.
+  static const mediaBarSourceRandom = 'random';
+  static const mediaBarSourceRecentlyAdded = 'recentlyAdded';
+  static const mediaBarSourceRecentlyReleased = 'recentlyReleased';
 
   final PreferenceStore _store;
 
@@ -278,9 +287,11 @@ class UserPreferences extends ChangeNotifier {
     'playback_time_below_center',
     'playback_time_below_left',
     'playback_time_below_right',
+    'playerSwipeGestures',
     'player_zoom_mode',
     'pref_audio_rows_sort_by',
     'pref_audio_rows_sort_order',
+    'pref_crash_reports_enabled',
     'pref_diagnostic_logging_enabled',
     'pref_display_studios_rows',
     'pref_epg_mobile_view',
@@ -336,6 +347,9 @@ class UserPreferences extends ChangeNotifier {
     'pref_detail_screen_style',
     'pref_detail_expanded_tabs',
     'pref_detail_show_technical_details',
+    'pref_hide_details_media_description',
+    'pref_detail_use_series_thumbnails',
+    'pref_hide_home_media_description',
     'pref_display_audio_rows',
     'pref_display_since_you_watched_rows',
     'pref_since_you_watched_source',
@@ -362,6 +376,7 @@ class UserPreferences extends ChangeNotifier {
     'pref_language_override',
     'pref_media_segment_countdown',
     'pref_media_segment_auto_hide',
+    'pref_desktop_scroll_sensitivity',
     'pref_desktop_ui_scale',
     'poster_size_library',
     'poster_size_playlist',
@@ -388,6 +403,13 @@ class UserPreferences extends ChangeNotifier {
     'subtitles_text_size',
     'subtitles_offset_position',
     'subtitles_default_to_none',
+    'subtitles_hdr_separate',
+    'subtitles_hdr_background_color',
+    'subtitles_hdr_text_weight',
+    'subtitles_hdr_text_color',
+    'subtitles_hdr_text_stroke_color',
+    'subtitles_hdr_text_size',
+    'subtitles_hdr_offset_position',
     'subtitles_use_embedded_styles',
     'subtitles_use_embedded_font_sizes',
     'prefer_sdh_subtitles',
@@ -430,6 +452,7 @@ class UserPreferences extends ChangeNotifier {
     'mediaBarEnabled',
     'mediaBarMode',
     'mediaBarContentType',
+    'mediaBarSourceType',
     'mediaBarItemCount',
     'mediaBarOverlayOpacity',
     'mediaBarOverlayColor',
@@ -452,6 +475,7 @@ class UserPreferences extends ChangeNotifier {
     'homeRowsUniversalOverride',
     'homeRowsUniversalImageType',
     'pref_enable_series_thumbnails',
+    'pref_media_type_badge_behavior',
     'pref_show_backdrop',
     'detailsBackgroundBlurAmount',
     'browsingBackgroundBlurAmount',
@@ -499,6 +523,7 @@ class UserPreferences extends ChangeNotifier {
     'last_radarr_calendar_fetch_time',
     'last_sonarr_calendar_fetch_time',
     'merge_radarr_sonarr_calendars',
+    'recently_released_series_type',
   };
 
   bool _isScopedPreference<T>(Preference<T> pref) {
@@ -869,6 +894,13 @@ class UserPreferences extends ChangeNotifier {
     defaultValue: 30,
   );
 
+  /// How far a mouse wheel notch scrolls, as a percentage of what the platform
+  /// reports.
+  static final desktopScrollSensitivity = Preference(
+    key: 'pref_desktop_scroll_sensitivity',
+    defaultValue: 100,
+  );
+
   static final desktopUiScale = EnumPreference(
     key: 'pref_desktop_ui_scale',
     defaultValue: DesktopUiScale.medium,
@@ -896,6 +928,12 @@ class UserPreferences extends ChangeNotifier {
   static final seriesThumbnailsEnabled = Preference(
     key: 'pref_enable_series_thumbnails',
     defaultValue: false,
+  );
+
+  static final mediaTypeBadgeBehavior = EnumPreference(
+    key: 'pref_media_type_badge_behavior',
+    defaultValue: MediaTypeBadgeBehavior.always,
+    values: MediaTypeBadgeBehavior.values,
   );
 
   static final homeRowInfoOverlay = Preference(
@@ -1162,6 +1200,12 @@ class UserPreferences extends ChangeNotifier {
     values: InterfaceStyle.values,
   );
 
+  static final interfaceLayout = EnumPreference(
+    key: 'pref_interface_layout',
+    defaultValue: InterfaceLayout.automatic,
+    values: InterfaceLayout.values,
+  );
+
   static final glassQuality = EnumPreference(
     key: 'pref_glass_quality',
     defaultValue: GlassQualityMode.auto,
@@ -1206,6 +1250,24 @@ class UserPreferences extends ChangeNotifier {
   /// server like [detailScreenStyle].
   static final detailShowTechnicalDetails = Preference(
     key: 'pref_detail_show_technical_details',
+    defaultValue: false,
+  );
+
+  /// When on, media description paragraph on the details page is hidden.
+  static final hideDetailsMediaDescription = Preference(
+    key: 'pref_hide_details_media_description',
+    defaultValue: false,
+  );
+
+  /// When on, thumbnails on Classic details page are replaced with series thumbnail.
+  static final detailUseSeriesThumbnails = Preference(
+    key: 'pref_detail_use_series_thumbnails',
+    defaultValue: false,
+  );
+
+  /// When on, media description paragraph on the Home screen is hidden.
+  static final hideHomeMediaDescription = Preference(
+    key: 'pref_hide_home_media_description',
     defaultValue: false,
   );
 
@@ -1327,6 +1389,13 @@ class UserPreferences extends ChangeNotifier {
   static final diagnosticLoggingEnabled = Preference(
     key: 'pref_diagnostic_logging_enabled',
     defaultValue: false,
+  );
+
+  /// Gates uploading crash reports to the server. Capture itself always runs
+  /// and stays on the device.
+  static final crashReportsEnabled = Preference(
+    key: 'pref_crash_reports_enabled',
+    defaultValue: true,
   );
 
   static final enableFolderView = Preference(
@@ -1735,6 +1804,43 @@ class UserPreferences extends ChangeNotifier {
     defaultValue: 0.04,
   );
 
+  /// A second appearance used only while HDR reaches the screen, defaulting to
+  /// grey text since white reads far brighter in HDR than in SDR.
+  static final subtitlesHdrSeparate = Preference(
+    key: 'subtitles_hdr_separate',
+    defaultValue: false,
+  );
+
+  static final subtitlesHdrBackgroundColor = Preference(
+    key: 'subtitles_hdr_background_color',
+    defaultValue: 0x00000000,
+  );
+
+  static final subtitlesHdrTextWeight = Preference(
+    key: 'subtitles_hdr_text_weight',
+    defaultValue: 400,
+  );
+
+  static final subtitlesHdrTextColor = Preference(
+    key: 'subtitles_hdr_text_color',
+    defaultValue: 0xFF808080,
+  );
+
+  static final subtitlesHdrTextStrokeColor = Preference(
+    key: 'subtitles_hdr_text_stroke_color',
+    defaultValue: 0xFF000000,
+  );
+
+  static final subtitlesHdrTextSize = Preference(
+    key: 'subtitles_hdr_text_size',
+    defaultValue: 20.0,
+  );
+
+  static final subtitlesHdrOffsetPosition = Preference(
+    key: 'subtitles_hdr_offset_position',
+    defaultValue: 0.04,
+  );
+
   static final subtitleMode = EnumPreference(
     key: 'pref_subtitle_mode',
     defaultValue: SubtitleMode.flagged,
@@ -1780,7 +1886,7 @@ class UserPreferences extends ChangeNotifier {
 
   static final mediaSegmentAutoHide = EnumPreference(
     key: 'pref_media_segment_auto_hide',
-    defaultValue: MediaSegmentAutoHide.s5,
+    defaultValue: MediaSegmentAutoHide.off,
     values: MediaSegmentAutoHide.values,
   );
 
@@ -1838,6 +1944,10 @@ class UserPreferences extends ChangeNotifier {
   static final osdLockEnabled = Preference(
     key: 'osdLockEnabled',
     defaultValue: false,
+  );
+  static final playerSwipeGestures = Preference(
+    key: 'playerSwipeGestures',
+    defaultValue: true,
   );
   static final detailButtonOrderTv = Preference(
     key: 'detailButtonOrderTv',
@@ -1902,6 +2012,11 @@ class UserPreferences extends ChangeNotifier {
   static final mediaBarContentType = Preference(
     key: 'mediaBarContentType',
     defaultValue: 'both',
+  );
+
+  static final mediaBarSourceType = Preference(
+    key: 'mediaBarSourceType',
+    defaultValue: mediaBarSourceRandom,
   );
 
   static final mediaBarItemCount = Preference(
@@ -2218,6 +2333,12 @@ class UserPreferences extends ChangeNotifier {
     defaultValue: false,
   );
 
+  static final recentlyReleasedSeriesType = EnumPreference(
+    key: 'recently_released_series_type',
+    defaultValue: RecentlyReleasedSeriesType.series,
+    values: RecentlyReleasedSeriesType.values,
+  );
+
   List<HomeSectionConfig> get homeSectionsConfig {
     final json = get(homeSectionsJson);
     return HomeSectionConfig.fromJsonString(json);
@@ -2329,6 +2450,23 @@ class UserPreferences extends ChangeNotifier {
         defaultValue: false,
       );
 
+  /// How far through the first-run setup this server and user have been taken.
+  ///
+  /// A version rather than a flag, so a release that adds a step can show only
+  /// the new one instead of asking everything again. Kept per server and user
+  /// because a second server is a fresh set of libraries worth arranging, and
+  /// kept out of the synced fields so a new device asks rather than inheriting
+  /// somebody else's answer.
+  static Preference<int> setupWizardVersionForServer(String serverKey) =>
+      Preference(
+        key: 'pref_setup_wizard_version_$serverKey',
+        defaultValue: 0,
+      );
+
+  /// Bumped only when a release adds a step that earns its place. Everything
+  /// already answered stays answered.
+  static const setupWizardVersion = 1;
+
   static final confirmExit = Preference(
     key: 'confirm_exit',
     defaultValue: true,
@@ -2409,6 +2547,14 @@ class UserPreferences extends ChangeNotifier {
     values: PlayedStatusFilter.values,
   );
 
+  static EnumPreference<LikedStatusFilter> libraryLikedFilter(
+    String libraryId,
+  ) => EnumPreference(
+    key: 'library_liked_filter_$libraryId',
+    defaultValue: LikedStatusFilter.all,
+    values: LikedStatusFilter.values,
+  );
+
   static EnumPreference<SeriesStatusFilter> librarySeriesFilter(
     String libraryId,
   ) => EnumPreference(
@@ -2419,6 +2565,63 @@ class UserPreferences extends ChangeNotifier {
 
   static Preference<bool> libraryFavoriteFilter(String libraryId) =>
       Preference(key: 'library_fav_filter_$libraryId', defaultValue: false);
+
+  /// The multi choice filters, each held as the selected enum names or the
+  /// selected facet values so a library reopens the way it was left.
+  static Preference<List<String>> libraryFeatureFilters(String libraryId) =>
+      Preference(
+        key: 'library_feature_filters_$libraryId',
+        defaultValue: const [],
+      );
+
+  static Preference<List<String>> libraryVideoQualityFilters(
+    String libraryId,
+  ) => Preference(
+    key: 'library_video_quality_filters_$libraryId',
+    defaultValue: const [],
+  );
+
+  static Preference<List<String>> libraryVideoSourceFilters(String libraryId) =>
+      Preference(
+        key: 'library_video_source_filters_$libraryId',
+        defaultValue: const [],
+      );
+
+  static Preference<List<String>> libraryGenreFilters(String libraryId) =>
+      Preference(
+        key: 'library_genre_filters_$libraryId',
+        defaultValue: const [],
+      );
+
+  static Preference<List<String>> libraryOfficialRatingFilters(
+    String libraryId,
+  ) => Preference(
+    key: 'library_official_rating_filters_$libraryId',
+    defaultValue: const [],
+  );
+
+  static Preference<List<String>> libraryTagFilters(String libraryId) =>
+      Preference(key: 'library_tag_filters_$libraryId', defaultValue: const []);
+
+  static Preference<List<String>> libraryYearFilters(String libraryId) =>
+      Preference(
+        key: 'library_year_filters_$libraryId',
+        defaultValue: const [],
+      );
+
+  static Preference<List<String>> libraryAudioLanguageFilters(
+    String libraryId,
+  ) => Preference(
+    key: 'library_audio_language_filters_$libraryId',
+    defaultValue: const [],
+  );
+
+  static Preference<List<String>> librarySubtitleLanguageFilters(
+    String libraryId,
+  ) => Preference(
+    key: 'library_subtitle_language_filters_$libraryId',
+    defaultValue: const [],
+  );
 
   static EnumPreference<ImageType> libraryImageType(String libraryId) =>
       EnumPreference(

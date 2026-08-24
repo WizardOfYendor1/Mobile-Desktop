@@ -18,6 +18,7 @@ import '../../../../data/viewmodels/item_detail_view_model.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../preference/user_preferences.dart';
 import '../../../../preference/preference_constants.dart';
+import '../../../../util/detail_track_highlight.dart';
 import '../../../../util/episode_playability.dart';
 import '../../../../util/overview_text.dart';
 import '../../../../util/platform_detection.dart';
@@ -199,6 +200,10 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
 
   PlaybackInfoResult? _playbackInfo;
   bool _loadingPlaybackInfo = false;
+  // A failed request has to count as loaded too. This runs from build, so
+  // retrying just because the last attempt failed turns one server error into
+  // a request every frame.
+  bool _playbackInfoFailed = false;
   String? _loadedPlaybackInfoItemId;
 
   bool _upNextResolvedThisBuild = false;
@@ -206,14 +211,15 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
 
   Future<void> _loadPlaybackInfo(AggregatedItem item) async {
     if (_loadingPlaybackInfo) return;
-    if (_playbackInfo != null &&
+    if ((_playbackInfo != null || _playbackInfoFailed) &&
         _loadedPlaybackInfoItemId == item.id &&
         _loadedAudioIndex == _vm.selectedAudioIndex &&
         _loadedSubtitleIndex == _vm.selectedSubtitleIndex) {
       return;
     }
-    
+
     _loadingPlaybackInfo = true;
+    _playbackInfoFailed = false;
     _loadedPlaybackInfoItemId = item.id;
     _loadedAudioIndex = _vm.selectedAudioIndex;
     _loadedSubtitleIndex = _vm.selectedSubtitleIndex;
@@ -266,6 +272,7 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
         setState(() {
           _loadingPlaybackInfo = false;
           _playbackInfo = null;
+          _playbackInfoFailed = true;
         });
       }
     }
@@ -2740,6 +2747,30 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
       return code.toUpperCase();
     }
 
+    final manager = GetIt.instance<PlaybackManager>();
+    // The queue holds bare id strings during offline playback, so this checks
+    // the type before asking for an item id.
+    final currentQueueItem = manager.queueService.currentItem;
+    final isPlayingThisItem =
+        currentQueueItem is AggregatedItem && currentQueueItem.id == item.id;
+
+    final activeAudioIndex = highlightedAudioIndex(
+      audioStreams: audioStreams,
+      seriesId: item.seriesId,
+      selectedIndex: _vm.selectedAudioIndex,
+      activePlaybackIndex: isPlayingThisItem ? manager.audioStreamIndex : null,
+    );
+    final activeSubtitleIndex = highlightedSubtitleIndex(
+      subtitleStreams: subtitleStreams,
+      audioStreams: audioStreams,
+      seriesId: item.seriesId,
+      selectedIndex: _vm.selectedSubtitleIndex,
+      activePlaybackIndex: isPlayingThisItem
+          ? manager.subtitleStreamIndex
+          : null,
+      activeAudioIndex: activeAudioIndex,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2810,8 +2841,6 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
                       .map((entry) {
                     final idx = entry.key;
                     final a = entry.value;
-                    final activeAudioIndex = _vm.selectedAudioIndex ??
-                        audioStreams.firstWhere((s) => s['IsDefault'] == true, orElse: () => audioStreams.first)['Index'] as int?;
                     final title = a['DisplayTitle'] ?? a['Codec']?.toString().toUpperCase();
                     final lang = formatLang(a['Language']);
                     final isDefault = a['IsDefault'] == true ? ' [${l10n.defaultLabel}]' : '';
@@ -2880,8 +2909,6 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
                       .map((entry) {
                     final idx = entry.key;
                     final s = entry.value;
-                    final activeSubtitleIndex = _vm.selectedSubtitleIndex ??
-                        subtitleStreams.firstWhere((s) => s['IsDefault'] == true, orElse: () => subtitleStreams.first)['Index'] as int?;
                     final title = s['DisplayTitle'] ?? s['Codec']?.toString().toUpperCase();
                     final lang = formatLang(s['Language']);
                     final isDefault = s['IsDefault'] == true ? ' [${l10n.defaultLabel}]' : '';
@@ -3954,6 +3981,7 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
               ratings: _vm.ratings,
               communityRating: item.communityRating,
               criticRating: item.criticRating,
+              personalRating: item.personalRating,
               enableAdditionalRatings:
                   widget.prefs.get(UserPreferences.enableAdditionalRatings),
               enabledRatings: widget.prefs.get(UserPreferences.enabledRatings),
@@ -3977,7 +4005,13 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
             ),
           ),
         ],
-        if (overview.isNotEmpty) ...[
+        if (overview.isNotEmpty &&
+            !hidesMediaDescription(
+              itemType: item.type,
+              hideMediaDescription: widget.prefs.get(
+                UserPreferences.hideDetailsMediaDescription,
+              ),
+            )) ...[
           if (!hideTitleAndLogo || (item.tagline != null && item.tagline!.trim().isNotEmpty))
             const SizedBox(height: 8),
           _buildOverviewText(
@@ -4725,6 +4759,7 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
                   ratings: _vm.ratings,
                   communityRating: item.communityRating,
                   criticRating: item.criticRating,
+                  personalRating: item.personalRating,
                   enableAdditionalRatings:
                       widget.prefs.get(UserPreferences.enableAdditionalRatings),
                   enabledRatings: widget.prefs.get(UserPreferences.enabledRatings),

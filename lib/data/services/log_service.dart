@@ -144,18 +144,38 @@ class LogService extends ChangeNotifier {
 
     if (!_enabled) return;
 
-    final entry = LogEntry(
-      time: DateTime.now(),
-      level: level,
-      category: category,
-      message: _redact(message),
-      error: error != null ? _redact(error.toString()) : null,
+    _append(
+      LogEntry(
+        time: DateTime.now(),
+        level: level,
+        category: category,
+        message: _redact(message),
+        error: error != null ? _redact(error.toString()) : null,
+      ),
     );
+  }
+
+  void _append(LogEntry entry) {
     _entries.addLast(entry);
     while (_entries.length > _maxEntries) {
       _entries.removeFirst();
     }
     notifyListeners();
+  }
+
+  /// Records an uncaught error. Unlike [log] this ignores the diagnostic
+  /// logging toggle, which is off by default and too late to turn on once
+  /// the crash it would have explained has already happened.
+  void logCrash(String message, Object error) {
+    _append(
+      LogEntry(
+        time: DateTime.now(),
+        level: LogLevel.error,
+        category: LogCategory.general,
+        message: _redact(message),
+        error: _redact(error.toString()),
+      ),
+    );
   }
 
   void media(String message, {LogLevel level = LogLevel.debug, Object? error}) =>
@@ -180,16 +200,21 @@ class LogService extends ChangeNotifier {
     notifyListeners();
   }
 
-  String exportText() {
+  /// [maxEntries] bounds the report to that many of the newest entries.
+  String exportText({int? maxEntries}) {
+    var start = 0;
+    if (maxEntries != null && _entries.length > maxEntries) {
+      start = _entries.length - maxEntries;
+    }
     final buffer = StringBuffer()
       ..writeln('Moonfin diagnostic report')
       ..writeln('Generated: ${DateTime.now().toIso8601String()}')
       ..writeln('App: ${_deviceInfo.appName} ${_deviceInfo.appVersion}')
       ..writeln('Device: ${_deviceInfo.name} (${_deviceInfo.id})')
-      ..writeln('Entries: ${_entries.length}')
+      ..writeln('Entries: ${_entries.length - start}')
       ..writeln('Platform: ${defaultTargetPlatform.name}')
       ..writeln('=' * 60);
-    for (final entry in _entries) {
+    for (final entry in _entries.skip(start)) {
       buffer.writeln(entry.format());
     }
     return buffer.toString();

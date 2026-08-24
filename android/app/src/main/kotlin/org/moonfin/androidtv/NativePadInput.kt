@@ -42,6 +42,10 @@ internal class NativePadInput(
     // Remotes/keyboards aren't controller connections but feed P1's D-pad/Enter
     // state; kept independent so it composes with, not replaces, P1's pad.
     private val keyboardState = PadState(KEYBOARD_DEVICE_ID, "", 0, DEFAULT_TABLE)
+    // Per-connection table for keyboardState's shared events, keyed by
+    // profileId; see navigationTable. tableFor allocates a 256-int copy, so
+    // this memoises it rather than resolving per key event.
+    private val navigationTables = HashMap<String, IntArray>()
 
     private var customMappings: Map<String, Map<Int, Int>> = emptyMap()
     private var snapModes: Map<String, StickSnap> = emptyMap()
@@ -218,6 +222,7 @@ internal class NativePadInput(
             val state = padStates.valueAt(index)
             state.table = tableFor(state.profileId)
         }
+        navigationTables.clear()
     }
 
     /** Snap mode per controller profile for the loaded game. */
@@ -259,6 +264,10 @@ internal class NativePadInput(
     /** Returns true when this key was consumed by the native pad path. */
     fun onKey(event: KeyEvent): Boolean {
         val keyCode = event.keyCode
+        // Back is the only escape from a running game, so it is never
+        // consumed and -- because this return sits above the capture branch
+        // on purpose -- never bindable either. Reordering this below capture
+        // would let a rebind strand a user with no way out.
         if (keyCode == KeyEvent.KEYCODE_BACK || isVolumeKey(keyCode)) return false
         if (event.repeatCount != 0) return true
 
@@ -308,7 +317,8 @@ internal class NativePadInput(
         }
         if (event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return true
 
-        val index = indexFor(state.table, keyCode)
+        val table = if (state === keyboardState) navigationTable(connection) else state.table
+        val index = indexFor(table, keyCode)
         when (index) {
             NONE -> return false
             SWALLOW -> return true
@@ -652,6 +662,7 @@ internal class NativePadInput(
         for (index in 0 until padStates.size()) clearPadState(padStates.valueAt(index), publish)
         padStates.clear()
         clearPadState(keyboardState, publish)
+        navigationTables.clear()
         maskComposer.reset()
     }
 
@@ -797,17 +808,24 @@ internal class NativePadInput(
         handler.postDelayed(timer, START_PULSE_MS)
     }
 
-    private fun tableFor(profileId: String): IntArray {
-        val overrides = customMappings[profileId] ?: return DEFAULT_TABLE
-        val table = DEFAULT_TABLE.copyOf()
-        for ((keyCode, index) in overrides) {
-            if (keyCode in 0 until TABLE_SIZE && index in 0..15) table[keyCode] = index
-        }
-        return table
-    }
+    private fun tableFor(profileId: String): IntArray = NativeMappingTables.custom(customMappings[profileId])
 
-    private fun indexFor(table: IntArray, keyCode: Int): Int =
-        if (keyCode in 0 until TABLE_SIZE) table[keyCode] else NONE
+    private fun indexFor(table: IntArray, keyCode: Int): Int = NativeMappingTables.indexFor(table, keyCode)
+
+    /**
+     * A portless remote/keyboard shares one PadState, so its table cannot live on
+     * the state; it is resolved from whichever device produced this event.
+     *
+     * While the overlay is open the default table is used regardless of what the
+     * user bound. The overlay is navigated by RetroPad indices fanned out from
+     * LibretroBridge.onPad, so a remote that rebound its D-pad or Select would
+     * otherwise lose the ability to drive the menu it just opened -- with Back as
+     * the only way out. Gameplay honours the custom table; menus never do.
+     */
+    private fun navigationTable(connection: NativeControllerConnection?): IntArray {
+        if (connection == null || bridge.overlayOpen) return DEFAULT_TABLE
+        return navigationTables.getOrPut(connection.profileId) { tableFor(connection.profileId) }
+    }
 
     private fun isVolumeKey(keyCode: Int): Boolean = keyCode == KeyEvent.KEYCODE_VOLUME_UP ||
         keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_MUTE
@@ -878,67 +896,130 @@ internal class NativePadInput(
         const val START_HOLD_MS = 1500L
         const val START_PULSE_MS = 34L
         const val KEYBOARD_DEVICE_ID = -1
-        const val TABLE_SIZE = 256
-        const val NONE = -1
-        const val SWALLOW = -2
+        const val TABLE_SIZE = NativeMappingTables.TABLE_SIZE
+        const val NONE = NativeMappingTables.NONE
+        const val SWALLOW = NativeMappingTables.SWALLOW
 
-        const val RETRO_A = 0
-        const val RETRO_X = 1
-        const val RETRO_SELECT = 2
-        const val RETRO_START = 3
-        const val RETRO_UP = 4
-        const val RETRO_DOWN = 5
-        const val RETRO_LEFT = 6
-        const val RETRO_RIGHT = 7
-        const val RETRO_B = 8
-        const val RETRO_Y = 9
-        const val RETRO_L1 = 10
-        const val RETRO_R1 = 11
-        const val RETRO_L2 = 12
-        const val RETRO_R2 = 13
-        const val RETRO_L3 = 14
-        const val RETRO_R3 = 15
+        const val RETRO_A = NativeMappingTables.RETRO_A
+        const val RETRO_X = NativeMappingTables.RETRO_X
+        const val RETRO_SELECT = NativeMappingTables.RETRO_SELECT
+        const val RETRO_START = NativeMappingTables.RETRO_START
+        const val RETRO_UP = NativeMappingTables.RETRO_UP
+        const val RETRO_DOWN = NativeMappingTables.RETRO_DOWN
+        const val RETRO_LEFT = NativeMappingTables.RETRO_LEFT
+        const val RETRO_RIGHT = NativeMappingTables.RETRO_RIGHT
+        const val RETRO_B = NativeMappingTables.RETRO_B
+        const val RETRO_Y = NativeMappingTables.RETRO_Y
+        const val RETRO_L1 = NativeMappingTables.RETRO_L1
+        const val RETRO_R1 = NativeMappingTables.RETRO_R1
+        const val RETRO_L2 = NativeMappingTables.RETRO_L2
+        const val RETRO_R2 = NativeMappingTables.RETRO_R2
+        const val RETRO_L3 = NativeMappingTables.RETRO_L3
+        const val RETRO_R3 = NativeMappingTables.RETRO_R3
 
-        val OPPOSITE = IntArray(16) { NONE }.apply {
-            this[RETRO_UP] = RETRO_DOWN
-            this[RETRO_DOWN] = RETRO_UP
-            this[RETRO_LEFT] = RETRO_RIGHT
-            this[RETRO_RIGHT] = RETRO_LEFT
-        }
-
-        val SWALLOWED_KEYCODES = intArrayOf(
-            KeyEvent.KEYCODE_BUTTON_C, KeyEvent.KEYCODE_BUTTON_Z,
-            KeyEvent.KEYCODE_BUTTON_1, KeyEvent.KEYCODE_BUTTON_2,
-            KeyEvent.KEYCODE_BUTTON_3, KeyEvent.KEYCODE_BUTTON_4,
-            KeyEvent.KEYCODE_BUTTON_5, KeyEvent.KEYCODE_BUTTON_6,
-            KeyEvent.KEYCODE_BUTTON_7, KeyEvent.KEYCODE_BUTTON_8,
-            KeyEvent.KEYCODE_BUTTON_9, KeyEvent.KEYCODE_BUTTON_10,
-            KeyEvent.KEYCODE_BUTTON_11, KeyEvent.KEYCODE_BUTTON_12,
-            KeyEvent.KEYCODE_BUTTON_13, KeyEvent.KEYCODE_BUTTON_14,
-            KeyEvent.KEYCODE_BUTTON_15, KeyEvent.KEYCODE_BUTTON_16,
-        )
-
-        val DEFAULT_TABLE: IntArray = IntArray(TABLE_SIZE) { NONE }.also { table ->
-            for (keyCode in SWALLOWED_KEYCODES) if (keyCode in 0 until TABLE_SIZE) table[keyCode] = SWALLOW
-            table[KeyEvent.KEYCODE_DPAD_UP] = RETRO_UP
-            table[KeyEvent.KEYCODE_DPAD_DOWN] = RETRO_DOWN
-            table[KeyEvent.KEYCODE_DPAD_LEFT] = RETRO_LEFT
-            table[KeyEvent.KEYCODE_DPAD_RIGHT] = RETRO_RIGHT
-            table[KeyEvent.KEYCODE_DPAD_CENTER] = RETRO_A
-            table[KeyEvent.KEYCODE_ENTER] = RETRO_A
-            table[KeyEvent.KEYCODE_BUTTON_A] = RETRO_A
-            table[KeyEvent.KEYCODE_BUTTON_B] = RETRO_B
-            table[KeyEvent.KEYCODE_BUTTON_X] = RETRO_X
-            table[KeyEvent.KEYCODE_BUTTON_Y] = RETRO_Y
-            table[KeyEvent.KEYCODE_BUTTON_SELECT] = RETRO_SELECT
-            table[KeyEvent.KEYCODE_BUTTON_L1] = RETRO_L1
-            table[KeyEvent.KEYCODE_BUTTON_R1] = RETRO_R1
-            table[KeyEvent.KEYCODE_BUTTON_L2] = RETRO_L2
-            table[KeyEvent.KEYCODE_BUTTON_R2] = RETRO_R2
-            table[KeyEvent.KEYCODE_BUTTON_THUMBL] = RETRO_L3
-            table[KeyEvent.KEYCODE_BUTTON_THUMBR] = RETRO_R3
-        }
+        val OPPOSITE = NativeMappingTables.OPPOSITE
+        val SWALLOWED_KEYCODES = NativeMappingTables.SWALLOWED_KEYCODES
+        val DEFAULT_TABLE: IntArray = NativeMappingTables.DEFAULT
     }
+}
+
+/**
+ * The RetroPad mapping tables: pure data plus the default-layout/override
+ * logic, kept top-level (not nested in [NativePadInput]'s private companion)
+ * so it is constructible and testable without any Android class -- see
+ * NativeMappingTablesTest. [NativePadInput] delegates to this object rather
+ * than duplicating it; behaviour for every existing caller is unchanged.
+ */
+internal object NativeMappingTables {
+    const val TABLE_SIZE = 256
+    const val NONE = -1
+    const val SWALLOW = -2
+
+    const val RETRO_A = 0
+    const val RETRO_X = 1
+    const val RETRO_SELECT = 2
+    const val RETRO_START = 3
+    const val RETRO_UP = 4
+    const val RETRO_DOWN = 5
+    const val RETRO_LEFT = 6
+    const val RETRO_RIGHT = 7
+    const val RETRO_B = 8
+    const val RETRO_Y = 9
+    const val RETRO_L1 = 10
+    const val RETRO_R1 = 11
+    const val RETRO_L2 = 12
+    const val RETRO_R2 = 13
+    const val RETRO_L3 = 14
+    const val RETRO_R3 = 15
+
+    val OPPOSITE = IntArray(16) { NONE }.apply {
+        this[RETRO_UP] = RETRO_DOWN
+        this[RETRO_DOWN] = RETRO_UP
+        this[RETRO_LEFT] = RETRO_RIGHT
+        this[RETRO_RIGHT] = RETRO_LEFT
+    }
+
+    // An unbound press on any of these keycodes must not reach the platform
+    // (media session, TV framework) while a native game is running; a user
+    // binding still wins, since custom() overwrites the SWALLOW entry with
+    // the chosen RetroPad index. HOME, BACK and the volume keys must never be
+    // added here: HOME and the volume keys are handled above this table
+    // entirely, and BACK is the game's only guaranteed escape (see D3) --
+    // swallowing or binding either would stop working correctly.
+    val SWALLOWED_KEYCODES = intArrayOf(
+        KeyEvent.KEYCODE_BUTTON_C, KeyEvent.KEYCODE_BUTTON_Z,
+        KeyEvent.KEYCODE_BUTTON_1, KeyEvent.KEYCODE_BUTTON_2,
+        KeyEvent.KEYCODE_BUTTON_3, KeyEvent.KEYCODE_BUTTON_4,
+        KeyEvent.KEYCODE_BUTTON_5, KeyEvent.KEYCODE_BUTTON_6,
+        KeyEvent.KEYCODE_BUTTON_7, KeyEvent.KEYCODE_BUTTON_8,
+        KeyEvent.KEYCODE_BUTTON_9, KeyEvent.KEYCODE_BUTTON_10,
+        KeyEvent.KEYCODE_BUTTON_11, KeyEvent.KEYCODE_BUTTON_12,
+        KeyEvent.KEYCODE_BUTTON_13, KeyEvent.KEYCODE_BUTTON_14,
+        KeyEvent.KEYCODE_BUTTON_15, KeyEvent.KEYCODE_BUTTON_16,
+        KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY,
+        KeyEvent.KEYCODE_MEDIA_PAUSE, KeyEvent.KEYCODE_MEDIA_STOP,
+        KeyEvent.KEYCODE_MEDIA_NEXT, KeyEvent.KEYCODE_MEDIA_PREVIOUS,
+        KeyEvent.KEYCODE_MEDIA_REWIND, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD,
+        KeyEvent.KEYCODE_MEDIA_RECORD,
+        KeyEvent.KEYCODE_CHANNEL_UP, KeyEvent.KEYCODE_CHANNEL_DOWN,
+        KeyEvent.KEYCODE_INFO, KeyEvent.KEYCODE_GUIDE, KeyEvent.KEYCODE_CAPTIONS,
+        KeyEvent.KEYCODE_TV, KeyEvent.KEYCODE_DVR, KeyEvent.KEYCODE_BOOKMARK,
+        KeyEvent.KEYCODE_SETTINGS,
+    )
+
+    val DEFAULT: IntArray = IntArray(TABLE_SIZE) { NONE }.also { table ->
+        for (keyCode in SWALLOWED_KEYCODES) if (keyCode in 0 until TABLE_SIZE) table[keyCode] = SWALLOW
+        table[KeyEvent.KEYCODE_DPAD_UP] = RETRO_UP
+        table[KeyEvent.KEYCODE_DPAD_DOWN] = RETRO_DOWN
+        table[KeyEvent.KEYCODE_DPAD_LEFT] = RETRO_LEFT
+        table[KeyEvent.KEYCODE_DPAD_RIGHT] = RETRO_RIGHT
+        table[KeyEvent.KEYCODE_DPAD_CENTER] = RETRO_A
+        table[KeyEvent.KEYCODE_ENTER] = RETRO_A
+        table[KeyEvent.KEYCODE_BUTTON_A] = RETRO_A
+        table[KeyEvent.KEYCODE_BUTTON_B] = RETRO_B
+        table[KeyEvent.KEYCODE_BUTTON_X] = RETRO_X
+        table[KeyEvent.KEYCODE_BUTTON_Y] = RETRO_Y
+        table[KeyEvent.KEYCODE_BUTTON_SELECT] = RETRO_SELECT
+        table[KeyEvent.KEYCODE_BUTTON_L1] = RETRO_L1
+        table[KeyEvent.KEYCODE_BUTTON_R1] = RETRO_R1
+        table[KeyEvent.KEYCODE_BUTTON_L2] = RETRO_L2
+        table[KeyEvent.KEYCODE_BUTTON_R2] = RETRO_R2
+        table[KeyEvent.KEYCODE_BUTTON_THUMBL] = RETRO_L3
+        table[KeyEvent.KEYCODE_BUTTON_THUMBR] = RETRO_R3
+    }
+
+    /** A profile's table: the default layout with the user's overrides applied. */
+    fun custom(overrides: Map<Int, Int>?): IntArray {
+        if (overrides == null) return DEFAULT
+        val table = DEFAULT.copyOf()
+        for ((keyCode, index) in overrides) {
+            if (keyCode in 0 until TABLE_SIZE && index in 0..15) table[keyCode] = index
+        }
+        return table
+    }
+
+    fun indexFor(table: IntArray, keyCode: Int): Int =
+        if (keyCode in 0 until TABLE_SIZE) table[keyCode] else NONE
 }
 
 /**

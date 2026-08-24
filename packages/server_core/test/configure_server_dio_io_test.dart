@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:server_core/server_core.dart';
 import 'package:test/test.dart';
 
@@ -75,6 +76,37 @@ void main() {
         await userAgentOfNextRequest(),
         'Mozilla/5.0 (compatible; Moonfin/Flutter)',
       );
+    });
+  });
+
+  // The socket used to outlive the request that wanted it, holding one of the
+  // fifteen per host slots long after Dio had given up, so a stalled server
+  // filled the pool and every retry refilled it.
+  group('configureServerDio socket timeout', () {
+    Duration socketTimeoutFor(Duration? dioTimeout) {
+      final dio = Dio(BaseOptions(connectTimeout: dioTimeout));
+      configureServerDio(dio);
+      final adapter = dio.httpClientAdapter as IOHttpClientAdapter;
+      return adapter.createHttpClient!().connectionTimeout!;
+    }
+
+    test('outlives the caller timeout by a small margin', () {
+      expect(
+        socketTimeoutFor(const Duration(seconds: 8)),
+        const Duration(seconds: 10),
+      );
+      expect(
+        socketTimeoutFor(const Duration(seconds: 30)),
+        const Duration(seconds: 32),
+      );
+      expect(
+        socketTimeoutFor(const Duration(seconds: 15)),
+        const Duration(seconds: 17),
+      );
+    });
+
+    test('a caller with no timeout of its own still gets a bound', () {
+      expect(socketTimeoutFor(null), const Duration(seconds: 32));
     });
   });
 }

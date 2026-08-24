@@ -740,12 +740,59 @@ class NativeControllerMappingScreenState
   static const int _syntheticL2 = 0x10012;
   static const int _syntheticR2 = 0x10013;
 
+  /// TV-remote media keys are now bindable alongside gamepad buttons, and a
+  /// bare "Key code 85" means nothing to a user holding a remote.
+  static const Map<int, String> _androidKeycodeNames = {
+    19: 'D-pad up',
+    20: 'D-pad down',
+    21: 'D-pad left',
+    22: 'D-pad right',
+    23: 'D-pad centre',
+    66: 'Enter',
+    111: 'Escape',
+    82: 'Menu',
+    85: 'Play/Pause',
+    86: 'Stop',
+    87: 'Next',
+    88: 'Previous',
+    89: 'Rewind',
+    90: 'Fast forward',
+    126: 'Play',
+    127: 'Pause',
+    130: 'Record',
+    165: 'Info',
+    166: 'Channel up',
+    167: 'Channel down',
+    170: 'TV',
+    172: 'Guide',
+    173: 'DVR',
+    174: 'Bookmark',
+    175: 'Captions',
+    176: 'Settings',
+    // Prefixed, because the row above already carries the bare RetroPad name
+    // and "A / A" reads as a mistake.
+    96: 'Button A',
+    97: 'Button B',
+    99: 'Button X',
+    100: 'Button Y',
+    102: 'Button L1',
+    103: 'Button R1',
+    104: 'Button L2',
+    105: 'Button R2',
+    106: 'Button L3',
+    107: 'Button R3',
+    108: 'Button Start',
+    109: 'Button Select',
+  };
+
   String _bindingLabel(int? code) {
     if (code == null) return 'Default layout';
     if (code == _syntheticL2) return 'Left trigger (L2)';
     if (code == _syntheticR2) return 'Right trigger (R2)';
     final button = desktopGamepadButtonsByCode[code];
     if (button != null) return _desktopButtonLabel(button);
+    final keycodeName = _androidKeycodeNames[code];
+    if (keycodeName != null) return keycodeName;
     return 'Key code $code';
   }
 

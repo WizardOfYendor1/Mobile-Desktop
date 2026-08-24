@@ -203,6 +203,7 @@ class _FolderBrowseScreenState extends State<FolderBrowseScreen> {
           item.id,
           serverId: item.serverId,
           type: item.type,
+          channelId: item.channelId,
         ),
       );
     }

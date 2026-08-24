@@ -5,6 +5,7 @@ import 'package:gamepads/gamepads.dart';
 
 import '../../platform_detection.dart';
 import 'android_gamepad_channel.dart';
+import 'gamepad_axis_gate.dart';
 import 'gamepad_key_synthesizer.dart';
 import 'gamepad_suppressor.dart';
 
@@ -39,6 +40,11 @@ class _GamepadNavigationScopeState extends State<GamepadNavigationScope> {
 
   final GamepadKeyRepeater _keys = GamepadKeyRepeater(GamepadKeySynthesizer());
   final GamepadDuplicateGuard _duplicateGuard = GamepadDuplicateGuard();
+  final GamepadAxisGate _axisGate = GamepadAxisGate(deadzone: _deadzone);
+  late final GamepadScrollRepeater _scroll = GamepadScrollRepeater(
+    deadzone: _deadzone,
+    onStep: _fireScroll,
+  );
 
   StreamSubscription<NormalizedGamepadEvent>? _subscription;
 
@@ -68,15 +74,17 @@ class _GamepadNavigationScopeState extends State<GamepadNavigationScope> {
     GamepadSuppressor.depth.removeListener(_onSuppressionChanged);
     _duplicateGuard.stop();
     _keys.releaseAll();
+    _scroll.stop();
     super.dispose();
   }
 
   void _onSuppressionChanged() {
     if (!GamepadSuppressor.suppressed) return;
     // Something else took the pad mid-hold, so drop everything we think is
-    // down rather than leaving a key stuck.
+    // down rather than leaving a key stuck or a scroll running.
     _axisDirection.clear();
     _keys.releaseAll();
+    _scroll.stop();
   }
 
   void _onGamepadEvent(NormalizedGamepadEvent event) {
@@ -87,7 +95,9 @@ class _GamepadNavigationScopeState extends State<GamepadNavigationScope> {
       return;
     }
     final axis = event.axis;
-    if (axis != null) _onAxis(axis, event.value);
+    if (axis == null) return;
+    if (!_axisGate.admit(event.gamepadId, axis, event.value)) return;
+    _onAxis(axis, event.value);
   }
 
   void _onButton(GamepadButton button, {required bool pressed}) {
@@ -117,7 +127,7 @@ class _GamepadNavigationScopeState extends State<GamepadNavigationScope> {
     // The right stick scrolls rather than moving focus, and Scrollable already
     // handles ScrollIntent, so no key synthesis is needed for it.
     if (axis == GamepadAxis.rightStickX || axis == GamepadAxis.rightStickY) {
-      _onScrollAxis(axis, value);
+      _scroll.onAxis(axis, value);
       return;
     }
     // Triggers are unmapped.
@@ -125,11 +135,7 @@ class _GamepadNavigationScopeState extends State<GamepadNavigationScope> {
       return;
     }
 
-    final direction = value <= -_deadzone
-        ? -1
-        : value >= _deadzone
-        ? 1
-        : 0;
+    final direction = quantiseAxis(value, _deadzone);
     final previous = _axisDirection[axis] ?? 0;
     if (direction == previous) return;
     _axisDirection[axis] = direction;
@@ -147,14 +153,13 @@ class _GamepadNavigationScopeState extends State<GamepadNavigationScope> {
     if (direction == 1) _press(positive);
   }
 
-  void _onScrollAxis(GamepadAxis axis, double value) {
-    if (value.abs() < _deadzone) return;
-    final direction = axis == GamepadAxis.rightStickX
-        ? (value < 0 ? AxisDirection.left : AxisDirection.right)
-        : (value < 0 ? AxisDirection.down : AxisDirection.up);
+  void _fireScroll(GamepadAxis axis, int direction) {
+    final axisDirection = axis == GamepadAxis.rightStickX
+        ? (direction < 0 ? AxisDirection.left : AxisDirection.right)
+        : (direction < 0 ? AxisDirection.down : AxisDirection.up);
     Actions.maybeInvoke(
       primaryFocus?.context ?? context,
-      ScrollIntent(direction: direction),
+      ScrollIntent(direction: axisDirection),
     );
   }
 

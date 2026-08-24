@@ -16,6 +16,7 @@ import '../../../auth/models/server.dart';
 import '../../../auth/repositories/auth_repository.dart';
 import '../../../auth/repositories/server_repository.dart';
 import '../../../auth/repositories/session_repository.dart';
+import '../../../auth/store/authentication_store.dart';
 import '../../../data/services/media_server_client_factory.dart';
 import '../../../preference/user_preferences.dart';
 import '../../../util/focus/dpad_keys.dart';
@@ -66,6 +67,7 @@ class _LoginScreenState extends State<LoginScreen> {
   MediaServerClient? _client;
   bool _isLoading = false;
   String? _errorMessage;
+  List<String> _recentUsernames = const [];
 
   bool _supportsQuickConnect = false;
   bool _showQuickConnect = true;
@@ -102,7 +104,17 @@ class _LoginScreenState extends State<LoginScreen> {
       _usernameController.text = widget.prefillUsername!;
     }
     _setupFocusHandlers();
+    _loadRecentUsernames();
     _initServer();
+  }
+
+  /// Names that signed in on this server before, freshest first, offered as
+  /// keyboard chips so a returning user never types theirs again.
+  void _loadRecentUsernames() {
+    final users = GetIt.instance<AuthenticationStore>()
+        .getUsers(widget.serverId)
+      ..sort((a, b) => b.lastUsed.compareTo(a.lastUsed));
+    _recentUsernames = [for (final user in users) user.name];
   }
 
   @override
@@ -463,6 +475,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
+    // The sign in button goes dead once this is running, but the flag only
+    // reaches it on the next build, and the password field submits straight
+    // here, so one remote select can sign in twice.
+    if (_isLoading) return;
     final username = _usernameController.text.trim();
     if (username.isEmpty || _client == null || _server == null) return;
 
@@ -506,7 +522,11 @@ class _LoginScreenState extends State<LoginScreen> {
               );
 
               if (!verified) {
-                if (mounted) context.go('${Destinations.login}?serverId=${_server!.id}');
+                // Lands back on a screen that has to take another attempt.
+                if (mounted) {
+                  setState(() => _isLoading = false);
+                  context.go('${Destinations.login}?serverId=${_server!.id}');
+                }
                 return;
               }
             }
@@ -522,6 +542,8 @@ class _LoginScreenState extends State<LoginScreen> {
             statusCode: statusCode,
             message: error,
           )) {
+            // Returns without reporting an error, so nothing else clears this.
+            setState(() => _isLoading = false);
             return;
           }
           _finishLoginWithError(error);
@@ -691,6 +713,10 @@ class _LoginScreenState extends State<LoginScreen> {
           Text(
             _formatCode(_quickConnectCode!),
             textAlign: TextAlign.center,
+            // The space between the digit groups is bidi neutral, so an RTL
+            // paragraph swaps the groups and shows a code the server never
+            // issued. Pinning the text LTR keeps the digits in reading order.
+            textDirection: TextDirection.ltr,
             style: TextStyle(
               fontSize: 48,
               fontWeight: FontWeight.bold,
@@ -744,6 +770,7 @@ class _LoginScreenState extends State<LoginScreen> {
             controller: _usernameController,
             focusNode: _usernameFocus,
             label: l10n.username,
+            recentSuggestions: _recentUsernames,
             textInputAction: _hasPassword
                 ? TextInputAction.next
                 : TextInputAction.done,
@@ -794,6 +821,7 @@ class _LoginScreenState extends State<LoginScreen> {
     required FocusNode focusNode,
     required String label,
     bool obscureText = false,
+    List<String> recentSuggestions = const [],
     TextInputAction? textInputAction,
     ValueChanged<String>? onSubmitted,
   }) {
@@ -814,6 +842,7 @@ class _LoginScreenState extends State<LoginScreen> {
               inputPurpose: obscureText
                   ? InputPurpose.password
                   : InputPurpose.username,
+              recentSuggestions: recentSuggestions,
               preferSystemIme: _userPreferences.get(
                 UserPreferences.preferSystemImeKeyboard,
               ),

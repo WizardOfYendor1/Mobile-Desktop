@@ -9001,5 +9001,9 @@
     "imdbMostPopularMovies": "Filmes mais populares do IMDb",
     "imdbMostPopularTvShows": "Séries mais populares do IMDb",
     "imdbLowestRatedMovies": "Filmes com as piores notas do IMDb",
-    "imdbTopEnglishMovies": "Melhores filmes em inglês do IMDb"
+    "imdbTopEnglishMovies": "Melhores filmes em inglês do IMDb",
+    "mixedRowsOnly": "Somente linhas mistas",
+    "@mixedRowsOnly": {
+        "description": "Option: only show the label on rows holding both movies and series"
+    }
 }

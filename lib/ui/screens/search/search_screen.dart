@@ -1395,6 +1395,7 @@ class _SearchScreenState extends State<SearchScreen> with GridFocusNodeMixin {
           item.id,
           serverId: item.serverId,
           type: item.type,
+          channelId: item.channelId,
         ),
       ),
       onLongPress: () => showContextMenu(

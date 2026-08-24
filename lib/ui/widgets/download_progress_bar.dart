@@ -4,6 +4,7 @@ import 'package:moonfin_design/moonfin_design.dart';
 
 import '../../data/services/download_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../util/download_utils.dart';
 import '../screens/downloads/downloads_panel.dart';
 
 class DownloadProgressBar extends StatelessWidget {
@@ -94,7 +95,11 @@ class DownloadProgressBar extends StatelessWidget {
                         if (current.isTranscoded) ...[
                           const SizedBox(height: 2),
                           Text(
-                            l10n.transcodingTimeRemainingUnavailable,
+                            current.etaSeconds != null
+                                ? l10n.timeRemaining(
+                                    formatEta(current.etaSeconds!),
+                                  )
+                                : l10n.transcodingTimeRemainingUnavailable,
                             style: TextStyle(
                               color: AppColorScheme.onAccent.withValues(alpha: 0.8),
                               fontSize: 11,

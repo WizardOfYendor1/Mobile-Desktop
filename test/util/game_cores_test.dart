@@ -142,6 +142,24 @@ void main() {
       expect(isArcadeFamilyCore('nes'), isFalse);
     });
 
+    // FBNeo's license asks that frontends not redistribute the core, and the
+    // Apple builds can only run what ships inside the bundle, so they leave it
+    // out. Android and desktop are unaffected because the user downloads the
+    // core there themselves.
+    test('FBNeo is not bundled on Apple', () {
+      expect(appleBundledCores.contains('fbneo'), isFalse);
+      expect(
+        _defaultFetchCores('ios/game_host/fetch_cores.sh').contains('fbneo'),
+        isFalse,
+      );
+      expect(
+        _defaultFetchCores(
+          'tvos/scripts/cores/fetch_cores.sh',
+        ).contains('fbneo'),
+        isFalse,
+      );
+    });
+
     test('Apple fetch scripts match the catalog bundle membership', () {
       expect(
         _defaultFetchCores('ios/game_host/fetch_cores.sh'),

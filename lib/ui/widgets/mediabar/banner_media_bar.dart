@@ -143,16 +143,22 @@ class _BannerMediaBarState extends State<BannerMediaBar> {
       widget.onNavigateUp?.call();
       return KeyEventResult.handled;
     }
-    if (key == LogicalKeyboardKey.arrowLeft) {
-      if (_index > 0) {
+    if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.arrowRight) {
+      final isRtl = Directionality.of(context) == TextDirection.rtl;
+      final isPhysicalLeftKey = key == LogicalKeyboardKey.arrowLeft;
+      final advances = isPhysicalLeftKey == isRtl;
+      final beforeIndex = _index;
+      if (advances) {
+        if (items.length > 1) _setIndex(_index + 1);
+      } else if (_index > 0) {
         _setIndex(_index - 1);
-      } else if (widget.onNavigateLeft != null) {
+      }
+      if (_index == beforeIndex &&
+          isPhysicalLeftKey &&
+          widget.onNavigateLeft != null) {
         widget.onNavigateLeft!();
       }
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.arrowRight) {
-      if (items.length > 1) _setIndex(_index + 1);
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;

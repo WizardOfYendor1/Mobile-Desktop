@@ -17,10 +17,12 @@ private typealias PlatformImage = NSImage
 final class SubtitleOverlay: PlatformView {
 
     #if canImport(UIKit)
+    private let outlineLabel = UILabel()
     private let textLabel = UILabel()
     private let bitmapView = UIImageView()
     private let assImageView = UIImageView()
     #else
+    private let outlineLabel = NSTextField(labelWithString: "")
     private let textLabel = NSTextField(labelWithString: "")
     private let bitmapView = NSImageView()
     private let assImageView = NSImageView()
@@ -86,11 +88,19 @@ final class SubtitleOverlay: PlatformView {
         subtitleStrokeEnabled ? max(2 * canvasScale, 1) : 0
     }
 
-    /// The 40pt base margin stays absolute rather than scaling with height,
-    /// because it also positions bitmap cues that arrive without a canvas rect
-    /// and those already sit correctly on a phone.
-    private var subtitleBottomOffset: CGFloat {
-        40 + canvasHeight * 0.5 * CGFloat(100 - subtitlePositionBase) / 60.0
+    /// The lowest position puts the text on the bottom edge itself, which is
+    /// what the setting reads as zero and what a wide film needs to keep its
+    /// lines inside the black bar under the picture.
+    private var textBottomOffset: CGFloat {
+        canvasHeight * 0.5 * CGFloat(100 - subtitlePositionBase) / 60.0
+    }
+
+    /// A bitmap cue that arrives without a canvas rect has nothing tying it to
+    /// the picture, so it keeps a margin off the edge on top of the position.
+    /// The margin stays absolute rather than scaling with height, since those
+    /// cues already sit correctly on a phone.
+    private var bitmapBottomOffset: CGFloat {
+        40 + textBottomOffset
     }
 
     override init(frame: CGRect) {
@@ -108,22 +118,29 @@ final class SubtitleOverlay: PlatformView {
         isUserInteractionEnabled = false
         backgroundColor = .clear
 
-        textLabel.numberOfLines = 0
-        textLabel.textAlignment = .center
+        for label in [outlineLabel, textLabel] {
+            label.numberOfLines = 0
+            label.textAlignment = .center
+        }
         bitmapView.contentMode = .scaleToFill
         assImageView.contentMode = .scaleToFill
         #else
         wantsLayer = true
 
-        textLabel.maximumNumberOfLines = 0
-        textLabel.alignment = .center
-        textLabel.isBezeled = false
-        textLabel.drawsBackground = false
+        for label in [outlineLabel, textLabel] {
+            label.maximumNumberOfLines = 0
+            label.alignment = .center
+            label.isBezeled = false
+            label.drawsBackground = false
+        }
         bitmapView.imageScaling = .scaleAxesIndependently
         assImageView.imageScaling = .scaleAxesIndependently
         #endif
-        textLabel.isHidden = true
-        addSubview(textLabel)
+        // The outline goes under the fill, so it is added first.
+        for label in [outlineLabel, textLabel] {
+            label.isHidden = true
+            addSubview(label)
+        }
         bitmapView.isHidden = true
         addSubview(bitmapView)
         assImageView.isHidden = true
@@ -153,7 +170,7 @@ final class SubtitleOverlay: PlatformView {
         // The point size follows the height, so it changes on resize and on
         // the first real layout after a style was applied against zero bounds.
         if subtitleFontSize != appliedFontSize, !activeTextEvents.isEmpty {
-            setLabelText(styledText(activeText))
+            setLabelText(activeText)
         }
         layoutTextLabel()
         layoutBitmapView()
@@ -168,11 +185,16 @@ final class SubtitleOverlay: PlatformView {
         #endif
     }
 
-    private func setLabelText(_ text: NSAttributedString?) {
+    private func setLabelText(_ text: String?) {
+        appliedFontSize = subtitleFontSize
+        let fill = text.map(fillText)
+        let outline = text.map(outlineText)
         #if canImport(UIKit)
-        textLabel.attributedText = text
+        textLabel.attributedText = fill
+        outlineLabel.attributedText = outline
         #else
-        textLabel.attributedStringValue = text ?? NSAttributedString()
+        textLabel.attributedStringValue = fill ?? NSAttributedString()
+        outlineLabel.attributedStringValue = outline ?? NSAttributedString()
         #endif
     }
 
@@ -309,12 +331,12 @@ final class SubtitleOverlay: PlatformView {
     private func showText(_ events: [SubtitleEvent]) {
         activeTextEvents = events
         guard !events.isEmpty else {
-            textLabel.isHidden = true
+            setTextHidden(true)
             setLabelText(nil)
             return
         }
-        setLabelText(styledText(activeText))
-        textLabel.isHidden = false
+        setLabelText(activeText)
+        setTextHidden(false)
         layoutTextLabel()
     }
 
@@ -335,16 +357,23 @@ final class SubtitleOverlay: PlatformView {
         showBitmap(nil)
     }
 
+    private func setTextHidden(_ hidden: Bool) {
+        textLabel.isHidden = hidden
+        outlineLabel.isHidden = hidden
+    }
+
     private func layoutTextLabel() {
         guard !textLabel.isHidden else { return }
         let maxWidth = bounds.width * 0.9
         let size = textLabel.sizeThatFits(CGSize(width: maxWidth, height: bounds.height * 0.4))
-        textLabel.frame = CGRect(
+        let frame = CGRect(
             x: (bounds.width - size.width) / 2,
-            y: bounds.height - size.height - subtitleBottomOffset,
+            y: bounds.height - size.height - textBottomOffset,
             width: size.width,
             height: size.height
         )
+        textLabel.frame = frame
+        outlineLabel.frame = frame
     }
 
     private func layoutBitmapView() {
@@ -373,23 +402,61 @@ final class SubtitleOverlay: PlatformView {
             let h = CGFloat(event.bitmapHeight) * scale
             bitmapView.frame = CGRect(
                 x: (bounds.width - w) / 2,
-                y: bounds.height - h - subtitleBottomOffset,
+                y: bounds.height - h - bitmapBottomOffset,
                 width: w,
                 height: h
             )
         }
     }
 
-    private func styledText(_ text: String) -> NSAttributedString {
-        appliedFontSize = subtitleFontSize
-        let font = PlatformFont.systemFont(ofSize: appliedFontSize, weight: subtitleFontWeight)
+    private func labelFont() -> PlatformFont {
+        PlatformFont.systemFont(ofSize: appliedFontSize, weight: subtitleFontWeight)
+    }
+
+    /// A label's own alignment is ignored once it holds an attributed string,
+    /// so the centring lives here. Line height is pinned to the glyph box
+    /// because the background only fills ascent and descent, leaving the
+    /// font's leading as a gap between stacked lines.
+    private func paragraphStyle(for font: PlatformFont) -> NSParagraphStyle {
+        let style = NSMutableParagraphStyle()
+        style.alignment = .center
+        let glyphBox = font.ascender - font.descender
+        style.minimumLineHeight = glyphBox
+        style.maximumLineHeight = glyphBox
+        return style
+    }
+
+    private func fillText(_ text: String) -> NSAttributedString {
+        let font = labelFont()
+        return NSAttributedString(
+            string: text,
+            attributes: [
+                .font: font,
+                .foregroundColor: subtitleTextColor,
+                .paragraphStyle: paragraphStyle(for: font),
+            ])
+    }
+
+    /// What sits under the text: the background box, and the outline when one
+    /// is wanted. The outline is its own copy of the line rather than a stroke
+    /// on the glyphs, since a stroke traces every contour a glyph is built from
+    /// and letters made of overlapping pieces come out with the seams drawn
+    /// across them. The fill on top covers those, leaving only the half of the
+    /// line that falls outside the letter.
+    private func outlineText(_ text: String) -> NSAttributedString {
+        let font = labelFont()
         var attrs: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: subtitleTextColor,
+            // Nothing to fill here, or this copy shows through as a second set
+            // of glyphs whenever there is no outline to draw.
+            .foregroundColor: PlatformColor.clear,
+            // Must match the fill, or the outline drifts off the letters.
+            .paragraphStyle: paragraphStyle(for: font),
         ]
         if subtitleStrokeWidth > 0 {
             attrs[.strokeColor] = subtitleStrokeColor
-            attrs[.strokeWidth] = -subtitleStrokeWidth
+            // Doubled, since only the outer half survives the fill on top.
+            attrs[.strokeWidth] = subtitleStrokeWidth * 2
         }
         if subtitleBgColor != .clear {
             attrs[.backgroundColor] = subtitleBgColor

@@ -6605,7 +6605,7 @@
     "settingsPreferServerTranscode": "Prefereix la transcodificació del servidor",
     "settingsDolbyVisionProfile7DirectPlay": "Dolby Vision Perfil 7 Direct Play",
     "settingsDolbyVisionProfile7DirectPlayDescription": "Controla si els fluxos de capa de millora del perfil Dolby Vision 7 han de dirigir la reproducció.",
-    "settingsAutoAftkrtEnabled": "Automàtic (AFTKRT habilitat)",
+    "settingsAutoAftkrtEnabled": "Auto",
     "settingsEnabledOnThisDevice": "Habilitat en aquest dispositiu",
     "settingsDisabledPreferTranscode": "Desactivat (prefereix la transcodificació)",
     "settingsResumeRewindDescription": "Quan es reprèn la reproducció (des de Continuar mirant o des de la pàgina d'un element multimèdia), quants segons s'han de rebobinar?",
@@ -9380,5 +9380,209 @@
     "mixedPlaylistsSection": "Llistes de reproducció mixtes",
     "@mixedPlaylistsSection": {
         "description": "Section header above mixed playlists when Group by Type is enabled"
-    }
+    },
+    "interfaceLayoutTv": "TV",
+    "@interfaceLayoutTv": {
+        "description": "Interface layout option: 10-foot TV layout"
+    },
+    "interfaceLayoutDesktop": "Escriptori",
+    "@interfaceLayoutDesktop": {
+        "description": "Interface layout option: desktop layout"
+    },
+    "interfaceLayoutPhone": "Mòbil",
+    "@interfaceLayoutPhone": {
+        "description": "Interface layout option: phone layout"
+    },
+    "oledMode": "Mode OLED",
+    "@oledMode": {
+        "description": "Label for the setting that deepens blacks and enriches artwork on OLED displays"
+    },
+    "oledModeSubtitle": "Profunditza els negres i enriqueix l'art. Millor en pantalles OLED.",
+    "@oledModeSubtitle": {
+        "description": "Explanation under the OLED Mode setting"
+    },
+    "oledModeSubtle": "Subtil",
+    "@oledModeSubtle": {
+        "description": "OLED Mode level that darkens surfaces gently and lightly enriches artwork"
+    },
+    "oledModeVivid": "Viu",
+    "@oledModeVivid": {
+        "description": "OLED Mode level that uses pure black surfaces and the strongest artwork enrichment"
+    },
+    "scrollDirection": "Direcció de desplaçament",
+    "@scrollDirection": {
+        "description": "Section header for scroll direction selection in library display settings"
+    },
+    "scrollDirectionVertical": "Vertical",
+    "@scrollDirectionVertical": {
+        "description": "Library scroll direction option: vertical grid (default)"
+    },
+    "scrollDirectionHorizontal": "Horitzontal",
+    "@scrollDirectionHorizontal": {
+        "description": "Library scroll direction option: horizontal grid for ultrawide displays"
+    },
+    "scrollToTop": "Torna a dalt",
+    "@scrollToTop": {
+        "description": "Tooltip for the button that returns a scrolled list to the top"
+    },
+    "starring": "PROTAGONISTES",
+    "@starring": {
+        "description": "Metadata label for the leading cast"
+    },
+    "recordSeries": "Gravar Sèrie",
+    "@recordSeries": {
+        "description": "Button label to record every showing of a live TV series"
+    },
+    "seriesSetToRecord": "Sèrie programada per gravar",
+    "@seriesSetToRecord": {
+        "description": "Snackbar confirmation after scheduling a live TV series recording"
+    },
+    "seriesRecordingCancelled": "S'ha cancel·lat l'enregistrament de la sèrie",
+    "@seriesRecordingCancelled": {
+        "description": "Snackbar confirmation after cancelling a live TV series recording"
+    },
+    "unableToCreateSeriesRecording": "No s'ha pogut crear l'enregistrament de sèrie",
+    "@unableToCreateSeriesRecording": {
+        "description": "Error when creating a live TV series recording fails"
+    },
+    "mixedRowsOnly": "Només files mixtes",
+    "@mixedRowsOnly": {
+        "description": "Option: only show the label on rows holding both movies and series"
+    },
+    "playerSwipeGestures": "Desplaçaments de volum i brillantor",
+    "@playerSwipeGestures": {
+        "description": "Setting for player swipe gestures"
+    },
+    "playerSwipeGesturesDescription": "Desplaça el controlador cap amunt o cap avall per canviar la brillantor a l'esquerra i el volum a la dreta",
+    "@playerSwipeGesturesDescription": {
+        "description": "Description for player swipe gestures"
+    },
+    "settingsAudioPassthroughMode": "Passthrough",
+    "@settingsAudioPassthroughMode": {
+        "description": "Title of the audio passthrough mode selector"
+    },
+    "settingsAudioPassthroughModeDescription": "Com el so envoltant comprimit arriba al teu televisor o receptor.",
+    "settingsAudioPassthroughModeDisabled": "Deshabilitat (descodifica sempre en aquest dispositiu)",
+    "settingsAudioPassthroughModeAuto": "Automàtic (detecta el suport de dispositius)",
+    "settingsAudioPassthroughModeManual": "Manual (trieu els formats a continuació)",
+    "settingsDownmixToStereoDescription": "Mescla tot l'àudio descodificat en dos canals (Stereo).",
+    "settingsAudioEac3IncludesAtmos": "Bitstream E-AC-3, incloent Dolby Atmos (JOC).",
+    "settingsAudioDtsHdIncludesDtsX": "Bitstream DTS-HD, incloent DTS:X.",
+    "settingsAudioTrueHdIncludesAtmos": "Bitstream TrueHD, incloent Dolby Atmos.",
+    "sdCard": "targeta SD",
+    "@sdCard": {
+        "description": "Download location option for a removable storage volume"
+    },
+    "downloadLocationLimitedByAndroid": "Android només permet que Moonfin escrigui a les carpetes que posseeix, i aquest dispositiu no té emmagatzematge extraïble. Activa la carpeta «Desar a Baixades» anterior per guardar les descàrregues en un lloc al qual les altres aplicacions puguin accedir.",
+    "@downloadLocationLimitedByAndroid": {
+        "description": "Note shown when the only download location Android allows is the default one"
+    },
+    "mergeRecentRowsByType": "Fusiona les files recents per tipus",
+    "@mergeRecentRowsByType": {
+        "description": "Setting for merging recently added and recently released libraries by media type"
+    },
+    "mergeRecentRowsByTypeDescription": "Combina biblioteques separades del mateix tipus per a les files d'inici de «Afegit recentment» i «Publicat recentment».",
+    "@mergeRecentRowsByTypeDescription": {
+        "description": "Description for merging recent home rows by media type"
+    },
+    "libraryView": "Vista de la biblioteca",
+    "@libraryView": {
+        "description": "Section title for library view settings"
+    },
+    "mediaBarModeBookshelf": "Llibreria",
+    "@mediaBarModeBookshelf": {
+        "description": "Media bar style option: Bookshelf"
+    },
+    "mediaBarModeGallery": "Galeria",
+    "@mediaBarModeGallery": {
+        "description": "Media bar style option: Gallery"
+    },
+    "mediaBarModeBanner": "Banner",
+    "@mediaBarModeBanner": {
+        "description": "Media bar style option: Banner"
+    },
+    "mediaBarModeAya": "Aya",
+    "@mediaBarModeAya": {
+        "description": "Media bar style option: Aya"
+    },
+    "mediaBarSourceType": "Font",
+    "@mediaBarSourceType": {
+        "description": "Setting for which titles the media bar draws from"
+    },
+    "mediaBarSourceRandom": "Aleatori",
+    "@mediaBarSourceRandom": {
+        "description": "Media bar source: any eligible title"
+    },
+    "recentlyReleasedSeriesType": "Ordena per sèries recentment publicades",
+    "@recentlyReleasedSeriesType": {
+        "description": "Setting for sorting series in recently released series row"
+    },
+    "recentlyReleasedSeriesTypeDescription": "Ordena les files de la pàgina d'inici de les sèries recentment estrenades per sèrie, temporada més recent o data d'emissió de l'episodi més recent",
+    "@recentlyReleasedSeriesTypeDescription": {
+        "description": "Description for recently released series type setting"
+    },
+    "favoriteChannels": "Canals preferits",
+    "@favoriteChannels": {
+        "description": "Home row: favourited live TV channels"
+    },
+    "tags": "Etiquetes",
+    "@tags": {
+        "description": "Heading for the keyword tags a title is filed under"
+    },
+    "genresAndTags": "Gèneres i etiquetes",
+    "@genresAndTags": {
+        "description": "Button and dialog title for browsing a title's genres, networks and tags"
+    },
+    "manageRequests": "Gestiona sol·licituds",
+    "@manageRequests": {
+        "description": "Details screen button opening the pending requests to approve or decline"
+    },
+    "watchlist": "Llista de seguiment",
+    "@watchlist": {
+        "description": "Details screen button adding the title to the Seerr watchlist"
+    },
+    "onWatchlist": "A la llista de seguiment",
+    "@onWatchlist": {
+        "description": "Details screen button label when the title is already on the Seerr watchlist"
+    },
+    "seerrSeriesContinuing": "La sèrie continua · Es poden sol·licitar temporades futures",
+    "@seerrSeriesContinuing": {
+        "description": "Banner in the Seerr request dialog for a continuing series whose aired seasons are all in the library"
+    },
+    "settingsSkipButtonAutoHide": "Amaga automàticament el botó per saltar",
+    "@settingsSkipButtonAutoHide": {
+        "description": "Setting label for automatically dismissing the skip intro and outro button after a delay"
+    },
+    "settingsSkipButtonAutoHideDescription": "Desactiva automàticament el botó per saltar l'intro i l'outro després de pocs segons.",
+    "settingsCinemaModeEpisodes": "Mode Cinema per a episodis",
+    "@settingsCinemaModeEpisodes": {
+        "description": "Settings toggle label. Extends Cinema Mode, which plays pre-roll videos before playback, to TV episodes as well as films. 'Cinema Mode' is the app's feature name."
+    },
+    "settingsCinemaModeEpisodesSubtitle": "També reprodueix prerolls abans dels episodis de televisió",
+    "@settingsCinemaModeEpisodesSubtitle": {
+        "description": "Subtitle for the Cinema Mode for episodes toggle. A 'preroll' is a short video (trailer, bumper) played before the main video starts."
+    },
+    "sortOrder": "Ordre de classificació",
+    "ascending": "Ascendent",
+    "descending": "Descendent",
+    "favoritesRowSortOrderDescription": "Ordena les files de favorits en ordre ascendent o descendent.",
+    "collectionsRowSortOrderDescription": "Ordena les files de les col·leccions en ordre ascendent o descendent.",
+    "collectionsRowShowEpisodes": "Mostra els episodis individuals",
+    "collectionsRowShowEpisodesSubtitle": "Expandir els programes de televisió per mostrar cada episodi per separat.",
+    "genresRowSortOrderDescription": "Ordena les files de gèneres en ordre ascendent o descendent.",
+    "displayStudiosRows": "Mostra la fila de l'estudi",
+    "displayStudiosRowsSubtitle": "Mostra la fila de l'estudi a les seccions d'inici.",
+    "studiosRowSorting": "Ordenació de files d'estudi",
+    "studiosRowSortingDescription": "Fila d'estudi per nom, afegit recentment, i més.",
+    "studiosRowSortOrderDescription": "Trieu l'ordre de classificació ascendent o descendent.",
+    "selectStudiosToInclude": "Selecciona estudis per incloure",
+    "selectStudiosToIncludeDescription": "Seleccioneu quins estudis s'han d'incloure a la fila d'inici.",
+    "selectAllStudios": "Selecciona-ho tot",
+    "deselectAllStudios": "Deselecciona-ho tot",
+    "tvStudiosFilter": "Estudis de TV",
+    "movieStudiosFilter": "Estudis de cinema",
+    "selectedStudiosFilter": "Estudis seleccionats",
+    "unselectedStudiosFilter": "Estudis no seleccionats",
+    "filtersHeader": "Filtres",
+    "showHeader": "Mostra"
 }

@@ -213,10 +213,8 @@ class PreviewChannelPublisher(private val context: Context) {
                     else -> TvContractCompat.PreviewPrograms.TYPE_MOVIE
                 },
             )
-            .setPosterArtAspectRatio(
-                if (kind == "episode") TvContractCompat.PreviewPrograms.ASPECT_RATIO_16_9
-                else TvContractCompat.PreviewPrograms.ASPECT_RATIO_MOVIE_POSTER,
-            )
+            // The launcher lays its rows out in 16:9, whatever the kind.
+            .setPosterArtAspectRatio(TvContractCompat.PreviewPrograms.ASPECT_RATIO_16_9)
             .setTitle(item["title"] as? String ?: "")
             .setPosterArtUri(Uri.parse(posterUriStr))
             .setIntent(intent)

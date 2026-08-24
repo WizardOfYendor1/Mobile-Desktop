@@ -105,4 +105,7 @@ dependencies {
     implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.9.0+1")
 
     implementation("io.github.peerless2012:ass-media:0.4.0")
+    // ass-media declares this at runtime scope, but its public API hands back
+    // AssRender and AssFrame, so driving libass here needs it at compile time.
+    implementation("io.github.peerless2012:ass-kt:0.4.0")
 }

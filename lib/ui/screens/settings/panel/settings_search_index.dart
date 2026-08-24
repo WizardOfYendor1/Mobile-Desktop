@@ -527,6 +527,12 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
       'classic',
       'modern',
     ]),
+    if (PlatformDetection.canOverrideInterfaceLayout)
+      style.leaf('pref_interface_layout', l10n.interfaceLayout, keywords: [
+        'tv mode',
+        'leanback',
+        'force',
+      ]),
     themes.screen(keywords: ['theme', 'color scheme', 'glass', 'neon']),
     if (AppColorScheme.isGlass)
       style.leaf('pref_glass_quality', l10n.glassQuality, keywords: [
@@ -565,6 +571,12 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
       'zoom',
       'scaling',
     ]),
+    style.leaf(
+      'pref_desktop_scroll_sensitivity',
+      l10n.scrollSensitivity,
+      subtitle: l10n.scrollSensitivitySubtitle,
+      keywords: ['mouse', 'wheel', 'speed', 'scrolling'],
+    ),
     style.leaf(
       'pref_show_backdrop',
       l10n.backgroundBackdrops,
@@ -612,6 +624,18 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
       l10n.showTechnicalDetails,
       subtitle: l10n.showTechnicalDetailsSubtitle,
       keywords: ['codec', 'bitrate info'],
+    ),
+    details.leaf(
+      'pref_hide_details_media_description',
+      l10n.hideDetailsMediaDescription,
+      subtitle: l10n.hideDetailsMediaDescriptionSubtitle,
+      keywords: ['spoiler', 'description', 'overview'],
+    ),
+    details.leaf(
+      'pref_detail_use_series_thumbnails',
+      l10n.detailUseSeriesThumbnails,
+      subtitle: l10n.detailUseSeriesThumbnailsSubtitle,
+      keywords: ['spoiler', 'thumbnails', 'series artwork'],
     ),
     details.leaf(
       'pref_recommendation_system_source',
@@ -742,10 +766,17 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
         subtitle: l10n.fullScreenRowsDescription,
         keywords: ['immersive'],
       ),
+    if (!PlatformDetection.useMobileUi)
+      home.leaf(
+        'pref_home_row_info_overlay',
+        l10n.homeRowInfoOverlay,
+        subtitle: l10n.showTitleMetadataOnHomeRows,
+      ),
     home.leaf(
-      'pref_home_row_info_overlay',
-      l10n.homeRowInfoOverlay,
-      subtitle: l10n.showTitleMetadataOnHomeRows,
+      'pref_hide_home_media_description',
+      l10n.hideHomeMediaDescription,
+      subtitle: l10n.hideHomeMediaDescriptionSubtitle,
+      keywords: ['spoiler', 'description', 'overview'],
     ),
     home.leaf('home_rows_padding', l10n.homeRowsPadding, keywords: [
       'spacing',
@@ -956,6 +987,12 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
       'movies',
       'shows',
     ]),
+    mediaBar.leaf('mediaBarSourceType', l10n.mediaBarSourceType, keywords: [
+      'random',
+      'recently added',
+      'recently released',
+      'newest',
+    ]),
     mediaBar.leaf('mediaBarItemCount', l10n.itemCount),
     mediaBar.leaf('mediaBarLibraryIds', l10n.sourceLibraries),
     mediaBar.leaf('mediaBarCollectionIds', l10n.sourceCollections),
@@ -1006,11 +1043,12 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
       subtitle: l10n.playThemeMusicOnDetailPages,
     ),
     themeMusic.leaf('themeMusicVolume', l10n.themeMusicVolume),
-    themeMusic.leaf(
-      'themeMusicOnHomeRows',
-      l10n.themeMusicOnHomeRows,
-      subtitle: l10n.playWhenBrowsingHomeScreen,
-    ),
+    if (!PlatformDetection.isMobile)
+      themeMusic.leaf(
+        'themeMusicOnHomeRows',
+        l10n.themeMusicOnHomeRows,
+        subtitle: l10n.playWhenBrowsingHomeScreen,
+      ),
     themeMusic.leaf(
       'themeMusicLoop',
       l10n.loopThemeMusic,
@@ -1093,13 +1131,20 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
     video.leaf('skipForwardLength', l10n.skipForwardLength, keywords: [
       'seek forward',
     ]),
-    if (PlatformDetection.useMobileUi)
+    if (PlatformDetection.useMobileUi) ...[
       video.leaf(
         'osdLockEnabled',
         l10n.osdLockButton,
         subtitle: l10n.osdLockButtonDescription,
         keywords: ['lock controls'],
       ),
+      video.leaf(
+        'playerSwipeGestures',
+        l10n.playerSwipeGestures,
+        subtitle: l10n.playerSwipeGesturesDescription,
+        keywords: ['swipe', 'gestures', 'volume', 'brightness'],
+      ),
+    ],
     osdButtons.screen(keywords: [
       'player buttons',
       'hide',
@@ -1394,6 +1439,8 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
         l10n.enableTunnelingTitle,
         subtitle: l10n.enableTunnelingSubtitle,
       ),
+    ],
+    if (PlatformDetection.isAndroid) ...[
       advanced.leaf(
         'external_player',
         l10n.useExternalPlayer,
@@ -1465,7 +1512,17 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
       subtitle: l10n.settingsReportAnIssueSubtitle,
       keywords: ['bug', 'github'],
     ),
+    about.leaf(
+      'run_setup_again',
+      l10n.runSetupAgain,
+      keywords: ['setup', 'wizard', 'first run', 'onboarding', 'quick start'],
+    ),
     diagnostics.screen(keywords: ['logs', 'report', 'debug']),
+    diagnostics.leaf(
+      'pref_crash_reports_enabled',
+      'Send crash reports to server',
+      keywords: ['error', 'bug', 'crashes'],
+    ),
   ];
 
   assert(() {

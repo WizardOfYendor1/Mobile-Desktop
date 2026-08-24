@@ -10,11 +10,13 @@ set -euo pipefail
 
 CORES=("$@")
 if [ ${#CORES[@]} -eq 0 ]; then
-  # fbneo is the only arcade core available natively (MAME is EmulatorJS-only,
-  # and tvOS has no WebView). Interpreter-only, so it clears wrap_frameworks.sh's
-  # no-JIT gate. ~53 MB unpacked vs ~1 MB for the next biggest core -- keep in
-  # sync by hand with ios/game_host/fetch_cores.sh.
-  CORES=(fceumm snes9x gambatte mgba genesis_plus_gx pcsx_rearmed fbneo)
+  # FBNeo is left out on purpose. Its license asks that frontends not
+  # redistribute the core, and bundling it in the app would do exactly that.
+  # tvOS has no WebView for EmulatorJS to fall back to either, so arcade has
+  # no path here at all. This list, the iOS one, and appleBundledCores in
+  # lib/util/game_cores.dart all have to agree, and game_cores_test.dart
+  # fails if they drift.
+  CORES=(fceumm snes9x gambatte mgba genesis_plus_gx pcsx_rearmed)
 fi
 
 BUILDBOT="https://buildbot.libretro.com/nightly/apple/tvos-arm64/latest"

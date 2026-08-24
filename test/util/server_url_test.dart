@@ -39,6 +39,35 @@ void main() {
       );
     });
 
+    test('converts internationalized hostnames to IDNA ASCII', () {
+      expect(
+        normalizeServerBaseUrl('https://éxâmplê.example'),
+        'https://xn--xmpl-boa4bm.example',
+      );
+      expect(
+        normalizeServerBaseUrl('éxâmplê.example'),
+        'xn--xmpl-boa4bm.example',
+      );
+      expect(
+        normalizeServerBaseUrl('https://media.éxâmplê.example:8443/jellyfin/'),
+        'https://media.xn--xmpl-boa4bm.example:8443/jellyfin',
+      );
+      expect(
+        normalizeServerBaseUrl('https://xn--xmpl-boa4bm.example'),
+        'https://xn--xmpl-boa4bm.example',
+      );
+    });
+
+    // Punycode is what the user sees as well as what we store. This one
+    // decodes to a Cyrillic lookalike of apple.com, and the address sits on
+    // the screen where someone picks which server to sign in to.
+    test('leaves a Punycode hostname encoded', () {
+      expect(
+        normalizeServerBaseUrl('https://xn--80ak6aa92e.com'),
+        'https://xn--80ak6aa92e.com',
+      );
+    });
+
     test('keeps a reverse proxy path prefix', () {
       expect(
         normalizeServerBaseUrl('https://example.com/jellyfin/'),

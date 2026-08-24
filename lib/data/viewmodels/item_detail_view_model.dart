@@ -177,6 +177,22 @@ class ItemDetailViewModel extends ChangeNotifier {
   // --- Collection grid pagination state ---
   static const _collectionPageSize = 50;
 
+  /// What a collection is allowed to show once its query walks the tree. A
+  /// recursive read reaches the seasons and episodes inside a series, and those
+  /// belong to the series rather than to the collection, so they stay out.
+  static const _collectionMemberTypes = <String>[
+    'Movie',
+    'Series',
+    'Video',
+    'MusicVideo',
+    'Audio',
+    'MusicAlbum',
+    'Book',
+    'AudioBook',
+    'Photo',
+    'BoxSet',
+  ];
+
   /// Items fetched so far for the grid (startIndex).
   int _collectionFetchedCount = 0;
   int _collectionTotalCount = 0;
@@ -1032,6 +1048,8 @@ class ItemDetailViewModel extends ChangeNotifier {
       parentId: itemId,
       startIndex: _collectionFetchedCount,
       limit: _collectionPageSize,
+      recursive: true,
+      includeItemTypes: _collectionMemberTypes,
       fields: 'PrimaryImageAspectRatio,BasicSyncInfo,People',
     );
     final newItems = _mapItems((data['Items'] as List?) ?? []);
@@ -1095,6 +1113,9 @@ class ItemDetailViewModel extends ChangeNotifier {
   Future<void> _ensurePlaylistIndexEntries() async {
     if (_playlistIndexEntries != null) return;
     try {
+      // Deliberately not recursive. The scan reads the collection's own members
+      // and then asks each series for its episodes below, so walking the tree
+      // here would spend the limit on episodes that arrive twice.
       final allData = await _client.itemsApi.getItems(
         parentId: itemId,
         limit: _indexScanLimit,
@@ -1283,6 +1304,8 @@ class ItemDetailViewModel extends ChangeNotifier {
         fetchFutures.add(() async {
           final data = await _client.itemsApi.getItems(
             parentId: boxSetId,
+            recursive: true,
+            includeItemTypes: _collectionMemberTypes,
             sortBy: 'PremiereDate,SortName',
             sortOrder: 'Ascending',
             fields: 'PrimaryImageAspectRatio,BasicSyncInfo',
@@ -1314,6 +1337,9 @@ class ItemDetailViewModel extends ChangeNotifier {
 
   Future<bool> _boxSetContainsItem(String boxSetId, String itemId) async {
     try {
+      // Membership is a direct-children question. Walking the tree would report
+      // an episode as belonging to whatever collection holds its series, and
+      // hand back every episode in the collection to answer it.
       final membership = await _client.itemsApi.getItems(
         parentId: boxSetId,
         fields: 'BasicSyncInfo',

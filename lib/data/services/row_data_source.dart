@@ -23,6 +23,7 @@ import '../repositories/seerr_repository.dart';
 import '../repositories/user_views_repository.dart';
 import '../../preference/seerr_preferences.dart';
 import '../viewmodels/seerr_discover_view_model.dart';
+import '../viewmodels/live_tv_guide_view_model.dart';
 import 'custom_external_lists_service.dart';
 import 'plugin_sync_service.dart';
 
@@ -107,6 +108,33 @@ class RowDataSource {
     );
     final total = response['TotalRecordCount'] as int? ?? 0;
     return total > 0;
+  }
+
+  /// Ordered the same way as the guide, so a channel sits where the user
+  /// expects to find it.
+  Future<HomeRow> loadFavoritesChannels(String serverId) async {
+    final response = await _client.liveTvApi.getChannels(
+      fields: 'ImageTags,UserData',
+    );
+    final pairs = <(GuideChannel, AggregatedItem)>[];
+    for (final item in _parseItems(response, serverId)) {
+      if (!item.isFavorite) continue;
+      pairs.add((GuideChannel.fromRawItem(item.rawData), item));
+    }
+    if (GetIt.instance.isRegistered<UserPreferences>()) {
+      final prefs = GetIt.instance<UserPreferences>();
+      final sortBy = prefs.get(UserPreferences.liveTvChannelSortBy);
+      final channelCompare = LiveTvGuideViewModel.comparatorFor(sortBy);
+      pairs.sort((a, b) => channelCompare(a.$1, b.$1));
+    }
+    final items = [for (final pair in pairs) pair.$2];
+    return HomeRow(
+      id: 'liveTvFavorites',
+      title: _l10n.favoriteChannels,
+      items: items,
+      rowType: HomeRowType.liveTvFavorites,
+      totalCount: items.length,
+    );
   }
 
   Future<HomeRow> loadOnNow(String serverId) async {
@@ -279,9 +307,25 @@ class RowDataSource {
       defaultLimit: _defaultLimit,
       maxLimit: _maxItems,
     );
+    List<String>? seriesType;
+    var recursive = false;
+    if (collectionType == 'tvshows') {
+      final prefSeriesType = GetIt.instance<UserPreferences>().get(
+        UserPreferences.recentlyReleasedSeriesType,
+      );
+      seriesType = switch (prefSeriesType) {
+        RecentlyReleasedSeriesType.series => const ['Series'],
+        RecentlyReleasedSeriesType.season => const ['Season'],
+        RecentlyReleasedSeriesType.episode => const ['Episode'],
+      };
+      // Seasons and episodes sit below the library rather than directly in it.
+      recursive = prefSeriesType != RecentlyReleasedSeriesType.series;
+    }
     final response = await _getRecentlyReleasedItemsWithFallback(
       parentId: parentId,
       limit: fetchLimit,
+      includeItemTypes: seriesType,
+      recursive: recursive,
     );
     final items = normalizeLatestMediaItems(
       _parseItems(response, serverId),
@@ -1504,6 +1548,7 @@ class RowDataSource {
       case HomeRowType.libraryTilesSmall:
       case HomeRowType.liveTv:
       case HomeRowType.liveTvOnNow:
+      case HomeRowType.liveTvFavorites:
       case HomeRowType.activeRecordings:
       case HomeRowType.mediaBar:
       case HomeRowType.pluginDynamic:
@@ -1820,6 +1865,8 @@ class RowDataSource {
   Future<Map<String, dynamic>> _getRecentlyReleasedItemsWithFallback({
     required String parentId,
     required int limit,
+    List<String>? includeItemTypes,
+    bool recursive = false,
   }) async {
     try {
       final response = await _client.itemsApi.getRecentlyReleasedItems(
@@ -1828,6 +1875,8 @@ class RowDataSource {
         fields: _fields,
         enableImageTypes: _imageTypes,
         imageTypeLimit: _imageTypeLimit,
+        includeItemTypes: includeItemTypes,
+        recursive: recursive,
       );
       return response;
     } on DioException catch (e) {
@@ -1839,6 +1888,8 @@ class RowDataSource {
         fields: _fallbackFields,
         enableImageTypes: _imageTypes,
         imageTypeLimit: _imageTypeLimit,
+        includeItemTypes: includeItemTypes,
+        recursive: recursive,
       );
       return response;
     }

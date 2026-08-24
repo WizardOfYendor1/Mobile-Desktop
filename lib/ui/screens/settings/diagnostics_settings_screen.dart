@@ -153,6 +153,15 @@ class _DiagnosticsSettingsScreenState extends State<DiagnosticsSettingsScreen> {
                     'diagnostics so they can be sent to the server as a report.',
                 icon: Icons.bug_report,
               ),
+              SwitchPreferenceTile(
+                preference: UserPreferences.crashReportsEnabled,
+                title: 'Send crash reports to server',
+                subtitle:
+                    'Save a report when the app crashes and send it to your '
+                    'own server the next time it connects. Nothing is sent '
+                    'anywhere else.',
+                icon: Icons.report_outlined,
+              ),
               _Section(
                 title: enabled
                     ? 'Reports ($count entries captured)'

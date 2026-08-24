@@ -391,6 +391,10 @@ class _GlobalShortcutScopeState extends State<_GlobalShortcutScope>
   final List<String> _routeHistory = [];
   late final KeyEventCallback _hardwareKeyHandler;
   Timer? _geometrySaveTimer;
+  // Windows answers isMaximized() from an uninitialized WINDOWPLACEMENT and
+  // returns whatever was on the stack, so the state is tracked from the window
+  // events instead, seeded with the state the window was restored into.
+  bool _isMaximized = false;
   int _routeHistoryIndex = -1;
   DateTime? _lastMouseThumbNavAt;
   String? _pendingRouteHistoryLocation;
@@ -412,6 +416,10 @@ class _GlobalShortcutScopeState extends State<_GlobalShortcutScope>
     }
     WidgetsBinding.instance.addObserver(this);
     if (PlatformDetection.isDesktop) {
+      final prefs = GetIt.instance<UserPreferences>();
+      _isMaximized =
+          prefs.get(UserPreferences.windowMaximized) &&
+          !prefs.get(UserPreferences.windowFullscreen);
       windowManager.addListener(this);
       unawaited(windowManager.setPreventClose(true));
     }
@@ -584,6 +592,7 @@ class _GlobalShortcutScopeState extends State<_GlobalShortcutScope>
       return true;
     }
     if (DialogBackSuppressor.consume()) return true;
+    if (CustomTVTextField.closeTopKeyboard()) return true;
     if (OverlaySheetController.closeTopSheet()) return true;
     if (InlineBackInterceptor.handleBack()) return true;
     if (_isPlayerRoute()) return false;
@@ -652,6 +661,9 @@ class _GlobalShortcutScopeState extends State<_GlobalShortcutScope>
       // key handling of its own, so without it the route pops out from under
       // an open keyboard.
       if (CustomTVTextField.closeTopKeyboard()) {
+        if (PlatformDetection.isAndroid && key == LogicalKeyboardKey.goBack) {
+          DialogBackSuppressor.markDismissed();
+        }
         return true;
       }
       if (OverlaySheetController.closeTopSheet()) {
@@ -798,12 +810,11 @@ class _GlobalShortcutScopeState extends State<_GlobalShortcutScope>
     try {
       final prefs = GetIt.instance<UserPreferences>();
       final isFullScreen = await windowManager.isFullScreen();
-      final isMaximized = await windowManager.isMaximized();
       await prefs.set(UserPreferences.windowFullscreen, isFullScreen);
-      await prefs.set(UserPreferences.windowMaximized, isMaximized);
+      await prefs.set(UserPreferences.windowMaximized, _isMaximized);
       // Keep the last windowed bounds. Neither state reports the size the
       // window would return to, so saving either would lose the real one.
-      if (isFullScreen || isMaximized) return;
+      if (isFullScreen || _isMaximized) return;
       final size = await windowManager.getSize();
       final pos = await windowManager.getPosition();
       await prefs.set(UserPreferences.windowWidth, size.width);
@@ -822,6 +833,11 @@ class _GlobalShortcutScopeState extends State<_GlobalShortcutScope>
 
   @override
   void onWindowEvent(String eventName) {
+    if (eventName == 'maximize') {
+      _isMaximized = true;
+    } else if (eventName == 'unmaximize') {
+      _isMaximized = false;
+    }
     if (eventName == 'move' ||
         eventName == 'resize' ||
         eventName == 'moved' ||
@@ -873,15 +889,7 @@ class _GlobalShortcutScopeState extends State<_GlobalShortcutScope>
         keys.contains(LogicalKeyboardKey.altRight);
 
     if ((key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.select) && !altPressed) {
-      final targetContext =
-          FocusManager.instance.primaryFocus?.context ?? context;
-      final activated = Actions.maybeInvoke(
-        targetContext,
-        const ActivateIntent(),
-      );
-      return activated == null
-          ? KeyEventResult.ignored
-          : KeyEventResult.handled;
+      return activateFocusedTarget(context);
     }
 
     return KeyEventResult.ignored;

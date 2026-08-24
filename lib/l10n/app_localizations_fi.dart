@@ -12,13 +12,13 @@ class AppLocalizationsFi extends AppLocalizations {
   String get appTitle => 'Moonfin';
 
   @override
-  String get accountPreferences => 'TILIASETUKSET';
+  String get accountPreferences => 'TILIN ASETUKSET';
 
   @override
   String get interfaceLanguage => 'Käyttöliittymän kieli';
 
   @override
-  String get systemLanguageDefault => 'Järjestelmän oletus';
+  String get systemLanguageDefault => 'Järjestelmän oletusasetus';
 
   @override
   String get signIn => 'Kirjaudu sisään';
@@ -48,7 +48,7 @@ class AppLocalizationsFi extends AppLocalizations {
       'Syötä tämä koodi palvelimesi web-hallintapaneeliin:';
 
   @override
-  String get waitingForAuthorization => 'Odotetaan valtuutusta...';
+  String get waitingForAuthorization => 'Odotetaan valtuutusta…';
 
   @override
   String get back => 'Takaisin';
@@ -61,12 +61,12 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String quickConnectUnavailable(String detail) {
-    return 'QuickConnect ei ole käytettävissä: $detail';
+    return 'Pikayhteys ei käytettävissä: $detail';
   }
 
   @override
   String quickConnectUnavailableWithStatus(String status, String detail) {
-    return 'QuickConnect ei ole käytettävissä ($status): $detail';
+    return 'Pikayhteys ei käytettävissä ($status): $detail';
   }
 
   @override
@@ -207,6 +207,25 @@ class AppLocalizationsFi extends AppLocalizations {
   String get interfaceStyleMaterial => 'Material';
 
   @override
+  String get interfaceLayout => 'Interface Layout';
+
+  @override
+  String get interfaceLayoutSubtitle =>
+      'Override the detected layout when this device is read wrong. Restart Moonfin for changes to take effect.';
+
+  @override
+  String get interfaceLayoutAutomatic => 'Automatic';
+
+  @override
+  String get interfaceLayoutTv => 'TV';
+
+  @override
+  String get interfaceLayoutDesktop => 'Desktop';
+
+  @override
+  String get interfaceLayoutPhone => 'Phone';
+
+  @override
   String get glassQuality => 'Lasin laatu';
 
   @override
@@ -315,10 +334,10 @@ class AppLocalizationsFi extends AppLocalizations {
       'Verkkovirhe otettaessa yhteyttä Emby Connectiin tai valittuun palvelimeen';
 
   @override
-  String get loadingLinkedServers => 'Ladataan linkitettyjä palvelimia...';
+  String get loadingLinkedServers => 'Ladataan linkitettyjä palvelimia…';
 
   @override
-  String get connectingToServerEllipsis => 'Yhdistetään palvelimeen...';
+  String get connectingToServerEllipsis => 'Yhdistetään palvelimeen…';
 
   @override
   String get noReachableAddress => 'Yhteysosoitetta ei ole annettu';
@@ -1305,6 +1324,9 @@ class AppLocalizationsFi extends AppLocalizations {
   String get director => 'JOHTAJA';
 
   @override
+  String get starring => 'STARRING';
+
+  @override
   String get directors => 'OHJAUS';
 
   @override
@@ -1889,6 +1911,19 @@ class AppLocalizationsFi extends AppLocalizations {
   String get unableToCreateRecording => 'Tallennusta ei voi luoda';
 
   @override
+  String get recordSeries => 'Record Series';
+
+  @override
+  String get seriesSetToRecord => 'Series set to record';
+
+  @override
+  String get seriesRecordingCancelled => 'Series recording cancelled';
+
+  @override
+  String get unableToCreateSeriesRecording =>
+      'Unable to create series recording';
+
+  @override
   String get watch => 'Katso';
 
   @override
@@ -2256,6 +2291,9 @@ class AppLocalizationsFi extends AppLocalizations {
   String get always => 'Aina';
 
   @override
+  String get mixedRowsOnly => 'Mixed rows only';
+
+  @override
   String get hideUnwatched => 'Piilota katsomattomat';
 
   @override
@@ -2412,6 +2450,12 @@ class AppLocalizationsFi extends AppLocalizations {
   String get disabled => 'Ei käytössä';
 
   @override
+  String get manual => 'Manual';
+
+  @override
+  String get autoDetect => 'Auto Detect';
+
+  @override
   String get scaleOnTv => 'Asteikko televisiossa';
 
   @override
@@ -2437,6 +2481,13 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get osdLockButtonDescription =>
       'Näytä lukituspainike, joka estää kosketussyötön, kunnes sitä painetaan pitkään';
+
+  @override
+  String get playerSwipeGestures => 'Volume and Brightness Swipes';
+
+  @override
+  String get playerSwipeGesturesDescription =>
+      'Slide up or down on the player to change brightness on the left and volume on the right';
 
   @override
   String get osdButtons => 'Soittimen painikkeet';
@@ -3387,6 +3438,18 @@ class AppLocalizationsFi extends AppLocalizations {
   String get mediaBarModeOff => 'Pois';
 
   @override
+  String get mediaBarModeBookshelf => 'Bookshelf';
+
+  @override
+  String get mediaBarModeGallery => 'Gallery';
+
+  @override
+  String get mediaBarModeBanner => 'Banner';
+
+  @override
+  String get mediaBarModeAya => 'Aya';
+
+  @override
   String get enableMediaBar => 'Ota Media Bar käyttöön';
 
   @override
@@ -3395,6 +3458,12 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get contentType => 'Sisältötyyppi';
+
+  @override
+  String get mediaBarSourceType => 'Source';
+
+  @override
+  String get mediaBarSourceRandom => 'Random';
 
   @override
   String get moviesAndTvShows => 'Elokuvat ja TV-ohjelmat';
@@ -3470,6 +3539,13 @@ class AppLocalizationsFi extends AppLocalizations {
   String get recentlyReleased => 'Äskettäin julkaistu';
 
   @override
+  String get recentlyReleasedSeriesType => 'Recently Released Series Sort By';
+
+  @override
+  String get recentlyReleasedSeriesTypeDescription =>
+      'Sort Recently Released Series home rows by series, latest season, or latest episode air date';
+
+  @override
   String get myMedia => 'Oma Media';
 
   @override
@@ -3492,6 +3568,9 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get liveTV => 'Live-TV';
+
+  @override
+  String get favoriteChannels => 'Favorite Channels';
 
   @override
   String get homeSections => 'Kotisivut';
@@ -10602,37 +10681,40 @@ class AppLocalizationsFi extends AppLocalizations {
   String get groupByStudio => 'Studio';
 
   @override
-  String get showAlphabeticalFilters => 'Show Alphabet';
+  String get showAlphabeticalFilters => 'Näytä aakkoset';
 
   @override
-  String get personalRatingStyle => 'Personal rating style';
+  String get personalRatingStyle => 'Henkilökohtainen arviointityyli';
 
   @override
-  String get personalRatingThumbs => 'Like / dislike';
+  String get personalRatingThumbs => 'Tykkää / ei tykkää';
 
   @override
-  String get personalRatingStars => '5 stars';
+  String get personalRatingStars => '5 tähteä';
 
   @override
-  String get personalRatingNumeric => 'Numeric score out of 10';
+  String get personalRatingNumeric => 'Pisteet asteikolla 1–10';
 
   @override
-  String get rate => 'Rate';
+  String get rate => 'Arvosana';
 
   @override
-  String get like => 'Like';
+  String get like => 'Tykkää';
 
   @override
-  String get dislike => 'Dislike';
+  String get dislike => 'En tykkää';
 
   @override
-  String get personalRatingClear => 'Clear rating';
+  String get personalRatingClear => 'Arvostelun tyhjentäminen';
 
   @override
-  String get personalRatingRated => 'Rated';
+  String get personalRatingRated => 'Arvosana';
 
   @override
-  String get personalRatingSaveFailed => 'Could not save rating';
+  String get personalRatingMine => 'My Rating';
+
+  @override
+  String get personalRatingSaveFailed => 'Arvostelua ei voitu tallentaa';
 
   @override
   String get increase => 'Increase';
@@ -10649,4 +10731,162 @@ class AppLocalizationsFi extends AppLocalizations {
   String personalRatingOutOfFive(String rating) {
     return '$rating / 5';
   }
+
+  @override
+  String get filterInProgress => 'In Progress';
+
+  @override
+  String get filterUnreleased => 'Unreleased';
+
+  @override
+  String get filterTrailers => 'Trailers';
+
+  @override
+  String get filterExtras => 'Extras';
+
+  @override
+  String get filterThemeSongs => 'Theme Songs';
+
+  @override
+  String get filterThemeVideos => 'Theme Videos';
+
+  @override
+  String get source => 'Source';
+
+  @override
+  String get years => 'Years';
+
+  @override
+  String get audioLanguage => 'Audio Language';
+
+  @override
+  String get subtitleLanguage => 'Subtitle Language';
+
+  @override
+  String get clearFilters => 'Clear Filters';
+
+  @override
+  String get seerrShortcutsRow => 'Seerr Browse';
+
+  @override
+  String get seerrReleased => 'Released';
+
+  @override
+  String get seerrMinRating => 'Minimum Rating';
+
+  @override
+  String get seerrMinVotes => 'Minimum Votes';
+
+  @override
+  String get seerrOriginalLanguage => 'Original Language';
+
+  @override
+  String get seerrRuntime => 'Runtime';
+
+  @override
+  String get subtitleHdrSeparate => 'Separate HDR Style';
+
+  @override
+  String get subtitleHdrSeparateSubtitle =>
+      'White is much brighter in HDR than in SDR, so a dimmer style here avoids the glare';
+
+  @override
+  String get scrollSensitivity => 'Scroll Sensitivity';
+
+  @override
+  String get scrollSensitivitySubtitle =>
+      'How far one mouse wheel notch scrolls';
+
+  @override
+  String get mediaDetailsAndSpoilers => 'Media Details and Spoilers';
+
+  @override
+  String get hideDetailsMediaDescription =>
+      'Hide Media Description on Details Page';
+
+  @override
+  String get hideDetailsMediaDescriptionSubtitle =>
+      'Hide the movie or episode descriptive text.';
+
+  @override
+  String get detailUseSeriesThumbnails =>
+      'Use Series Thumbnails on Details Page';
+
+  @override
+  String get detailUseSeriesThumbnailsSubtitle =>
+      'Replace all thumbnails on Classic details page with series thumbnail';
+
+  @override
+  String get hideHomeMediaDescription =>
+      'Hide Media Description on Home Screen';
+
+  @override
+  String get hideHomeMediaDescriptionSubtitle =>
+      'Hide the movie or episode descriptive text.';
+
+  @override
+  String get continueWatchingAndNextUpHeader => 'Continue Watching and Next Up';
+
+  @override
+  String get setupSkip => 'Skip setup';
+
+  @override
+  String get setupNavbarQuestion => 'Where should navigation go?';
+
+  @override
+  String get setupMediaBarQuestion =>
+      'How should the top of your Home screen look?';
+
+  @override
+  String get setupHomeRowsQuestion => 'How should your rows look?';
+
+  @override
+  String get setupDetailQuestion =>
+      'How should a movie or show look when you open it?';
+
+  @override
+  String get setupTourQuestion => 'You\'re set. Here\'s what else is in here.';
+
+  @override
+  String get setupStyleClassic => 'Classic';
+
+  @override
+  String get setupStyleModern => 'Modern';
+
+  @override
+  String get setupRowsClassicHint => 'Compact. More rows on screen at once.';
+
+  @override
+  String get setupRowsModernHint => 'Larger cards with titles underneath.';
+
+  @override
+  String get setupDetailClassicHint => 'Everything centred in one stack.';
+
+  @override
+  String get setupDetailModernHint =>
+      'Cinematic, with tabs for cast and extras.';
+
+  @override
+  String get setupPickALook => 'Pick a look';
+
+  @override
+  String get setupTourMoreHeader => 'There is more waiting in Settings';
+
+  @override
+  String get setupTourBulletRequests => 'Seerr requests';
+
+  @override
+  String get setupTourBulletSyncPlay => 'SyncPlay watch parties';
+
+  @override
+  String get setupTourBulletThemes => 'Custom themes';
+
+  @override
+  String get setupTourBulletDownloads => 'Offline downloads';
+
+  @override
+  String get setupTourBulletMore => 'And plenty more';
+
+  @override
+  String get runSetupAgain => 'Run setup again';
 }

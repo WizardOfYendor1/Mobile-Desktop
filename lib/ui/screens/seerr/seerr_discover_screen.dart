@@ -24,8 +24,12 @@ import '../../widgets/fullscreen_backdrop_switcher.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../widgets/focus/request_initial_focus.dart';
 import '../../widgets/focus/locked_focus_row.dart';
+import '../../widgets/seerr/seerr_shortcuts.dart';
+import '../../util/home_row_title_localizer.dart';
 import '../../widgets/horizontal_scroll_section.dart';
 import '../../widgets/quick_return_wrapper.dart';
+import '../../../util/seerr_genre_art.dart';
+import '../../widgets/seerr/seerr_genre_label.dart';
 
 const _tmdbPosterBase = 'https://image.tmdb.org/t/p/w300';
 const _tmdbBackdropBase = 'https://image.tmdb.org/t/p/w1280';
@@ -264,6 +268,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
   }
 
   bool _rowHasFocusableContent(SeerrDiscoverRow row) {
+    if (row.isShortcutsRow) return true;
     if (row.isGenreRow) return row.genres.isNotEmpty;
     if (row.isNetworkRow) return row.networks.isNotEmpty;
     if (row.isStudioRow) return row.studios.isNotEmpty;
@@ -433,7 +438,14 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
         final autofocusRow = isFirstFocusableRow && _wantsInitialFocus;
         final firstNode = autofocusRow ? _initialFocusNode : null;
         Widget rowWidget;
-        if (row.isGenreRow) {
+        if (row.isShortcutsRow) {
+          rowWidget = _buildShortcutsRow(
+            row,
+            index,
+            autofocusFirst: autofocusRow,
+            firstFocusNode: firstNode,
+          );
+        } else if (row.isGenreRow) {
           rowWidget = _buildGenreRow(
             row,
             index,
@@ -497,7 +509,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
   }
 
   Widget _buildRowContainer({
-    required String title,
+    required SeerrRowType type,
     required double rowHeight,
     required bool isLoading,
     required bool hasItems,
@@ -505,6 +517,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     required Widget child,
   }) {
     final l10n = AppLocalizations.of(context);
+    final title = localizeSeerrRowTitle(type, l10n);
     final desktopScale = GetIt.instance<UserPreferences>()
         .get(UserPreferences.desktopUiScale)
         .scaleFactor;
@@ -584,7 +597,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
       child: LockedFocusRow<SeerrDiscoverItem>(
         key: focusKey,
         items: row.items,
-        hubKey: 'seerr_discover_media_${rowIndex}_${row.title}',
+        hubKey: 'seerr_discover_media_${rowIndex}_${row.type.name}',
         controller: _getRowScroll(rowIndex),
         itemExtent: 130,
         itemSpacing: 12 * desktopScale,
@@ -636,7 +649,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     );
 
     return _buildRowContainer(
-      title: row.title,
+      type: row.type,
       rowHeight: 260,
       isLoading: row.isLoading && row.items.isEmpty,
       hasItems: row.items.isNotEmpty,
@@ -644,6 +657,86 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
       child: child,
     );
   }
+
+  Widget _buildShortcutsRow(
+    SeerrDiscoverRow row,
+    int rowIndex, {
+    bool autofocusFirst = false,
+    FocusNode? firstFocusNode,
+  }) {
+    final l10n = AppLocalizations.of(context);
+    final desktopScale = GetIt.instance<UserPreferences>()
+        .get(UserPreferences.desktopUiScale)
+        .scaleFactor;
+    final shortcuts = SeerrShortcut.withoutDiscover;
+    final backdrops = pickShortcutBackdrops(
+      shortcuts: shortcuts,
+      movieBackdrops: _backdropPathsFor(row.items, 'movie'),
+      tvBackdrops: _backdropPathsFor(row.items, 'tv'),
+    );
+
+    final focusKey = _getRowKey(rowIndex);
+    final child = LockedFocusRow<SeerrShortcut>(
+      key: focusKey,
+      items: shortcuts,
+      hubKey: 'seerr_discover_shortcuts_$rowIndex',
+      controller: _getRowScroll(rowIndex),
+      itemExtent: 180,
+      itemSpacing: 12 * desktopScale,
+      height: 90 * desktopScale,
+      clipBehavior: Clip.none,
+      padding: EdgeInsets.fromLTRB(
+        20 * desktopScale,
+        5 * desktopScale,
+        20 * desktopScale,
+        5 * desktopScale,
+      ),
+      onLeftEdge: _onRowLeftEdge,
+      onVerticalNavigation: (isUp) => _onRowVerticalNavigation(rowIndex, isUp),
+      onTap: (index, shortcut) => shortcut.open(context),
+      onIndexChanged: (index, shortcut) {
+        if (rowIndex == 0) {
+          _setFirstRowFocused(true);
+          _restoreNavbarToNormalPosition();
+        }
+      },
+      onFocusChange: (has) {
+        if (rowIndex == 0) {
+          _setFirstRowFocused(has);
+        }
+      },
+      autofocus: autofocusFirst,
+      focusNode: autofocusFirst ? firstFocusNode : null,
+      itemBuilder: (context, shortcut, index, isFocused) {
+        final backdrop = backdrops[shortcut];
+        return _GenreCard(
+          name: shortcut.label(l10n),
+          imageUrl: backdrop == null ? null : '$_tmdbBackdropBase$backdrop',
+          icon: shortcut.icon,
+          externalIsFocused: isFocused,
+          onTap: () => shortcut.open(context),
+        );
+      },
+    );
+
+    return _buildRowContainer(
+      type: row.type,
+      rowHeight: 100 * desktopScale,
+      isLoading: false,
+      hasItems: true,
+      scrollController: _getRowScroll(rowIndex),
+      child: child,
+    );
+  }
+
+  List<String> _backdropPathsFor(
+    List<SeerrDiscoverItem> items,
+    String mediaType,
+  ) => [
+    for (final item in items)
+      if (item.mediaType == mediaType && (item.backdropPath?.isNotEmpty ?? false))
+        item.backdropPath!,
+  ];
 
   Widget _buildGenreRow(
     SeerrDiscoverRow row,
@@ -661,7 +754,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     final child = LockedFocusRow<SeerrGenre>(
       key: focusKey,
       items: row.genres,
-      hubKey: 'seerr_discover_genres_${rowIndex}_${row.title}',
+      hubKey: 'seerr_discover_genres_${rowIndex}_${row.type.name}',
       controller: _getRowScroll(rowIndex),
       itemExtent: 180,
       itemSpacing: 12 * desktopScale,
@@ -701,9 +794,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
       autofocus: autofocusFirst,
       focusNode: autofocusFirst ? firstFocusNode : null,
       itemBuilder: (context, genre, index, isFocused) {
-        final backdrop = genre.backdrops.isNotEmpty
-            ? '$_tmdbBackdropBase${genre.backdrops.first}'
-            : null;
+        final backdrop = seerrGenreBackdropUrl(genre.id, genre.backdrops);
         return _GenreCard(
           name: genre.name,
           imageUrl: backdrop,
@@ -725,7 +816,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     );
 
     return _buildRowContainer(
-      title: row.title,
+      type: row.type,
       rowHeight: 90,
       isLoading: row.isLoading && row.genres.isEmpty,
       hasItems: row.genres.isNotEmpty,
@@ -749,7 +840,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     final child = LockedFocusRow<SeerrNetwork>(
       key: focusKey,
       items: row.networks,
-      hubKey: 'seerr_discover_networks_${rowIndex}_${row.title}',
+      hubKey: 'seerr_discover_networks_${rowIndex}_${row.type.name}',
       controller: _getRowScroll(rowIndex),
       itemExtent: 180,
       itemSpacing: 12 * desktopScale,
@@ -810,7 +901,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     );
 
     return _buildRowContainer(
-      title: row.title,
+      type: row.type,
       rowHeight: 90,
       isLoading: row.isLoading && row.networks.isEmpty,
       hasItems: row.networks.isNotEmpty,
@@ -834,7 +925,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     final child = LockedFocusRow<SeerrStudio>(
       key: focusKey,
       items: row.studios,
-      hubKey: 'seerr_discover_studios_${rowIndex}_${row.title}',
+      hubKey: 'seerr_discover_studios_${rowIndex}_${row.type.name}',
       controller: _getRowScroll(rowIndex),
       itemExtent: 180,
       itemSpacing: 12 * desktopScale,
@@ -895,7 +986,7 @@ class _SeerrDiscoverScreenState extends State<SeerrDiscoverScreen> {
     );
 
     return _buildRowContainer(
-      title: row.title,
+      type: row.type,
       rowHeight: 90,
       isLoading: row.isLoading && row.studios.isEmpty,
       hasItems: row.studios.isNotEmpty,
@@ -1067,12 +1158,14 @@ class _InfoPanel extends StatelessWidget {
 class _GenreCard extends StatefulWidget {
   final String name;
   final String? imageUrl;
+  final IconData? icon;
   final VoidCallback? onTap;
   final bool? externalIsFocused;
 
   const _GenreCard({
     required this.name,
     this.imageUrl,
+    this.icon,
     this.onTap,
     this.externalIsFocused,
   });
@@ -1088,7 +1181,11 @@ class _GenreCardState extends State<_GenreCard> with FocusStateMixin {
     final focusColor =
         Color(GetIt.instance<UserPreferences>().get(UserPreferences.focusColor).colorValue);
     final externallyDriven = widget.externalIsFocused != null;
-    final effectiveFocused = widget.externalIsFocused ?? (focused || hovered);
+    // The row drives focus and knows nothing about the mouse, so hovering has
+    // to count too. Same rule as MediaCard.
+    final effectiveFocused = externallyDriven
+        ? (widget.externalIsFocused! || hovered)
+        : (focused || hovered);
 
     final inner = GestureDetector(
       onTap: widget.onTap,
@@ -1117,39 +1214,54 @@ class _GenreCardState extends State<_GenreCard> with FocusStateMixin {
                     )
                   else
                     Container(color: AppColorScheme.surfaceVariant),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppColorScheme.scrim.withValues(alpha: 0),
-                          AppColorScheme.scrim.withValues(alpha: 0.73),
-                        ],
+                  // A genre card carries its name across the middle. A
+                  // shortcut keeps the bottom gradient its lower-left label
+                  // needs, under the icon it shows instead.
+                  if (widget.icon != null)
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            AppColorScheme.scrim.withValues(alpha: 0),
+                            AppColorScheme.scrim.withValues(alpha: 0.73),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    bottom: 8,
-                    left: 8,
-                    right: 8,
-                    child: Text(
-                      widget.name,
-                      style: TextStyle(
-                        color: AppColorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        shadows: [
-                          Shadow(
-                            blurRadius: 4,
-                            color: AppColorScheme.scrim,
-                          ),
-                        ],
+                  if (widget.icon != null)
+                    Center(
+                      child: Icon(
+                        widget.icon,
+                        size: 32,
+                        color: AppColorScheme.onSurface.withValues(alpha: 0.8),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
+                  if (widget.icon == null)
+                    SeerrGenreLabel(name: widget.name)
+                  else
+                    Positioned(
+                      bottom: 8,
+                      left: 8,
+                      right: 8,
+                      child: Text(
+                        widget.name,
+                        style: TextStyle(
+                          color: AppColorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                          shadows: [
+                            Shadow(
+                              blurRadius: 4,
+                              color: AppColorScheme.scrim,
+                            ),
+                          ],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   if (effectiveFocused)
                     Container(
                       decoration: BoxDecoration(
@@ -1210,7 +1322,11 @@ class _LogoCardState extends State<_LogoCard> with FocusStateMixin {
     final focusColor =
         Color(GetIt.instance<UserPreferences>().get(UserPreferences.focusColor).colorValue);
     final externallyDriven = widget.externalIsFocused != null;
-    final effectiveFocused = widget.externalIsFocused ?? (focused || hovered);
+    // The row drives focus and knows nothing about the mouse, so hovering has
+    // to count too. Same rule as MediaCard.
+    final effectiveFocused = externallyDriven
+        ? (widget.externalIsFocused! || hovered)
+        : (focused || hovered);
 
     final inner = GestureDetector(
       onTap: widget.onTap,

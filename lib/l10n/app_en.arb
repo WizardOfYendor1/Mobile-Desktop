@@ -188,7 +188,7 @@
   "@settingsAppearanceTheme": {
     "description": "Title for the theme selection screen and theme settings entry"
   },
-  "detailScreenStyle": "Detail screen style",
+  "detailScreenStyle": "Details Screen Style",
   "@detailScreenStyle": {
     "description": "Label for the media detail screen layout style setting"
   },
@@ -263,6 +263,30 @@
   "interfaceStyleMaterial": "Material",
   "@interfaceStyleMaterial": {
     "description": "Interface style option: Material look"
+  },
+  "interfaceLayout": "Interface Layout",
+  "@interfaceLayout": {
+    "description": "Setting to override which UI layout the app uses"
+  },
+  "interfaceLayoutSubtitle": "Override the detected layout when this device is read wrong. Restart Moonfin for changes to take effect.",
+  "@interfaceLayoutSubtitle": {
+    "description": "Subtitle for the interface layout setting"
+  },
+  "interfaceLayoutAutomatic": "Automatic",
+  "@interfaceLayoutAutomatic": {
+    "description": "Interface layout option: detect from the device"
+  },
+  "interfaceLayoutTv": "TV",
+  "@interfaceLayoutTv": {
+    "description": "Interface layout option: 10-foot TV layout"
+  },
+  "interfaceLayoutDesktop": "Desktop",
+  "@interfaceLayoutDesktop": {
+    "description": "Interface layout option: desktop layout"
+  },
+  "interfaceLayoutPhone": "Phone",
+  "@interfaceLayoutPhone": {
+    "description": "Interface layout option: phone layout"
   },
   "glassQuality": "Glass Quality",
   "@glassQuality": {
@@ -1764,6 +1788,10 @@
   "@director": {
     "description": "Metadata label for director"
   },
+  "starring": "STARRING",
+  "@starring": {
+    "description": "Metadata label for the leading cast"
+  },
   "directors": "DIRECTORS",
   "@directors": {
     "description": "Metadata label for directors"
@@ -2651,6 +2679,22 @@
   "@unableToCreateRecording": {
     "description": "Error when creating a live TV recording fails"
   },
+  "recordSeries": "Record Series",
+  "@recordSeries": {
+    "description": "Button label to record every showing of a live TV series"
+  },
+  "seriesSetToRecord": "Series set to record",
+  "@seriesSetToRecord": {
+    "description": "Snackbar confirmation after scheduling a live TV series recording"
+  },
+  "seriesRecordingCancelled": "Series recording cancelled",
+  "@seriesRecordingCancelled": {
+    "description": "Snackbar confirmation after cancelling a live TV series recording"
+  },
+  "unableToCreateSeriesRecording": "Unable to create series recording",
+  "@unableToCreateSeriesRecording": {
+    "description": "Error when creating a live TV series recording fails"
+  },
   "watch": "Watch",
   "@watch": {
     "description": "Button label to start watching a channel"
@@ -2775,7 +2819,7 @@
   },
   "seerr": "Seerr",
   "@seerr": {
-    "description": "Title for the Seerr (Overseerr/Jellyseerr) results section"
+    "description": "Title for the Seerr results section"
   },
   "seerrAccountType": "Seerr Account Type",
   "@seerrAccountType": {
@@ -3173,6 +3217,10 @@
   "@always": {
     "description": "Option: always"
   },
+  "mixedRowsOnly": "Mixed rows only",
+  "@mixedRowsOnly": {
+    "description": "Option: only show the label on rows holding both movies and series"
+  },
   "hideUnwatched": "Hide Unwatched",
   "@hideUnwatched": {
     "description": "Option: hide unwatched indicators"
@@ -3375,6 +3423,14 @@
   "@disabled": {
     "description": "Option: disabled"
   },
+  "manual": "Manual",
+  "@manual": {
+    "description": "Option: manual"
+  },
+  "autoDetect": "Auto Detect",
+  "@autoDetect": {
+    "description": "Option: detect the value automatically"
+  },
   "scaleOnTv": "Scale on TV",
   "@scaleOnTv": {
     "description": "Refresh rate option: scale on TV"
@@ -3406,6 +3462,14 @@
   "osdLockButtonDescription": "Show a lock button that blocks touch input until long-pressed",
   "@osdLockButtonDescription": {
     "description": "Description for OSD lock button"
+  },
+  "playerSwipeGestures": "Volume and Brightness Swipes",
+  "@playerSwipeGestures": {
+    "description": "Setting for player swipe gestures"
+  },
+  "playerSwipeGesturesDescription": "Slide up or down on the player to change brightness on the left and volume on the right",
+  "@playerSwipeGesturesDescription": {
+    "description": "Description for player swipe gestures"
   },
   "osdButtons": "Player Buttons",
   "@osdButtons": {
@@ -4599,6 +4663,22 @@
   "@mediaBarModeOff": {
     "description": "Media bar style option: Off"
   },
+  "mediaBarModeBookshelf": "Bookshelf",
+  "@mediaBarModeBookshelf": {
+    "description": "Media bar style option: Bookshelf"
+  },
+  "mediaBarModeGallery": "Gallery",
+  "@mediaBarModeGallery": {
+    "description": "Media bar style option: Gallery"
+  },
+  "mediaBarModeBanner": "Banner",
+  "@mediaBarModeBanner": {
+    "description": "Media bar style option: Banner"
+  },
+  "mediaBarModeAya": "Aya",
+  "@mediaBarModeAya": {
+    "description": "Media bar style option: Aya"
+  },
   "enableMediaBar": "Enable Media Bar",
   "@enableMediaBar": {
     "description": "Setting for enabling media bar"
@@ -4610,6 +4690,14 @@
   "contentType": "Content Type",
   "@contentType": {
     "description": "Setting for content type"
+  },
+  "mediaBarSourceType": "Source",
+  "@mediaBarSourceType": {
+    "description": "Setting for which titles the media bar draws from"
+  },
+  "mediaBarSourceRandom": "Random",
+  "@mediaBarSourceRandom": {
+    "description": "Media bar source: any eligible title"
   },
   "moviesAndTvShows": "Movies & TV Shows",
   "@moviesAndTvShows": {
@@ -4707,6 +4795,14 @@
   "@recentlyReleased": {
     "description": "Home section: recently released"
   },
+  "recentlyReleasedSeriesType": "Recently Released Series Sort By",
+  "@recentlyReleasedSeriesType": {
+    "description": "Setting for sorting series in recently released series row"
+  },
+  "recentlyReleasedSeriesTypeDescription": "Sort Recently Released Series home rows by series, latest season, or latest episode air date",
+  "@recentlyReleasedSeriesTypeDescription": {
+    "description": "Description for recently released series type setting"
+  },
   "myMedia": "My Media",
   "@myMedia": {
     "description": "Home section: my media"
@@ -4742,6 +4838,10 @@
   "liveTV": "Live TV",
   "@liveTV": {
     "description": "Home section: live TV"
+  },
+  "favoriteChannels": "Favorite Channels",
+  "@favoriteChannels": {
+    "description": "Home row: favourited live TV channels"
   },
   "homeSections": "Home Sections",
   "@homeSections": {
@@ -9420,6 +9520,10 @@
   "@personalRatingRated": {
     "description": "Tooltip for a media item that has a numeric personal rating."
   },
+  "personalRatingMine": "My Rating",
+  "@personalRatingMine": {
+    "description": "Label under the viewer's own rating in the ratings row."
+  },
   "personalRatingSaveFailed": "Could not save rating",
   "@personalRatingSaveFailed": {
     "description": "Error shown when saving a personal rating fails."
@@ -9441,5 +9545,201 @@
   "@personalRatingOutOfFive": {
     "description": "Personal rating displayed on a five-star scale.",
     "placeholders": { "rating": { "type": "String" } }
+  },
+  "filterInProgress": "In Progress",
+  "@filterInProgress": {
+    "description": "Library filter for items the viewer has started but not finished."
+  },
+  "filterUnreleased": "Unreleased",
+  "@filterUnreleased": {
+    "description": "Series status filter for shows that have not started airing."
+  },
+  "filterTrailers": "Trailers",
+  "@filterTrailers": {
+    "description": "Library filter for items that have a trailer."
+  },
+  "filterExtras": "Extras",
+  "@filterExtras": {
+    "description": "Library filter for items that have bonus features."
+  },
+  "filterThemeSongs": "Theme Songs",
+  "@filterThemeSongs": {
+    "description": "Library filter for items that have a theme song."
+  },
+  "filterThemeVideos": "Theme Videos",
+  "@filterThemeVideos": {
+    "description": "Library filter for items that have a theme video."
+  },
+  "source": "Source",
+  "@source": {
+    "description": "Heading for the disc source filters in the library filter picker."
+  },
+  "years": "Years",
+  "@years": {
+    "description": "Heading for the release year filters in the library filter picker."
+  },
+  "audioLanguage": "Audio Language",
+  "@audioLanguage": {
+    "description": "Heading for the audio language filters in the library filter picker."
+  },
+  "subtitleLanguage": "Subtitle Language",
+  "@subtitleLanguage": {
+    "description": "Heading for the subtitle language filters in the library filter picker."
+  },
+  "clearFilters": "Clear Filters",
+  "@clearFilters": {
+    "description": "Action that turns every library filter back off."
+  },
+  "seerrShortcutsRow": "Seerr Browse",
+  "@seerrShortcutsRow": {
+    "description": "Title of the Seerr shortcuts row that jumps to Discover, Movies, Series, Requests and Issues."
+  },
+  "seerrReleased": "Released",
+  "@seerrReleased": {
+    "description": "Heading for the release window filter in the Seerr browse dialog."
+  },
+  "seerrMinRating": "Minimum Rating",
+  "@seerrMinRating": {
+    "description": "Heading for the TMDB score floor filter in the Seerr browse dialog."
+  },
+  "seerrMinVotes": "Minimum Votes",
+  "@seerrMinVotes": {
+    "description": "Heading for the TMDB vote count floor filter in the Seerr browse dialog."
+  },
+  "seerrOriginalLanguage": "Original Language",
+  "@seerrOriginalLanguage": {
+    "description": "Heading for the original language filter in the Seerr browse dialog."
+  },
+  "seerrRuntime": "Runtime",
+  "@seerrRuntime": {
+    "description": "Heading for the runtime window filter in the Seerr browse dialog."
+  },
+  "subtitleHdrSeparate": "Separate HDR Style",
+  "@subtitleHdrSeparate": {
+    "description": "Toggle for a second subtitle appearance used only while HDR is playing."
+  },
+  "subtitleHdrSeparateSubtitle": "White is much brighter in HDR than in SDR, so a dimmer style here avoids the glare",
+  "@subtitleHdrSeparateSubtitle": {
+    "description": "Explains why a separate HDR subtitle style is worth setting."
+  },
+  "scrollSensitivity": "Scroll Sensitivity",
+  "@scrollSensitivity": {
+    "description": "Title of the desktop setting that scales mouse wheel scrolling."
+  },
+  "scrollSensitivitySubtitle": "How far one mouse wheel notch scrolls",
+  "@scrollSensitivitySubtitle": {
+    "description": "Explains the desktop scroll sensitivity slider."
+  },
+  "mediaDetailsAndSpoilers": "Media Details and Spoilers",
+  "@mediaDetailsAndSpoilers": {
+    "description": "Section header for media details and spoiler settings"
+  },
+  "hideDetailsMediaDescription": "Hide Media Description on Details Page",
+  "@hideDetailsMediaDescription": {
+    "description": "Setting title to hide media description on details screen"
+  },
+  "hideDetailsMediaDescriptionSubtitle": "Hide the movie or episode descriptive text.",
+  "@hideDetailsMediaDescriptionSubtitle": {
+    "description": "Description for setting to hide media description on details page"
+  },
+  "detailUseSeriesThumbnails": "Use Series Thumbnails on Details Page",
+  "@detailUseSeriesThumbnails": {
+    "description": "Setting title to replace thumbnails on Classic details page with series thumbnail"
+  },
+  "detailUseSeriesThumbnailsSubtitle": "Replace all thumbnails on Classic details page with series thumbnail",
+  "@detailUseSeriesThumbnailsSubtitle": {
+    "description": "Description for setting to use series thumbnails on Classic details page"
+  },
+  "hideHomeMediaDescription": "Hide Media Description on Home Screen",
+  "@hideHomeMediaDescription": {
+    "description": "Setting title to hide media description on home screen"
+  },
+  "hideHomeMediaDescriptionSubtitle": "Hide the movie or episode descriptive text.",
+  "@hideHomeMediaDescriptionSubtitle": {
+    "description": "Description for setting to hide media description on home screen"
+  },
+  "continueWatchingAndNextUpHeader": "Continue Watching and Next Up",
+  "@continueWatchingAndNextUpHeader": {
+    "description": "Header for settings section containing Continue Watching and Next Up options"
+  },
+  "setupSkip": "Skip setup",
+  "@setupSkip": {
+    "description": "Leaves the first-run setup wizard without answering anything"
+  },
+  "setupNavbarQuestion": "Where should navigation go?",
+  "@setupNavbarQuestion": {
+    "description": "Setup question asking where the navigation bar should sit"
+  },
+  "setupMediaBarQuestion": "How should the top of your Home screen look?",
+  "@setupMediaBarQuestion": {
+    "description": "Setup wizard question for the media bar style"
+  },
+  "setupHomeRowsQuestion": "How should your rows look?",
+  "@setupHomeRowsQuestion": {
+    "description": "Setup wizard question for the home row style"
+  },
+  "setupDetailQuestion": "How should a movie or show look when you open it?",
+  "@setupDetailQuestion": {
+    "description": "Setup wizard question for the detail screen style"
+  },
+  "setupTourQuestion": "You're set. Here's what else is in here.",
+  "@setupTourQuestion": {
+    "description": "Heading of the final setup wizard screen"
+  },
+  "setupStyleClassic": "Classic",
+  "@setupStyleClassic": {
+    "description": "Name of the original layout, offered in the setup wizard"
+  },
+  "setupStyleModern": "Modern",
+  "@setupStyleModern": {
+    "description": "Name of the newer layout, offered in the setup wizard"
+  },
+  "setupRowsClassicHint": "Compact. More rows on screen at once.",
+  "@setupRowsClassicHint": {
+    "description": "What the classic home row style gives you"
+  },
+  "setupRowsModernHint": "Larger cards with titles underneath.",
+  "@setupRowsModernHint": {
+    "description": "What the modern home row style gives you"
+  },
+  "setupDetailClassicHint": "Everything centred in one stack.",
+  "@setupDetailClassicHint": {
+    "description": "What the classic detail screen style gives you"
+  },
+  "setupDetailModernHint": "Cinematic, with tabs for cast and extras.",
+  "@setupDetailModernHint": {
+    "description": "What the modern detail screen style gives you"
+  },
+  "setupPickALook": "Pick a look",
+  "@setupPickALook": {
+    "description": "Label above the theme swatches on the final setup screen"
+  },
+  "setupTourMoreHeader": "There is more waiting in Settings",
+  "@setupTourMoreHeader": {
+    "description": "Heading of the closing setup screen block that lists features found in settings"
+  },
+  "setupTourBulletRequests": "Seerr requests",
+  "@setupTourBulletRequests": {
+    "description": "Bullet on the closing setup screen for the Seerr request feature"
+  },
+  "setupTourBulletSyncPlay": "SyncPlay watch parties",
+  "@setupTourBulletSyncPlay": {
+    "description": "Bullet on the closing setup screen for SyncPlay"
+  },
+  "setupTourBulletThemes": "Custom themes",
+  "@setupTourBulletThemes": {
+    "description": "Bullet on the closing setup screen for custom themes"
+  },
+  "setupTourBulletDownloads": "Offline downloads",
+  "@setupTourBulletDownloads": {
+    "description": "Bullet on the closing setup screen for downloads"
+  },
+  "setupTourBulletMore": "And plenty more",
+  "@setupTourBulletMore": {
+    "description": "Closing bullet on the setup screen settings list"
+  },
+  "runSetupAgain": "Run setup again",
+  "@runSetupAgain": {
+    "description": "Starts the first-run setup wizard again from settings"
   }
 }

@@ -1,0 +1,77 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:moonfin/data/models/aggregated_item.dart';
+import 'package:moonfin/data/services/watch_next_service.dart';
+import 'package:server_core/server_core.dart';
+
+/// Names the image type in the URL so a test can say which one was chosen.
+class _FakeImageApi implements ImageApi {
+  @override
+  String getPrimaryImageUrl(String itemId, {int? maxWidth, int? maxHeight,
+      String? tag}) => 'http://fake/$itemId/Primary';
+
+  @override
+  String getThumbImageUrl(String itemId, {int? maxWidth, String? tag}) =>
+      'http://fake/$itemId/Thumb';
+
+  @override
+  String getBackdropImageUrl(String itemId, {int? maxWidth, int? index,
+      String? tag}) => 'http://fake/$itemId/Backdrop';
+
+  @override
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _FakeClient implements MediaServerClient {
+  final _imageApi = _FakeImageApi();
+
+  @override
+  ImageApi get imageApi => _imageApi;
+
+  @override
+  String? get accessToken => null;
+
+  @override
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+AggregatedItem _movie(Map<String, dynamic> images) => AggregatedItem(
+      id: 'm1',
+      serverId: 's1',
+      rawData: <String, dynamic>{
+        'Id': 'm1',
+        'Name': 'A Movie',
+        'Type': 'Movie',
+        ...images,
+      },
+    );
+
+void main() {
+  final client = _FakeClient();
+
+  String? artFor(AggregatedItem item) =>
+      WatchNextService.buildProgramPayload(item, client)?['posterUri']
+          as String?;
+
+  test('a wide thumb wins, because the launcher card is 16:9', () {
+    final art = artFor(_movie({
+      'ImageTags': {'Thumb': 't', 'Primary': 'p'},
+      'BackdropImageTags': ['b'],
+    }));
+    expect(art, contains('/Thumb'));
+  });
+
+  test('a backdrop stands in when there is no thumb', () {
+    final art = artFor(_movie({
+      'ImageTags': {'Primary': 'p'},
+      'BackdropImageTags': ['b'],
+    }));
+    expect(art, contains('/Backdrop'));
+  });
+
+  test('the upright poster is only the last resort', () {
+    final art = artFor(_movie({
+      'ImageTags': {'Primary': 'p'},
+    }));
+    expect(art, contains('/Primary'));
+  });
+}

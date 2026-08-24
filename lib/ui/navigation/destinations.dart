@@ -62,6 +62,10 @@ class Destinations {
   static const server = '/server';
   static const login = '/login';
 
+  /// First-run setup. Sits between login and home the first time a user lands
+  /// on a server, and is reachable again from About afterwards.
+  static const setup = '/setup';
+
   // General
   static const home = '/home';
   static const search = '/search';
@@ -296,17 +300,31 @@ class Destinations {
   static bool isLiveTvChannelType(String? type) =>
       type == 'TvChannel' || type == 'LiveTvChannel';
 
+  static bool isLiveTvProgramType(String? type) =>
+      type == 'Program' || type == 'LiveTvProgram';
+
   static bool isFolderType(String? type) =>
       type == 'Folder' || type == 'CollectionFolder' || type == 'UserView';
 
   static String liveTvChannel(String channelId) =>
       '$liveTvPlayer?channelId=${Uri.encodeQueryComponent(channelId)}';
 
-  static String itemOrPhoto(String itemId, {String? serverId, String? type}) {
+  static String itemOrPhoto(
+    String itemId, {
+    String? serverId,
+    String? type,
+    String? channelId,
+  }) {
     if (type == 'Photo') return photo(itemId);
     // Channels have no detail screen worth landing on, so go straight to
     // the live player, which resolves the lineup from the id.
     if (isLiveTvChannelType(type)) return liveTvChannel(itemId);
+    // A program is only its channel's current airing. Its own id carries no
+    // media sources, and asking the server for PlaybackInfo on one fails with
+    // a 500, so tune the channel instead.
+    if (isLiveTvProgramType(type) && channelId != null && channelId.isNotEmpty) {
+      return liveTvChannel(channelId);
+    }
     // Folders open their contents rather than a detail screen.
     if (isFolderType(type)) return folder(itemId, serverId: serverId);
     return item(itemId, serverId: serverId);

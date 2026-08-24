@@ -136,7 +136,7 @@ class _HomeRowTogglesScreenState extends State<HomeRowTogglesScreen> {
       builder: (ctx) => StudioSelectionDialog(selectedIdsCsv: currentIds),
     );
     previousFocus?.requestFocus();
-    if (result != null && mounted) {
+    if (result != null && result != currentIds && mounted) {
       await _prefs.set(UserPreferences.studiosRowSelectedIds, result);
       final hasSelected = result.split(',').any((s) => s.trim().isNotEmpty);
       if (hasSelected) {
@@ -1026,18 +1026,22 @@ class _StudioSelectionDialogState extends State<StudioSelectionDialog> {
     }).toList();
   }
 
+  /// Whether every studio in the library is picked, which is what the button
+  /// claims to do, so the filters only decide what is listed and never how
+  /// much the button reaches.
+  bool get _allStudiosSelected =>
+      _allStudios.isNotEmpty &&
+      _allStudios.every((s) => _selectedIds.contains(s['id'] as String));
+
   void _toggleAll() {
-    final filtered = _filteredStudios;
-    final allSelected = filtered.isNotEmpty &&
-        filtered.every((s) => _selectedIds.contains(s['id'] as String));
+    final selectAll = !_allStudiosSelected;
     setState(() {
-      if (allSelected) {
-        for (final s in filtered) {
-          _selectedIds.remove(s['id'] as String);
-        }
-      } else {
-        for (final s in filtered) {
-          _selectedIds.add(s['id'] as String);
+      for (final s in _allStudios) {
+        final id = s['id'] as String;
+        if (selectAll) {
+          _selectedIds.add(id);
+        } else {
+          _selectedIds.remove(id);
         }
       }
     });
@@ -1048,8 +1052,7 @@ class _StudioSelectionDialogState extends State<StudioSelectionDialog> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final filtered = _filteredStudios;
-    final allSelected = filtered.isNotEmpty &&
-        filtered.every((s) => _selectedIds.contains(s['id'] as String));
+    final allSelected = _allStudiosSelected;
 
     return withBackClose(
       context,

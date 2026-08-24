@@ -601,7 +601,7 @@
     "@resume": {
         "description": "Primary action label for resuming reading"
     },
-    "failedToLoadLibrary": "載入庫失敗",
+    "failedToLoadLibrary": "載入媒體庫失敗",
     "@failedToLoadLibrary": {
         "description": "Error when a library cannot be loaded"
     },
@@ -629,7 +629,7 @@
     "@bookHighlightsDescription": {
         "description": "Subtitle for saved highlights section"
     },
-    "handPickedFromLibrary": "從您的圖書館中精心挑選的。",
+    "handPickedFromLibrary": "從媒體庫中精心挑選。",
     "@handPickedFromLibrary": {
         "description": "Subtitle for primary book rail from library"
     },
@@ -657,7 +657,7 @@
     "@searchAudiobooks": {
         "description": "Placeholder text in audiobook search bar"
     },
-    "searchYourLibrary": "搜尋您的圖書館",
+    "searchYourLibrary": "搜尋媒體庫",
     "@searchYourLibrary": {
         "description": "Placeholder text in library search bar"
     },
@@ -806,7 +806,7 @@
     "@seriesStatus": {
         "description": "Section header for series status filter"
     },
-    "allLibraries": "所有圖書館",
+    "allLibraries": "所有媒體庫",
     "@allLibraries": {
         "description": "Label when all libraries are selected"
     },
@@ -1019,7 +1019,7 @@
     "@noBooksFound": {
         "description": "Placeholder when no books are found for an author"
     },
-    "unableToLoadAuthorDetails": "目前無法載入作者詳細資料。",
+    "unableToLoadAuthorDetails": "目前無法載入作者詳細資訊。",
     "@unableToLoadAuthorDetails": {
         "description": "Error message when author details fail to load"
     },
@@ -1891,7 +1891,7 @@
             }
         }
     },
-    "failedToLoadBookDetails": "無法載入書籍詳細資料：{error}",
+    "failedToLoadBookDetails": "無法載入書籍詳細資訊：{error}",
     "@failedToLoadBookDetails": {
         "description": "Error when loading book details fails",
         "placeholders": {
@@ -2282,7 +2282,7 @@
     "@failedToCancelSeriesRecording": {
         "description": "Error when cancelling a series recording fails"
     },
-    "searchThisLibrary": "搜尋這個圖書館...",
+    "searchThisLibrary": "搜尋這個媒體庫...",
     "@searchThisLibrary": {
         "description": "Search hint when scoped to a specific library"
     },
@@ -2336,7 +2336,7 @@
     "@noDownloadedMediaYet": {
         "description": "Shown when no media has been downloaded"
     },
-    "browseLibrary": "瀏覽圖書館",
+    "browseLibrary": "瀏覽媒體庫",
     "@browseLibrary": {
         "description": "Button to navigate to the library"
     },
@@ -3468,7 +3468,7 @@
     "@indigo": {
         "description": "Color: indigo"
     },
-    "libraryDisplay": "圖書館展示",
+    "libraryDisplay": "媒體庫顯示",
     "@libraryDisplay": {
         "description": "Section title for library display settings"
     },
@@ -3484,7 +3484,7 @@
     "@bannerLabel": {
         "description": "Image type: banner"
     },
-    "overridePerLibrarySettings": "覆蓋每個庫的設置",
+    "overridePerLibrarySettings": "覆蓋每個媒體庫的設置",
     "@overridePerLibrarySettings": {
         "description": "Setting for overriding per-library settings"
     },
@@ -3508,7 +3508,7 @@
     "@showFolderBrowsingOption": {
         "description": "Description for folder view"
     },
-    "libraryVisibility": "圖書館可見性",
+    "libraryVisibility": "媒體庫顯示狀態",
     "@libraryVisibility": {
         "description": "Section title for library visibility"
     },
@@ -3641,7 +3641,7 @@
     "@previewAudio": {
         "description": "Setting for preview audio"
     },
-    "enablePreviewAudio": "為預告片和劇集預覽啟用音訊",
+    "enablePreviewAudio": "為媒體預覽啟用音訊",
     "@enablePreviewAudio": {
         "description": "Description for preview audio"
     },
@@ -3801,7 +3801,7 @@
     "@mode": {
         "description": "Setting for mode"
     },
-    "libraryArt": "圖書館藝術",
+    "libraryArt": "媒體庫圖片",
     "@libraryArt": {
         "description": "Screensaver mode: library art"
     },
@@ -4347,11 +4347,11 @@
     "@keep": {
         "description": "Button to keep/dismiss a cancel dialog"
     },
-    "itemNotFoundInLibrary": "在您的 Moonfin 庫中找不到項目",
+    "itemNotFoundInLibrary": "在您的 Moonfin 媒體庫中找不到此項目",
     "@itemNotFoundInLibrary": {
         "description": "Snackbar when Seerr item cannot be found in Jellyfin"
     },
-    "errorSearchingLibrary": "搜尋庫時出錯",
+    "errorSearchingLibrary": "搜尋媒體庫時出錯",
     "@errorSearchingLibrary": {
         "description": "Snackbar when library search fails"
     },
@@ -4640,8 +4640,8 @@
     "adminServerActions": "伺服器操作",
     "adminRestartServer": "重啟伺服器",
     "adminShutdownServer": "關閉伺服器",
-    "adminScanLibraries": "掃描函式庫",
-    "adminLibraryScanStarted": "圖書館掃描開始",
+    "adminScanLibraries": "掃描媒體庫",
+    "adminLibraryScanStarted": "媒體庫掃描已開始",
     "errorGeneric": "錯誤：{error}",
     "@errorGeneric": {
         "placeholders": {
@@ -4721,8 +4721,8 @@
     "adminEditName": "編輯姓名",
     "adminLibrariesLoadFailed": "載入庫失敗",
     "adminNoLibraries": "沒有配置庫",
-    "adminScanAllLibraries": "掃描所有圖書館",
-    "adminAddLibrary": "新增庫",
+    "adminScanAllLibraries": "掃描所有媒體庫",
+    "adminAddLibrary": "新增媒體庫",
     "adminScanFailed": "無法開始掃描：{error}",
     "@adminScanFailed": {
         "placeholders": {
@@ -4731,7 +4731,7 @@
             }
         }
     },
-    "adminRenameLibrary": "重新命名庫",
+    "adminRenameLibrary": "重新命名媒體庫",
     "adminNewName": "新名稱",
     "adminLibraryRenamed": "媒體庫已重新命名為「{name}」",
     "@adminLibraryRenamed": {
@@ -4749,7 +4749,7 @@
             }
         }
     },
-    "adminDeleteLibrary": "刪除庫",
+    "adminDeleteLibrary": "刪除媒體庫",
     "adminLibraryDeleted": "已刪除媒體庫「{name}」",
     "@adminLibraryDeleted": {
         "placeholders": {
@@ -4775,7 +4775,7 @@
         }
     },
     "adminRemovePath": "刪除路徑",
-    "adminRemovePathConfirm": "要從此媒體庫移除「{path}」嗎？",
+    "adminRemovePathConfirm": "從此媒體庫中移除「{path}」嗎？",
     "@adminRemovePathConfirm": {
         "placeholders": {
             "path": {
@@ -4791,7 +4791,7 @@
             }
         }
     },
-    "adminLibraryOptionsSaved": "已儲存庫選項",
+    "adminLibraryOptionsSaved": "媒體庫選項已儲存",
     "adminLibraryOptionsSaveFailed": "無法儲存選項：{error}",
     "@adminLibraryOptionsSaveFailed": {
         "placeholders": {
@@ -4800,7 +4800,7 @@
             }
         }
     },
-    "adminLibraryLoadFailed": "載入庫失敗",
+    "adminLibraryLoadFailed": "載入媒體庫失敗",
     "adminNoMediaPaths": "未配置媒體路徑",
     "adminAddPath": "新增路徑",
     "adminBrowseFilesystem": "瀏覽伺服器檔案系統：",
@@ -4809,7 +4809,7 @@
     "adminMetadataLanguageHint": "例如英語、德語、法語",
     "adminMetadataCountryCode": "元數據國家代碼",
     "adminMetadataCountryHint": "例如美國、德國、法國",
-    "adminLibraryNameRequired": "庫名稱為必填項",
+    "adminLibraryNameRequired": "媒體庫名稱為必填項",
     "adminLibraryCreateFailed": "無法建立媒體庫：{error}",
     "@adminLibraryCreateFailed": {
         "placeholders": {
@@ -4818,10 +4818,10 @@
             }
         }
     },
-    "adminLibraryName": "圖書館名稱",
+    "adminLibraryName": "媒體庫名稱",
     "adminSelectedPaths": "選定的路徑：",
     "adminNoPathsAdded": "未新增路徑（可以稍後新增）",
-    "adminCreateLibrary": "建立庫",
+    "adminCreateLibrary": "建立媒體庫",
     "paths": "路徑：",
     "adminDisableUser": "停用用戶",
     "adminEnableUser": "啟用用戶",
@@ -4928,7 +4928,7 @@
     "adminAllowSubtitleManagement": "允許字幕管理",
     "adminAllowLyricManagement": "允許歌詞管理",
     "adminSavePermissions": "保存權限",
-    "adminEnableAllLibraryAccess": "允許存取所有庫",
+    "adminEnableAllLibraryAccess": "允許存取所有媒體庫",
     "adminSaveAccess": "儲存存取權限",
     "adminChangePassword": "更改密碼",
     "adminNewPassword": "新密碼",
@@ -4938,7 +4938,7 @@
     "adminPasswordReset": "密碼重設",
     "adminPasswordUpdated": "密碼已更新",
     "adminUserSettings": "使用者設定",
-    "adminLibraryAccess": "圖書館訪問",
+    "adminLibraryAccess": "媒體庫存取",
     "adminDeviceAndChannelAccess": "設備和通道訪問",
     "adminEnableAllDevices": "啟用對所有裝置的訪問",
     "adminEnableAllChannels": "允許存取所有頻道",
@@ -5336,7 +5336,7 @@
     "adminPreferredMetadataCountry": "首選元數據國家/地區",
     "adminCachePath": "快取路徑",
     "adminMetadataPath": "元資料路徑",
-    "adminLibraryScanConcurrency": "庫掃描並行",
+    "adminLibraryScanConcurrency": "媒體庫並行掃描數",
     "adminParallelImageEncodingLimit": "並行圖像編碼限制",
     "adminSlowResponseThreshold": "慢響應閾值（毫秒）",
     "adminBrandingSaved": "已儲存品牌設定",
@@ -5653,7 +5653,7 @@
     "adminSettingsSaved": "設定已儲存",
     "adminBackupsNotAvailable": "備份在此伺服器版本上不可用。",
     "adminRestoreWarning1": "恢復將用備份資料替換所有當前伺服器資料。",
-    "adminRestoreWarning2": "目前的伺服器設定、使用者和庫資料將被覆蓋。",
+    "adminRestoreWarning2": "目前的伺服器設定、使用者和媒體庫資料將被覆蓋。",
     "adminRestoreWarning3": "恢復後伺服器將重新啟動。",
     "adminRestoreConfirmMessage": "要立即還原備份 {name} 嗎？",
     "@adminRestoreConfirmMessage": {
@@ -5918,7 +5918,7 @@
     "adminGeneralMetadataLanguageHint": "例如英語、德語、法語",
     "adminGeneralMetadataCountry": "首選元數據國家/地區",
     "adminGeneralMetadataCountryHint": "例如美國、德國、法國",
-    "adminGeneralLibraryScanConcurrency": "庫掃描並行",
+    "adminGeneralLibraryScanConcurrency": "媒體庫並行掃描數",
     "adminGeneralImageEncodingLimit": "並行圖像編碼限制",
     "adminUnknownError": "未知錯誤",
     "adminBrowse": "瀏覽",
@@ -6232,7 +6232,7 @@
         }
     },
     "syncPlayAccessDeniedTitle": "SyncPlay 存取被拒絕",
-    "syncPlayAccessDeniedMessage": "您無權存取此 SyncPlay 群組中的一項或多項。請群組擁有者驗證庫權限或選擇其他佇列。",
+    "syncPlayAccessDeniedMessage": "您無權存取此 SyncPlay 群組中的一項或多項。請群組擁有者驗證媒體庫權限或選擇其他佇列。",
     "syncPlaySyncingPlaybackToGroup": "正在將播放同步至 {groupName}",
     "@syncPlaySyncingPlaybackToGroup": {
         "description": "Snackbar message shown when starting playback in a SyncPlay group",
@@ -6393,7 +6393,7 @@
     "trackActionDeletedFile": "已刪除下載的文件",
     "trackActionDeleteFileFailed": "無法刪除下載的文件",
     "shuffleBy": "隨機播放",
-    "shuffleSelectLibrary": "選擇庫",
+    "shuffleSelectLibrary": "選擇媒體庫",
     "shuffleSelectGenre": "選擇類型",
     "shuffleLibrary": "媒體庫",
     "shuffleGenre": "類型",
@@ -6412,7 +6412,7 @@
     "playlistNoneFound": "未找到播放列表",
     "addToPlaylist": "新增到播放列表",
     "lyricsNotAvailable": "沒有可用的歌詞",
-    "upNext": "接下來",
+    "upNext": "即將播放",
     "playNext": "播放下一個",
     "stillWatchingContent": "播放已暫停。你還在看嗎？",
     "stillWatchingStop": "停止",
@@ -6532,7 +6532,7 @@
     "settingsGeneralStyleSubtitle": "主題口音、背景、觀看指示器和主題音樂",
     "settingsHomePage": "首頁",
     "settingsHomePageSubtitle": "首頁區段、圖片類型、浮層和媒體預覽",
-    "settingsLibrariesSubtitle": "庫可見性、資料夾視圖和多伺服器行為",
+    "settingsLibrariesSubtitle": "媒體庫顯示、資料夾檢視和多伺服器行為",
     "settingsTwentyFourHourClock": "24 小時制",
     "settingsTwentyFourHourClockSubtitle": "無論何時顯示時鐘，都使用 24 小時時間格式",
     "settingsShowShuffleButtonInNavigation": "在導覽列中顯示隨機播放按鈕",
@@ -7113,7 +7113,7 @@
             }
         }
     },
-    "webDiagnosticsDetail": "詳細資料：{detail}",
+    "webDiagnosticsDetail": "詳細資訊：{detail}",
     "@webDiagnosticsDetail": {
         "description": "Error detail shown in diagnostics summary",
         "placeholders": {
@@ -7201,7 +7201,7 @@
         }
     },
     "analyticsNoIndexedMediaTotals": "此選擇尚無可用的已建立索引媒體總數。",
-    "analyticsLibraryDetails": "媒體庫詳細資料",
+    "analyticsLibraryDetails": "媒體庫詳細資訊",
     "analyticsLibraryBreakdown": "媒體庫細目",
     "analyticsNoLibrariesAvailable": "沒有可用的媒體庫。",
     "adminServerAdministrationTitle": "伺服器管理",
@@ -7326,7 +7326,7 @@
     "@empty": {
         "description": "Label indicating a section or category is empty"
     },
-    "detailScreenStyle": "詳細資料頁樣式",
+    "detailScreenStyle": "詳細資訊頁樣式",
     "@detailScreenStyle": {
         "description": "Label for the media detail screen layout style setting"
     },
@@ -7829,7 +7829,7 @@
     "@subtitleModeForced": {
         "description": "Subtitle mode: only forced"
     },
-    "subtitleModeFlaggedDescription": "播放在媒體檔案中繼資料中標示為「default」或「forced」的字幕軌。",
+    "subtitleModeFlaggedDescription": "播放媒體檔案中繼資料標記為「預設」或「強制」的字幕軌。",
     "@subtitleModeFlaggedDescription": {
         "description": "Description for flagged subtitle mode"
     },
@@ -7841,7 +7841,7 @@
     "@subtitleModeForeignDescription": {
         "description": "Description for foreign subtitle mode"
     },
-    "subtitleModeForcedDescription": "僅載入明確標示 forced 中繼資料旗標的字幕。",
+    "subtitleModeForcedDescription": "僅載入明確標記為「強制」的字幕。",
     "@subtitleModeForcedDescription": {
         "description": "Description for forced subtitle mode"
     },
@@ -8532,7 +8532,7 @@
     "@settingsAllowSelfSignedCertsSubtitle": {
         "description": "Description for the allow self-signed certificates setting"
     },
-    "settingsDetailsScreen": "詳細資料頁",
+    "settingsDetailsScreen": "詳細資訊頁",
     "settingsDetailsScreenSubtitle": "樣式、背景模糊與分頁行為",
     "settingsShowSeerrButtonInNavigation": "在導覽列中顯示 Seerr 按鈕",
     "settingsAlwaysExpandNavbarLabels": "在頂端導覽列中一律顯示文字標籤",
@@ -8569,11 +8569,11 @@
     "@enableTunnelingSubtitle": {
         "description": "Setting subtitle for enable tunneling"
     },
-    "showMediaDetailsOnLibraryPage": "顯示媒體詳細資料",
+    "showMediaDetailsOnLibraryPage": "顯示媒體詳細資訊",
     "@showMediaDetailsOnLibraryPage": {
         "description": "Setting title to show/hide focused media details at the top of the library page"
     },
-    "showMediaDetailsOnLibraryPageDescription": "在媒體庫頁面頂端顯示所選項目的詳細資料。",
+    "showMediaDetailsOnLibraryPageDescription": "在媒體庫頁面頂端顯示所選項目的詳細資訊。",
     "@showMediaDetailsOnLibraryPageDescription": {
         "description": "Setting description to show/hide focused media details at the top of the library page"
     },
@@ -9049,5 +9049,9 @@
     "homeRowsPaddingDescription": "自訂首頁列之間的內邊距",
     "@homeRowsPaddingDescription": {
         "description": "Description for home rows padding setting"
+    },
+    "settingsAudioPassthroughMode": "直通",
+    "@settingsAudioPassthroughMode": {
+        "description": "Title of the audio passthrough mode selector"
     }
 }

@@ -470,6 +470,7 @@ class _ShuffleOverlayState extends State<_ShuffleOverlay> {
       item.id,
       serverId: item.serverId,
       type: item.type,
+      channelId: item.channelId,
     );
     final router = GoRouter.of(context);
     Navigator.of(context, rootNavigator: true).pop();

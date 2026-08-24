@@ -574,6 +574,9 @@ class MediaKitPlayerBackend extends PlayerBackend {
       // mpv decodes all advertised audio codecs in software and downmixes
       // locally, so stereo routes never need a server-side audio transcode.
       universalAudioDecode: true,
+      // The Android libmpv is built without the TrueHD and MLP decoders. The
+      // Windows and Linux builds have them.
+      playerDecodesTrueHd: !PlatformDetection.isAndroid,
       maxResolution: maxResolution,
       pgsDirectPlay:
           _prefs.get(UserPreferences.pgsDirectPlay) && canRenderBitmapSubtitles,
@@ -618,6 +621,7 @@ class MediaKitPlayerBackend extends PlayerBackend {
     Duration startPosition = Duration.zero,
   }) async {
     final payload = mediaItem is Map ? mediaItem : const <String, dynamic>{};
+    final autoPlay = payload['autoPlay'] != false;
     final url = mediaItem is String
         ? mediaItem
         : payload['url']?.toString() ?? '';
@@ -646,7 +650,7 @@ class MediaKitPlayerBackend extends PlayerBackend {
     }
 
     final media = Media(url);
-    final openPaused = startPosition > Duration.zero;
+    final openPaused = !autoPlay || startPosition > Duration.zero;
     await _player.open(media, play: !openPaused);
     _updateStaleState();
     await _applyLinuxHwdecFallbackIfNeeded(media, openPaused: openPaused);

@@ -225,7 +225,14 @@ Widget buildSettingsSelectionBubble(
   final theme = Theme.of(context);
   final colorScheme = theme.colorScheme;
   final invert = focused && settingsTileInvertsOnFocus;
+  // ListTile hands its trailing whatever width it asks for and leaves the
+  // title the rest, so an uncapped long label crushes the title to a sliver.
+  final maxBubbleWidth = (MediaQuery.sizeOf(context).width * 0.42).clamp(
+    120.0,
+    280.0,
+  );
   return Container(
+    constraints: BoxConstraints(maxWidth: maxBubbleWidth),
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
     decoration: BoxDecoration(
       color: invert
@@ -242,6 +249,8 @@ Widget buildSettingsSelectionBubble(
     child: Text(
       label,
       textAlign: TextAlign.center,
+      maxLines: 3,
+      overflow: TextOverflow.ellipsis,
       style: theme.textTheme.labelMedium?.copyWith(
         color: invert
             ? AppColors.black.withValues(alpha: 0.87)
@@ -968,6 +977,10 @@ class IntPickerPreferenceTile extends StatefulWidget {
   final String? description;
   final IconData? icon;
   final Map<int, String> options;
+
+  /// Longer wording for the picker rows, where there is room to explain what
+  /// an option means. The chip falls back to [options] when absent.
+  final Map<int, String>? dialogOptions;
   final VoidCallback? onChanged;
 
   const IntPickerPreferenceTile({
@@ -975,6 +988,7 @@ class IntPickerPreferenceTile extends StatefulWidget {
     required this.preference,
     required this.title,
     required this.options,
+    this.dialogOptions,
     this.description,
     this.icon,
     this.onChanged,
@@ -1070,7 +1084,10 @@ class _IntPickerPreferenceTileState extends State<IntPickerPreferenceTile> {
             return TvFocusHighlight(
               builder: (_, _) => ListTile(
                 autofocus: i == autofocusIndex,
-                title: Text(e.value, style: _kSettingsTitleTextStyle),
+                title: Text(
+                  widget.dialogOptions?[e.key] ?? e.value,
+                  style: _kSettingsTitleTextStyle,
+                ),
                 trailing: selected ? const Icon(Icons.check) : null,
                 onTap: () {
                   if (picked) return;

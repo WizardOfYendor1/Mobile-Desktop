@@ -9,6 +9,20 @@ import 'queue_service.dart';
 import 'stream_resolution_result.dart';
 import 'track_ordinal_mapper.dart';
 
+class _ProgressGeneration {
+  _ProgressGeneration({
+    required this.item,
+    required this.resolution,
+    required this.service,
+  });
+
+  final dynamic item;
+  final StreamResolutionResult resolution;
+  final PlayerService? service;
+  bool ended = false;
+  Duration stopPosition = Duration.zero;
+}
+
 class PlaybackManager implements AudioOwnable {
   static const _mediaReadyPollInterval = Duration(milliseconds: 100);
   static const _defaultMediaReadyTimeout = Duration(seconds: 60);
@@ -45,6 +59,7 @@ class PlaybackManager implements AudioOwnable {
   final Set<PlayerBackend> _retainedBackends = <PlayerBackend>{};
   final List<StreamSubscription> _streamSubs = [];
   Timer? _progressTimer;
+  _ProgressGeneration? _progressGeneration;
   StreamResolutionResult? _currentResolution;
   dynamic _lastPlaybackItem;
   StreamResolutionResult? _lastPlaybackResolution;
@@ -89,7 +104,7 @@ class PlaybackManager implements AudioOwnable {
   Future<void> Function()? _onOfflineStop;
   Future<void> Function(String url)? _onOfflineAutoNext;
   Map<String, Map<String, dynamic>> _offlineMetadataByUrl = {};
-  Future<void>? _stopInFlight;
+  Future<bool>? _stopInFlight;
   int _playbackSessionToken = 0;
   Future<void>? _externalSubsLoaded;
   Duration _deferredStartPosition = Duration.zero;
@@ -287,6 +302,7 @@ class PlaybackManager implements AudioOwnable {
     double? normalizationGainDb,
     String? hybridAudioUrl,
     bool isLive = false,
+    bool autoPlay = true,
   }) {
     final resolvedMediaType = mediaType?.trim().toLowerCase();
 
@@ -318,6 +334,16 @@ class PlaybackManager implements AudioOwnable {
         .where((s) => s['Type'] == 'Video')
         .firstOrNull;
 
+    // Some servers report only the average, so it stands in when the real
+    // rate is missing.
+    final realRate = videoStream?['RealFrameRate'];
+    final averageRate = videoStream?['AverageFrameRate'];
+    final videoFrameRate = realRate is num
+        ? realRate.toDouble()
+        : averageRate is num
+        ? averageRate.toDouble()
+        : null;
+
     final audioStreamLang = _extractLanguage(audioStream);
     final subtitleStreamLang = _extractLanguage(subtitleStream);
 
@@ -339,6 +365,7 @@ class PlaybackManager implements AudioOwnable {
 
     return <String, dynamic>{
       'url': url,
+      'autoPlay': autoPlay,
       if (container != null && container.isNotEmpty) 'container': container,
       if (videoRangeType != null && videoRangeType.isNotEmpty)
         'videoRangeType': videoRangeType,
@@ -354,8 +381,7 @@ class PlaybackManager implements AudioOwnable {
         'preferredTextLanguage': subtitleStreamLang,
       if (videoStream != null && videoStream['DvProfile'] is int)
         'videoDvProfile': videoStream['DvProfile'],
-      if (videoStream != null && videoStream['RealFrameRate'] is num)
-        'videoFrameRate': (videoStream['RealFrameRate'] as num).toDouble(),
+      if (videoFrameRate != null) 'videoFrameRate': videoFrameRate,
       if (videoStream != null && videoStream['Width'] is int)
         'videoWidth': videoStream['Width'],
       if (videoStream != null && videoStream['Height'] is int)
@@ -611,6 +637,25 @@ class PlaybackManager implements AudioOwnable {
     _streamSubs.clear();
   }
 
+  /// The highest bitrate any of [item]'s sources needs, or null when the item
+  /// does not say. Read duck-typed like the rest of the item, so a queue entry
+  /// that is only an id costs nothing.
+  int? _sourceBitrate(dynamic item) {
+    try {
+      final mediaSources = item.mediaSources as List?;
+      if (mediaSources == null) return null;
+      var highest = 0;
+      for (final source in mediaSources) {
+        if (source is! Map) continue;
+        final bitrate = source['Bitrate'];
+        if (bitrate is num && bitrate > highest) highest = bitrate.toInt();
+      }
+      return highest > 0 ? highest : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Duration _resolvedItemDuration(dynamic item, String? mediaSourceId) {
     if (mediaSourceId != null) {
       try {
@@ -841,7 +886,10 @@ class PlaybackManager implements AudioOwnable {
     Future<void> recoverViaTranscode() async {
       _unsupportedAudioRecoveryInFlight = true;
       try {
-        await _reResolveAtCurrentPosition(forceTranscode: true);
+        await _reResolveAtCurrentPosition(
+          forceTranscode: true,
+          isErrorRecovery: true,
+        );
       } catch (_) {
         emitFailedBringupState('Playback failed.');
       } finally {
@@ -1065,9 +1113,15 @@ class PlaybackManager implements AudioOwnable {
     bool enableDirectPlay = true,
     bool enableDirectStream = true,
     bool enableTranscoding = true,
+    bool freshResolution = false,
   }) async {
     _deferredStartPosition = Duration.zero;
     _deferPlaybackToExternalPlayer = false;
+    if (freshResolution) {
+      // A background timeout has ended ownership of the old source. Do not
+      // carry its selected source into the new PlaybackInfo request.
+      _mediaSourceId = null;
+    }
     await _playCurrentItem(
       startPosition: startPosition,
       enableDirectPlay: enableDirectPlay,
@@ -1097,6 +1151,7 @@ class PlaybackManager implements AudioOwnable {
     bool enableDirectStream = true,
     bool enableTranscoding = true,
     bool allowStartupRecovery = true,
+    bool autoPlay = true,
   }) async {
     _deferredStartPosition = Duration.zero;
     _deferPlaybackToExternalPlayer = false;
@@ -1173,8 +1228,18 @@ class PlaybackManager implements AudioOwnable {
       final measured = await autoBitrateProvider!();
       if (sessionToken != _playbackSessionToken) return;
       if (measured != null && measured > 0) {
-        maxBitrate = measured;
-        profile['MaxStreamingBitrate'] = measured;
+        // The measurement bounds how heavy a transcode the server is asked
+        // for, but the server reads it as a ceiling on direct play too, and a
+        // short sample under-reads a fast link. A source that outruns it keeps
+        // the uncapped request rather than becoming a transcode nothing asked
+        // for.
+        final sourceBps = _sourceBitrate(item);
+        final vetoesDirectPlay =
+            enableDirectPlay && sourceBps != null && sourceBps > measured;
+        if (!vetoesDirectPlay) {
+          maxBitrate = measured;
+          profile['MaxStreamingBitrate'] = measured;
+        }
       }
     }
 
@@ -1314,6 +1379,7 @@ class PlaybackManager implements AudioOwnable {
           enableDirectStream: enableDirectStream,
           enableTranscoding: enableTranscoding,
           allowStartupRecovery: allowStartupRecovery,
+          autoPlay: autoPlay,
         );
         return;
       } finally {
@@ -1433,6 +1499,7 @@ class PlaybackManager implements AudioOwnable {
         normalizationGainDb: resolution.normalizationGainDb,
         hybridAudioUrl: resolution.hybridAudioUrl,
         isLive: resolution.liveStreamId != null,
+        autoPlay: autoPlay,
       );
       await _arbiter?.acquire(AudioProducer.mainPlayback);
       if (sessionToken != _playbackSessionToken) {
@@ -1551,6 +1618,7 @@ class PlaybackManager implements AudioOwnable {
               : enableDirectStream,
           enableTranscoding: forceTranscodeFallback ? true : enableTranscoding,
           allowStartupRecovery: false,
+          autoPlay: autoPlay,
         );
         return;
       }
@@ -1591,7 +1659,10 @@ class PlaybackManager implements AudioOwnable {
           playMethod: resolution.playMethod.name,
         ),
       );
-      await _seekWhilePausedAndResume(startPosition);
+      await _seekWhilePausedAndMaybeResume(
+        startPosition,
+        resumeAfterSeek: autoPlay,
+      );
     }
 
     if (resolution.externalSubtitles.isNotEmpty) {
@@ -1669,19 +1740,92 @@ class PlaybackManager implements AudioOwnable {
 
   void _startProgressTimer() {
     _stopProgressTimer();
+    final item = queueService.currentItem;
+    final resolution = _currentResolution;
+    if (item == null || resolution == null) return;
+
+    var generation = _progressGeneration;
+    if (generation == null ||
+        generation.ended ||
+        !identical(generation.item, item) ||
+        !identical(generation.resolution, resolution)) {
+      if (generation != null && !generation.ended) {
+        _retireProgressGeneration(generation, currentPlaybackPosition);
+        _issuePlaybackStop(generation);
+      }
+      generation = _ProgressGeneration(
+        item: item,
+        resolution: resolution,
+        service: _service,
+      );
+      _progressGeneration = generation;
+    }
+
+    final activeGeneration = generation;
     _progressTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      final item = queueService.currentItem;
-      final resolution = _currentResolution;
-      if (item == null || resolution == null) return;
-      _service?.onPlaybackProgress(
-        item,
-        resolution,
-        state.position,
-        isPaused: !state.isPlaying,
-        audioStreamIndex: _audioStreamIndex,
-        subtitleStreamIndex: _subtitleStreamIndex,
+      if (activeGeneration.ended ||
+          !identical(_progressGeneration, activeGeneration)) {
+        return;
+      }
+      Future<void>? progress;
+      try {
+        progress = activeGeneration.service?.onPlaybackProgress(
+          activeGeneration.item,
+          activeGeneration.resolution,
+          state.position,
+          isPaused: !state.isPlaying,
+          audioStreamIndex: _audioStreamIndex,
+          subtitleStreamIndex: _subtitleStreamIndex,
+        );
+      } catch (_) {
+        return;
+      }
+      if (progress == null) return;
+      unawaited(
+        progress.then<void>(
+          (_) => _progressSettled(activeGeneration),
+          onError: (Object _, StackTrace _) =>
+              _progressSettled(activeGeneration),
+        ),
       );
     });
+  }
+
+  void _progressSettled(_ProgressGeneration generation) {
+    if (generation.ended) {
+      // The request may have reached the server after the original stop. A
+      // second stop, scoped to this generation's old PlaySessionId, ensures
+      // that no late progress report can be the server's final state.
+      _issuePlaybackStop(generation);
+    }
+  }
+
+  void _retireProgressGeneration(
+    _ProgressGeneration generation,
+    Duration position,
+  ) {
+    generation
+      ..ended = true
+      ..stopPosition = position;
+    if (identical(_progressGeneration, generation)) {
+      _progressGeneration = null;
+    }
+  }
+
+  void _issuePlaybackStop(_ProgressGeneration generation) {
+    final service = generation.service;
+    if (service == null) return;
+    try {
+      unawaited(
+        service
+            .onPlaybackStop(
+              generation.item,
+              generation.resolution,
+              generation.stopPosition,
+            )
+            .catchError((_) {}),
+      );
+    } catch (_) {}
   }
 
   void _stopProgressTimer() {
@@ -1729,7 +1873,10 @@ class PlaybackManager implements AudioOwnable {
     return false;
   }
 
-  Future<void> _seekWhilePausedAndResume(Duration position) async {
+  Future<void> _seekWhilePausedAndMaybeResume(
+    Duration position, {
+    bool resumeAfterSeek = true,
+  }) async {
     await _backend!.seekTo(position);
     for (var i = 0; i < 50; i++) {
       await Future.delayed(const Duration(milliseconds: 100));
@@ -1737,12 +1884,29 @@ class PlaybackManager implements AudioOwnable {
         break;
       }
     }
-    await _backend!.resume();
+
+    if (resumeAfterSeek) {
+      await _backend!.resume();
+    }
   }
 
   Future<void> stop({bool userInitiated = true}) async {
     if (userInitiated && await _maybeIntercept(TransportAction.stop)) return;
     await _stopAndReportCurrent();
+  }
+
+  /// Ends the server/backend ownership of a backgrounded video while keeping
+  /// the expected queued item available for a fresh resolution on return.
+  Future<bool> stopForBackground(dynamic expectedItem) async {
+    if (_stopInFlight != null ||
+        !identical(queueService.currentItem, expectedItem)) {
+      return false;
+    }
+    return _stopAndReportCurrent(
+      skipQueueChange: true,
+      expectedItem: expectedItem,
+      releaseServerResources: true,
+    );
   }
 
   Future<void> seekTo(Duration position) async {
@@ -2215,17 +2379,25 @@ class PlaybackManager implements AudioOwnable {
     bool isErrorRecovery = false,
   }) {
     final previous = _reResolveQueue;
+
     final run = () async {
       if (previous != null) {
         try {
           await previous;
         } catch (_) {}
       }
+
+      final autoPlayAfterResolve = isErrorRecovery
+          ? true
+          : (_backend?.isPlaying ?? state.isPlaying);
+
       await _reResolveNow(
         forceTranscode: forceTranscode,
         isErrorRecovery: isErrorRecovery,
+        autoPlayAfterResolve: autoPlayAfterResolve,
       );
     }();
+
     _reResolveQueue = run;
     return run;
   }
@@ -2233,6 +2405,7 @@ class PlaybackManager implements AudioOwnable {
   Future<void> _reResolveNow({
     required bool forceTranscode,
     required bool isErrorRecovery,
+    required bool autoPlayAfterResolve,
   }) async {
     final backendPos = _backend?.position ?? Duration.zero;
     final currentPos = Duration(
@@ -2245,6 +2418,10 @@ class PlaybackManager implements AudioOwnable {
     _stopProgressTimer();
     final item = queueService.currentItem ?? _lastPlaybackItem;
     final resolution = _currentResolution ?? _lastPlaybackResolution;
+    final progressGeneration = _progressGeneration;
+    if (progressGeneration != null) {
+      _retireProgressGeneration(progressGeneration, currentPos);
+    }
     _currentResolution = null;
 
     // Stop the backend before tearing down the server session so the old
@@ -2286,6 +2463,7 @@ class PlaybackManager implements AudioOwnable {
         startPosition: currentPos,
         enableDirectPlay: !forceTranscode,
         enableDirectStream: !forceTranscode,
+        autoPlay: autoPlayAfterResolve,
       );
     } finally {
       _teardownForReResolve = false;
@@ -2578,18 +2756,26 @@ class PlaybackManager implements AudioOwnable {
     }
 
     if (startPosition > Duration.zero) {
-      await _seekWhilePausedAndResume(startPosition);
+      await _seekWhilePausedAndMaybeResume(startPosition);
     }
   }
 
-  Future<void> _stopAndReportCurrent({bool skipQueueChange = false}) async {
+  Future<bool> _stopAndReportCurrent({
+    bool skipQueueChange = false,
+    dynamic expectedItem,
+    bool releaseServerResources = false,
+  }) async {
     final existingStop = _stopInFlight;
     if (existingStop != null) {
       await existingStop;
-      return;
+      return false;
     }
 
     final stopFuture = (() async {
+      if (expectedItem != null &&
+          !identical(queueService.currentItem, expectedItem)) {
+        return false;
+      }
       _deferredStartPosition = Duration.zero;
       _deferPlaybackToExternalPlayer = false;
       _playbackSessionToken++;
@@ -2603,7 +2789,7 @@ class PlaybackManager implements AudioOwnable {
           state.reset();
           _setBringupState(const PlaybackBringupState.idle());
         }
-        return;
+        return true;
       }
       if (_isOfflinePlayback) {
         if (!skipQueueChange) {
@@ -2622,21 +2808,44 @@ class PlaybackManager implements AudioOwnable {
           state.reset();
           _setBringupState(const PlaybackBringupState.idle());
         }
-        return;
+        return true;
       }
       final item = queueService.currentItem;
       final resolution = _currentResolution ?? _lastPlaybackResolution;
       final reportItem = item ?? _lastPlaybackItem;
+      final backendPos = _backend?.position ?? Duration.zero;
+      final pos = Duration(
+        microseconds: [
+          backendPos.inMicroseconds,
+          state.position.inMicroseconds,
+          _lastKnownPosition.inMicroseconds,
+        ].reduce((a, b) => a > b ? a : b),
+      );
+      final progressGeneration = _progressGeneration;
+      if (progressGeneration != null) {
+        _retireProgressGeneration(progressGeneration, pos);
+      }
       if (reportItem != null && resolution != null) {
-        final backendPos = _backend?.position ?? Duration.zero;
-        final pos = Duration(
-          microseconds: [
-            backendPos.inMicroseconds,
-            state.position.inMicroseconds,
-            _lastKnownPosition.inMicroseconds,
-          ].reduce((a, b) => a > b ? a : b),
-        );
-        unawaited(_service?.onPlaybackStop(reportItem, resolution, pos).catchError((_) => null));
+        if (progressGeneration != null &&
+            identical(progressGeneration.item, reportItem) &&
+            identical(progressGeneration.resolution, resolution)) {
+          _issuePlaybackStop(progressGeneration);
+        } else {
+          try {
+            unawaited(
+              _service
+                      ?.onPlaybackStop(reportItem, resolution, pos)
+                      .catchError((_) {}) ??
+                  Future<void>.value(),
+            );
+          } catch (_) {}
+        }
+        if (releaseServerResources &&
+            resolution.playMethod != StreamPlayMethod.directPlay) {
+          try {
+            unawaited(_service?.stopTranscoding(resolution).catchError((_) {}));
+          } catch (_) {}
+        }
       }
       _currentResolution = null;
       _lastPlaybackItem = null;
@@ -2651,11 +2860,12 @@ class PlaybackManager implements AudioOwnable {
         state.reset();
         _setBringupState(const PlaybackBringupState.idle());
       }
+      return true;
     })();
 
     _stopInFlight = stopFuture;
     try {
-      await stopFuture;
+      return await stopFuture;
     } finally {
       if (identical(_stopInFlight, stopFuture)) {
         _stopInFlight = null;

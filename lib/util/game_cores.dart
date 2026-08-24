@@ -162,7 +162,6 @@ const List<GameCore> gameCoreCatalog = [
     system: 'Arcade (FBNeo)',
     approxSizeMb: 16,
     emulatorJsSystemCores: {'arcade'},
-    bundledOnApple: true,
   ),
   GameCore(
     coreId: 'mupen64plus_next',

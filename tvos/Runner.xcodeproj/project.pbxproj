@@ -25,6 +25,7 @@
 		5CE155E72FDE599A002FEC36 /* AVKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5CE155E62FDE599A002FEC36 /* AVKit.framework */; };
 		63160795D06DD3057225A07E /* libass in Frameworks */ = {isa = PBXBuildFile; productRef = 6839BF2ED5903422B72FBF8A /* libass */; };
 		6E8429C73DFB8688BD40C60F /* AppleTvSystemChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0D05FC70CE4F8BD2EC3962C /* AppleTvSystemChannel.swift */; };
+		B442A32AFF52482C82DC7435 /* SiriRemotePressGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 831094325F3C44B3BF9FCEF1 /* SiriRemotePressGate.swift */; };
 		78EF4B6DD80648BB6CCD5C58 /* AssRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A047E16625CE2E99DE21DFF8 /* AssRenderer.swift */; };
 		7A8BDAB827D12F39CAF7401E /* AetherEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 7AFE3931A7703B48EA41DA54 /* AetherEngine */; };
 		81DCCA41EF933CEC711C17AF /* genesis_plus_gx_libretro.framework in Embed Libretro Cores */ = {isa = PBXBuildFile; fileRef = 3D25A3FF43C9B94D5ED8A397 /* genesis_plus_gx_libretro.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -143,6 +144,7 @@
 		9FB2A16267CCEF78E57FCBBF /* AetherVideoChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AetherVideoChannel.swift; path = Aether/AetherVideoChannel.swift; sourceTree = "<group>"; };
 		A047E16625CE2E99DE21DFF8 /* AssRenderer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AssRenderer.swift; path = Aether/AssRenderer.swift; sourceTree = "<group>"; };
 		A0D05FC70CE4F8BD2EC3962C /* AppleTvSystemChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppleTvSystemChannel.swift; sourceTree = "<group>"; };
+		831094325F3C44B3BF9FCEF1 /* SiriRemotePressGate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SiriRemotePressGate.swift; sourceTree = "<group>"; };
 		AAA000000000000000000003 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		ACEF4B8C13F871646DA3AA02 /* ServiceProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ServiceProvider.swift; sourceTree = "<group>"; };
 		AD10AD10AD10AD10AD100002 /* AppleTvAudioChannel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppleTvAudioChannel.swift; sourceTree = "<group>"; };
@@ -294,6 +296,7 @@
 				2D0DB225C5FD5F802D648CC0 /* TopShelfChannel.swift */,
 				5B3D4A2E4C583DF7B8CAE4BA /* AppleTvPreviewChannel.swift */,
 				A0D05FC70CE4F8BD2EC3962C /* AppleTvSystemChannel.swift */,
+				831094325F3C44B3BF9FCEF1 /* SiriRemotePressGate.swift */,
 				AD10AD10AD10AD10AD100002 /* AppleTvAudioChannel.swift */,
 				AD10AD10AD10AD10AD100004 /* AppleTvThemeMusicChannel.swift */,
 				4790983D8AB5249022D779CA /* Games */,
@@ -527,6 +530,7 @@
 				991C71B70423D0CB846BAF6C /* TopShelfChannel.swift in Sources */,
 				86EBDA29EC9F3F8B48EC6A25 /* AppleTvPreviewChannel.swift in Sources */,
 				6E8429C73DFB8688BD40C60F /* AppleTvSystemChannel.swift in Sources */,
+				B442A32AFF52482C82DC7435 /* SiriRemotePressGate.swift in Sources */,
 				AD10AD10AD10AD10AD100001 /* AppleTvAudioChannel.swift in Sources */,
 				AD10AD10AD10AD10AD100003 /* AppleTvThemeMusicChannel.swift in Sources */,
 				0BB4A7E017A41C2DC92AA740 /* AppleTvGameChannel.swift in Sources */,
@@ -950,7 +954,7 @@
 			repositoryURL = "https://github.com/RadicalMuffinMan/AetherEngine";
 			requirement = {
 				kind = revision;
-				revision = fe472e5d26439227b9072c0f60abea901ed5068b;
+				revision = dff261a24c5b2cd611d3aa764e8fb15387da1c4c;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

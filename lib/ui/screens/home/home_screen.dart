@@ -24,11 +24,13 @@ import '../../../data/models/aggregated_item.dart';
 import '../../../data/models/home_row.dart';
 import '../../../data/repositories/mdblist_repository.dart';
 import '../../../data/repositories/seerr_repository.dart';
+import '../../widgets/seerr/seerr_shortcuts.dart';
 import '../../../data/services/background_service.dart';
 import '../../widgets/rating_display.dart';
 import '../../../data/services/theme_music_service.dart';
 import '../../../data/services/media_server_client_factory.dart';
 import '../../../data/services/plugin_sync_service.dart';
+import '../../../data/utils/media_type_badges.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../playback/appletv_preview_player.dart';
 import '../../../playback/inline_preview_engine.dart';
@@ -70,6 +72,7 @@ import '../../navigation/route_lifecycle_observer.dart';
 import '../../util/home_row_title_localizer.dart';
 import '../../../util/game_library.dart';
 import 'home_view_model.dart';
+import '../../widgets/seerr/seerr_genre_label.dart';
 
 Color get _homeBackground => AppColorScheme.background;
 
@@ -308,7 +311,10 @@ class _HomeShellState extends State<_HomeShell>
     setState(() {});
   }
 
-  void onItemSelected(AggregatedItem? item) {
+  void onItemSelected(
+      AggregatedItem? item, {
+        bool preserveBackground = false,
+      }) {
     _selectionDebounce?.cancel();
     _selectionDebounce = Timer(_selectionDelay, () {
       if (!mounted) return;
@@ -321,9 +327,15 @@ class _HomeShellState extends State<_HomeShell>
       });
 
       _backdropDebounce?.cancel();
-      _backdropDebounce = Timer(_backdropDelay, () {
-        _backgroundService.setBackground(item, context: BlurContext.browsing);
-      });
+
+      if (!preserveBackground) {
+        _backdropDebounce = Timer(_backdropDelay, () {
+          _backgroundService.setBackground(
+            item,
+            context: BlurContext.browsing,
+          );
+        });
+      }
 
       _maybePlayThemeMusic(item);
     });
@@ -331,6 +343,7 @@ class _HomeShellState extends State<_HomeShell>
 
   void _maybeRegisterThemeMusic() {
     final shouldRegister =
+        !PlatformDetection.isMobile &&
         _userPrefs.get(UserPreferences.themeMusicEnabled) &&
         _userPrefs.get(UserPreferences.themeMusicOnHomeRows);
     if (shouldRegister && !_themeMusicRegistered) {
@@ -618,7 +631,10 @@ class _ContentRows extends StatefulWidget {
   final MediaBarViewModel mediaBarViewModel;
   final UserPreferences prefs;
   final ValueNotifier<AggregatedItem?> selectedItemNotifier;
-  final ValueChanged<AggregatedItem?> onItemSelected;
+  final void Function(
+      AggregatedItem? item, {
+      bool preserveBackground,
+      }) onItemSelected;
   final ValueNotifier<bool> isHoverPausedNotifier;
   final ValueNotifier<bool> isScrolledToTopNotifier;
   final ValueChanged<bool>? onScrolledToTopChanged;
@@ -642,6 +658,11 @@ class _ContentRows extends StatefulWidget {
 class _ContentRowsState extends State<_ContentRows>
     with WidgetsBindingObserver, WindowListener
     implements AudioOwnable {
+  /// A wide artwork row has no modern variant, so beside rows drawing at twice
+  /// the poster height it reads as a band of undersized cards. This brings the
+  /// two back to roughly the same height.
+  static const double _wideArtworkModernScale = 2.5;
+
   static const double _kHomeRowLabelInset = 16.0;
   static const double _focusedRowExtraSpacing = 20.0;
   static const Duration _focusedRowSpacingDuration = Duration(
@@ -711,6 +732,8 @@ class _ContentRowsState extends State<_ContentRows>
   VideoController? _previewController;
   AppleTvPreviewPlayer? _appleTvPreviewPlayer;
   StreamSubscription<void>? _appleTvPreviewCompletedSub;
+  MediaServerClient? _previewEncodingClient;
+  String? _previewPlaySessionId;
   int _previewRequestId = 0;
   bool _mainPlaybackActive = false;
   bool _previewUsingMedia3 = false;
@@ -933,10 +956,16 @@ class _ContentRowsState extends State<_ContentRows>
         primary == null ||
         primary is FocusScopeNode ||
         identical(primary, globalShortcutFocusNode);
+    final onToolbar = TopToolbar.isFocusedNotifier.value;
     final chromeFocusActive =
         SettingsPanel.isOpenNotifier.value ||
         (!onIdleFocus && !desktopUnfocused && !onMediaBar && !hasRowContext);
-    final chromeAudioActive = chromeFocusActive || onSidebar;
+    // Ending a row preview and pausing the bar part company at the toolbar.
+    // Focus rests there after launch and after a mouse scroll, so pausing for
+    // it left the bar silent and still with no way back, while a preview the
+    // user has just navigated away from should still end.
+    final chromePreviewActive = chromeFocusActive || onSidebar;
+    final chromeAudioActive = (chromeFocusActive && !onToolbar) || onSidebar;
 
     final nextMediaBarVisible = isMobileUi
         ? true
@@ -966,7 +995,7 @@ class _ContentRowsState extends State<_ContentRows>
     _wasSidebarFocused = onSidebar;
     _lastGlobalPrimaryFocus = primary;
 
-    if (chromeAudioActive && (chromeChanged || _activePreviewKey != null)) {
+    if (chromePreviewActive && (chromeChanged || _activePreviewKey != null)) {
       _finishSharedPreview(releaseResources: true);
     }
   }
@@ -1057,6 +1086,7 @@ class _ContentRowsState extends State<_ContentRows>
     FocusManager.instance.addListener(_onGlobalFocusChanged);
     SettingsPanel.isOpenNotifier.addListener(_onSettingsPanelOpenChanged);
     LeftSidebar.isFocusedNotifier.addListener(_onGlobalFocusChanged);
+    TopToolbar.isFocusedNotifier.addListener(_onGlobalFocusChanged);
     _lastMedia3PreviewPreference = _useMedia3InlinePreview();
     widget.prefs.addListener(_onPreviewPrefsChanged);
     _previousFocusContentFromNavbarCallback =
@@ -1209,6 +1239,7 @@ class _ContentRowsState extends State<_ContentRows>
     FocusManager.instance.removeListener(_onGlobalFocusChanged);
     SettingsPanel.isOpenNotifier.removeListener(_onSettingsPanelOpenChanged);
     LeftSidebar.isFocusedNotifier.removeListener(_onGlobalFocusChanged);
+    TopToolbar.isFocusedNotifier.removeListener(_onGlobalFocusChanged);
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _scrollOffsetNotifier.dispose();
@@ -1484,7 +1515,27 @@ class _ContentRowsState extends State<_ContentRows>
       _previewReady = false;
       _pendingPreviewKey = null;
     }
+    _stopPreviewEncoding();
     _themeMusicService.setExternalAudioActive(false);
+  }
+
+  /// Tells the server to stop the preview's transcode. Scoped to the
+  /// preview's own play session, so a running main playback transcode on the
+  /// same device is left alone.
+  void _stopPreviewEncoding() {
+    final client = _previewEncodingClient;
+    final playSessionId = _previewPlaySessionId;
+    _previewEncodingClient = null;
+    _previewPlaySessionId = null;
+    if (client == null || playSessionId == null) return;
+    unawaited(
+      client.playbackApi
+          .stopActiveEncodings(
+            deviceId: client.deviceInfo.id,
+            playSessionId: playSessionId,
+          )
+          .catchError((_) {}),
+    );
   }
 
   void _disposeSharedPreview() {
@@ -1519,6 +1570,7 @@ class _ContentRowsState extends State<_ContentRows>
       await _appleTvPreviewPlayer?.stop();
       _previewUsingAppleTv = false;
     }
+    _stopPreviewEncoding();
     _themeMusicService.setExternalAudioActive(true);
 
     try {
@@ -1533,7 +1585,13 @@ class _ContentRowsState extends State<_ContentRows>
       }
 
       final seekPosition = _previewSeekPosition(target);
-      final previewUrl = _buildPreviewUrl(client, target, seekPosition);
+      final playSessionId = '${DateTime.now().microsecondsSinceEpoch}';
+      final previewUrl = _buildPreviewUrl(
+        client,
+        target,
+        seekPosition,
+        playSessionId,
+      );
       final previewUri = Uri.tryParse(previewUrl);
       if (previewUri == null ||
           !previewUri.hasScheme ||
@@ -1541,6 +1599,10 @@ class _ContentRowsState extends State<_ContentRows>
         _finishSharedPreview();
         return;
       }
+      // Remembered so every finish path can tell the server to stop this
+      // transcode instead of leaving the job to the idle reaper.
+      _previewEncodingClient = client;
+      _previewPlaySessionId = playSessionId;
 
       final previewAudioEnabled = widget.prefs.get(
         UserPreferences.previewAudioEnabled,
@@ -1778,6 +1840,7 @@ class _ContentRowsState extends State<_ContentRows>
     MediaServerClient client,
     AggregatedItem item,
     Duration startPosition,
+    String playSessionId,
   ) {
     if (item.id.isEmpty) return '';
 
@@ -1793,6 +1856,10 @@ class _ContentRowsState extends State<_ContentRows>
     final startTicks = startPosition.inMicroseconds * 10;
     final params = <String, String>{
       'Static': 'false',
+      // The transcode is registered against these two, and stopping it later
+      // looks it up the same way.
+      'PlaySessionId': playSessionId,
+      if (client.deviceInfo.id.isNotEmpty) 'DeviceId': client.deviceInfo.id,
       'videoCodec': 'h264',
       'audioCodec': 'aac',
       'maxVideoBitDepth': '8',
@@ -1813,7 +1880,15 @@ class _ContentRowsState extends State<_ContentRows>
     final normalizedBasePath = baseUri.path.endsWith('/')
         ? baseUri.path.substring(0, baseUri.path.length - 1)
         : baseUri.path;
-    final streamPath = kIsWeb ? 'stream.mp4' : 'stream';
+    // AVPlayer never reaches readyToPlay on a growing progressive transcode,
+    // so the preview stays blank until the open times out. HLS is the form
+    // AVFoundation reads natively, so the Apple preview player asks for the
+    // segmented version of the same request.
+    final streamPath = kIsWeb
+        ? 'stream.mp4'
+        : PlatformDetection.useApplePreviewPlayer
+        ? 'master.m3u8'
+        : 'stream';
     final fullPath = '$normalizedBasePath/Videos/${item.id}/$streamPath';
 
     return baseUri.replace(path: fullPath, queryParameters: params).toString();
@@ -1890,6 +1965,9 @@ class _ContentRowsState extends State<_ContentRows>
   }
 
   bool _showHomeRowInfoOverlay() {
+    if (PlatformDetection.useMobileUi) {
+      return false;
+    }
     if (_isHomeRowsStyleV2()) {
       return false;
     }
@@ -2022,6 +2100,10 @@ class _ContentRowsState extends State<_ContentRows>
       return 200.0;
     }
 
+    if (_isAyaMode()) {
+      return screenHeight * 0.65;
+    }
+
     if (!PlatformDetection.useMobileUi) {
       return screenHeight;
     }
@@ -2054,6 +2136,13 @@ class _ContentRowsState extends State<_ContentRows>
       widget.prefs.get(UserPreferences.mediaBarMode),
     );
     return mode == UserPreferences.mediaBarModeBanner;
+  }
+
+  bool _isAyaMode() {
+    final mode = UserPreferences.normalizeMediaBarMode(
+      widget.prefs.get(UserPreferences.mediaBarMode),
+    );
+    return mode == UserPreferences.mediaBarModeAya;
   }
 
   double _pinnedInfoCollapseOffset() {
@@ -2090,7 +2179,10 @@ class _ContentRowsState extends State<_ContentRows>
   }
 
   void _navigateFromMediaBarToNavbar() {
-    widget.onItemSelected(null);
+    widget.onItemSelected(
+      null,
+      preserveBackground: _isAyaMode(),
+    );
     if (_scrollController.hasClients && _scrollController.offset > 0) {
       unawaited(
         _scrollController.animateTo(
@@ -2239,7 +2331,10 @@ class _ContentRowsState extends State<_ContentRows>
     _verticalNavInFlight = true;
     try {
       _finishSharedPreview(releaseResources: true);
-      widget.onItemSelected(null);
+      widget.onItemSelected(
+          null,
+          preserveBackground: _isAyaMode(),
+      );
       if (mounted) {
         setState(() {
           _infoRevealedNotifier.value = false;
@@ -2414,9 +2509,9 @@ class _ContentRowsState extends State<_ContentRows>
 
     final desktopScale = _desktopUiScaleFactor();
     final metadataScale = desktopScale;
-    final isRowsV2 = prefs.get(UserPreferences.homeRowsStyle) == HomeRowsStyle.v2 && !_isSeerrFilterRow(row);
+    final isRowsV2 = prefs.get(UserPreferences.homeRowsStyle) == HomeRowsStyle.v2 && !_isWideArtworkRow(row);
     final fullScreenRows = _fullScreenRowsEnabled(prefs);
-    final platformScale = PlatformDetection.isTV ? 0.8 * desktopScale : desktopScale;
+    final platformScale = _rowPlatformScale(row, desktopScale);
 
     double childHeight = 0.0;
     if (row.isLoading) {
@@ -2503,7 +2598,7 @@ class _ContentRowsState extends State<_ContentRows>
     final row = rowIndex < widget.viewModel.rows.length ? widget.viewModel.rows[rowIndex] : null;
     if (row == null) return defaultTop;
     final isRowsV2 = widget.prefs.get(UserPreferences.homeRowsStyle) == HomeRowsStyle.v2 &&
-        !_isSeerrFilterRow(row);
+        !_isWideArtworkRow(row);
 
     if (rowIndex == 0 && _rowTopOffsets.isNotEmpty) {
       if (_isMediaBarIncluded() && !_isBannerMode()) {
@@ -3417,6 +3512,14 @@ class _ContentRowsState extends State<_ContentRows>
     return widget.prefs.get(UserPreferences.desktopUiScale).scaleFactor;
   }
 
+  double _rowPlatformScale(HomeRow row, double desktopScale) {
+    final base = PlatformDetection.isTV ? 0.8 * desktopScale : desktopScale;
+    if (_isHomeRowsStyleV2() && _isWideArtworkRow(row)) {
+      return base * _wideArtworkModernScale;
+    }
+    return base;
+  }
+
   double _squarePosterSide(PosterSize posterSize) {
     final scaleFactor = _desktopUiScaleFactor();
     final platformScale = PlatformDetection.isTV
@@ -3446,13 +3549,11 @@ class _ContentRowsState extends State<_ContentRows>
       final isSeerrRowOverride = _isSeerrFilterRow(row);
       final isRowsV2 =
           prefs.get(UserPreferences.homeRowsStyle) == HomeRowsStyle.v2 &&
-          !isSeerrRowOverride;
+          !_isWideArtworkRow(row);
       final rowImageType = isSeerrRowOverride
           ? ImageType.thumb
           : (isRowsV2 ? ImageType.poster : _homeRowImageTypeForRow(row, prefs));
-      final platformScale = PlatformDetection.isTV
-          ? 0.8 * desktopScale
-          : desktopScale;
+      final platformScale = _rowPlatformScale(row, desktopScale);
       var maxCardHeight = 0.0;
       if (isRowsV2) {
         final imageHeight =
@@ -3499,7 +3600,7 @@ class _ContentRowsState extends State<_ContentRows>
       final safeTop = MediaQuery.paddingOf(context).top;
       final isRowsV2 =
           prefs.get(UserPreferences.homeRowsStyle) == HomeRowsStyle.v2 &&
-          !_isSeerrFilterRow(row);
+          !_isWideArtworkRow(row);
 
       final navbarIsTop =
           prefs.get(UserPreferences.navbarPosition) == NavbarPosition.top;
@@ -3590,8 +3691,12 @@ class _ContentRowsState extends State<_ContentRows>
     double requestScale, {
     bool isMyMediaRow = false,
   }) {
+    // MediaType belongs in the key: a Seerr genre card takes the TMDB genre id
+    // as its item id, and a genre in both the movie row and the series row has
+    // the same id in each, so the second row would reuse the first row's image.
     final key =
-        '${item.serverId}|${item.id}|${imageType.index}|${height.round()}'
+        '${item.serverId}|${item.id}|${item.rawData['MediaType']}'
+        '|${imageType.index}|${height.round()}'
         '|$useSeriesThumbs|${requestScale.toStringAsFixed(2)}|$isMyMediaRow';
     final cached = _rowImageUrlCache[key];
     if (cached != null || _rowImageUrlCache.containsKey(key)) {
@@ -4102,7 +4207,7 @@ class _ContentRowsState extends State<_ContentRows>
 
                     final contentHeight = _rowContentHeight(row, posterSize, prefs);
                     final targetExtent = rowExtents[rowIndex];
-                    final isRowsV2 = prefs.get(UserPreferences.homeRowsStyle) == HomeRowsStyle.v2 && !_isSeerrFilterRow(row);
+                    final isRowsV2 = prefs.get(UserPreferences.homeRowsStyle) == HomeRowsStyle.v2 && !_isWideArtworkRow(row);
                     final extraTopPadding = isRowsV2
                         ? ((targetExtent - contentHeight) * 0.1).clamp(0.0, double.infinity)
                         : ((targetExtent - contentHeight) / 2.0).clamp(0.0, double.infinity);
@@ -4401,18 +4506,20 @@ class _ContentRowsState extends State<_ContentRows>
     required AppLocalizations l10n,
   }) {
     final suppressFocusGlow = ThemeRegistry.active.borders.focusGlow.isNotEmpty;
+    final showMediaTypeBadges = showsMediaTypeBadges(
+      prefs.get(UserPreferences.mediaTypeBadgeBehavior),
+      row.items,
+    );
     final isSeerrRowOverride = _isSeerrFilterRow(row);
     final isRowsV2 =
         prefs.get(UserPreferences.homeRowsStyle) == HomeRowsStyle.v2 &&
-        !isSeerrRowOverride;
+        !_isWideArtworkRow(row);
     final rowImageType = isSeerrRowOverride
         ? ImageType.thumb
         : (isRowsV2 ? ImageType.poster : _homeRowImageTypeForRow(row, prefs));
     final desktopScale = _desktopUiScaleFactor();
     final metadataScale = desktopScale;
-    final platformScale = PlatformDetection.isTV
-        ? 0.8 * desktopScale
-        : desktopScale;
+    final platformScale = _rowPlatformScale(row, desktopScale);
     final v2ImageHeight =
         posterSize.portraitHeight.toDouble() * platformScale * 2;
     final v2MetadataHeightBudget = _v2MetadataBudgetFor(row, prefs);
@@ -4553,6 +4660,7 @@ class _ContentRowsState extends State<_ContentRows>
                 item.id,
                 serverId: item.serverId,
                 type: item.type,
+                channelId: item.channelId,
               ),
             );
           }
@@ -4652,6 +4760,7 @@ class _ContentRowsState extends State<_ContentRows>
                           item.id,
                           serverId: item.serverId,
                           type: item.type,
+                          channelId: item.channelId,
                         ),
                       );
                     }
@@ -4727,8 +4836,15 @@ class _ContentRowsState extends State<_ContentRows>
             cardSubtitleWidget = null;
           }
 
+                  // Seerr genre cards print their name across the artwork,
+                  // the way the Jellyfin genre row does.
+                  final isSeerrGenreCard =
+                      _isSeerrFilterRow(row) && item.type == 'Genre';
                   final card = MediaCard(
                     title: cardTitle,
+                    imageOverlays: isSeerrGenreCard
+                        ? [Positioned.fill(child: SeerrGenreLabel(name: item.name))]
+                        : const <Widget>[],
                     subtitle: cardSubtitle,
                     subtitleWidget: cardSubtitleWidget,
                     imageUrl: imageUrl,
@@ -4744,7 +4860,7 @@ class _ContentRowsState extends State<_ContentRows>
                     playedPercentage: item.playedPercentage,
                     watchedBehavior: watchedBehavior,
                     itemType: item.type,
-                    seerrMediaType: item.seerrMediaType,
+                    seerrMediaType: showMediaTypeBadges ? item.seerrMediaType : null,
                     seerrStatus: item.seerrStatus,
                     isGenreFallback: (row.rowType == HomeRowType.genres && row.id == 'genres') &&
                         (() {
@@ -4754,7 +4870,7 @@ class _ContentRowsState extends State<_ContentRows>
                     focusColor: (row.rowType == HomeRowType.genres && row.id == 'genres')
                         ? ThemeRegistry.active.borders.focusBorder.color
                         : focusColor,
-                    cardFocusExpansion: isRowsV2 ? false : cardExpansion && !showPreviewVideo,
+                    cardFocusExpansion: _isHomeRowsStyleV2() ? false : cardExpansion && !showPreviewVideo,
                     externalIsFocused: effectiveV2Focused,
                     suppressImageFocusBorder: showPreviewVideo,
                     suppressFocusGlow: suppressFocusGlow,
@@ -4927,6 +5043,7 @@ class _ContentRowsState extends State<_ContentRows>
                         ratings: additionalRatings,
                         communityRating: item.communityRating,
                         criticRating: item.criticRating,
+                        personalRating: item.personalRating,
                         enableAdditionalRatings: widget.prefs.get(
                           UserPreferences.enableAdditionalRatings,
                         ),
@@ -4940,7 +5057,7 @@ class _ContentRowsState extends State<_ContentRows>
                           UserPreferences.showRatingBadges,
                         ),
                       ),
-                    if (overview.isNotEmpty)
+                    if (overview.isNotEmpty && !widget.prefs.get(UserPreferences.hideHomeMediaDescription))
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
@@ -5122,10 +5239,18 @@ class _ContentRowsState extends State<_ContentRows>
   }
 
   static bool _isSeerrFilterRow(HomeRow row) =>
+      row.id == 'seerr_shortcuts' ||
       row.id == 'seerr_movie_genres' ||
       row.id == 'seerr_series_genres' ||
       row.id == 'seerr_studios' ||
       row.id == 'seerr_networks';
+
+  /// Rows whose artwork is a wide logo rather than cover art. The modern style
+  /// draws every card portrait, which crops those, so these rows stay on the
+  /// classic layout whichever style is picked.
+  static bool _isWideArtworkRow(HomeRow row) =>
+      _isSeerrFilterRow(row) ||
+      (row.rowType == HomeRowType.studios && row.id == 'studios');
 
   static String? _seerrTmdbImageUrl(String? path, int width) {
     if (path == null || path.isEmpty) return null;
@@ -5134,6 +5259,13 @@ class _ContentRowsState extends State<_ContentRows>
   }
 
   static void _navigateToSeerrItem(BuildContext context, AggregatedItem item) {
+    final shortcut = SeerrShortcut.fromName(
+      item.rawData['SeerrShortcut'] as String?,
+    );
+    if (shortcut != null) {
+      shortcut.open(context);
+      return;
+    }
     final filterType = item.rawData['FilterType'] as String?;
     if (filterType != null) {
       final mediaType = item.rawData['MediaType'] as String? ?? 'movie';
@@ -5499,6 +5631,9 @@ class _ContentRowsState extends State<_ContentRows>
     if (row.isAudio) {
       return 1.0;
     }
+    if (row.rowType == HomeRowType.liveTvFavorites) {
+      return 1.0;
+    }
     if (_isSeerrFilterRow(row)) {
       return 16 / 9;
     }
@@ -5564,6 +5699,18 @@ class _ContentRowsState extends State<_ContentRows>
       }
       return poster ?? backdrop;
     }
+
+    if (Destinations.isLiveTvChannelType(item.type)) {
+      final logoTag = item.logoImageTag;
+      if (logoTag != null) {
+        return imageApi.getLogoImageUrl(
+          item.id,
+          maxWidth: (height * requestScale).toInt(),
+          tag: logoTag,
+        );
+      }
+    }
+
     final itemThumbTag = _tagForType(item, 'Thumb');
     final itemBannerTag = _tagForType(item, 'Banner');
     final parentThumbItemId = item.rawData['ParentThumbItemId']?.toString();

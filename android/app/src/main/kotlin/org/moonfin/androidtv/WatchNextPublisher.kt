@@ -117,10 +117,8 @@ class WatchNextPublisher(private val context: Context) {
                 if (isMovie) WatchNextPrograms.TYPE_MOVIE
                 else WatchNextPrograms.TYPE_TV_EPISODE,
             )
-            .setPosterArtAspectRatio(
-                if (isMovie) WatchNextPrograms.ASPECT_RATIO_MOVIE_POSTER
-                else WatchNextPrograms.ASPECT_RATIO_16_9,
-            )
+            // The launcher lays its rows out in 16:9, whatever the kind.
+            .setPosterArtAspectRatio(WatchNextPrograms.ASPECT_RATIO_16_9)
             .setTitle(item["title"] as? String ?: "")
             .setIntent(intent)
 

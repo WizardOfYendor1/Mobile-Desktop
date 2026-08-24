@@ -103,10 +103,15 @@ dependencies:
   json_annotation: ^4.9.0
   logger: ^2.7.0
   intl: ^0.20.2
+  punycoder: ^0.3.0
   collection: ^1.19.1
   package_info_plus: ^8.3.1
   uuid: ^4.5.3
   cupertino_icons: ^1.0.9
+  # Direct because restoring a window needs the work areas of the attached
+  # displays to keep it on screen. Keep in step with what window_manager, which
+  # already pulls it in, resolves.
+  screen_retriever: ^0.2.0
   window_manager: ^0.5.1
 
   # Local packages

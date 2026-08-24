@@ -14,6 +14,7 @@ import 'package:server_core/server_core.dart';
 import '../../data/models/aggregated_item.dart';
 import '../../data/services/carplay_service.dart';
 import '../../data/services/cast/cast_service.dart';
+import '../../data/services/crash_report_service.dart';
 import '../../data/services/download_notification_service.dart';
 import '../../data/services/tv_channels_service.dart';
 import '../../data/services/watch_next_service.dart';
@@ -70,6 +71,7 @@ class SessionRepository {
   SessionState _state = SessionState.ready;
   StreamSubscription<ServerWebSocketMessage>? _remoteCommandSubscription;
   StreamSubscription<ServerWebSocketMessage>? _pluginEventSubscription;
+  StreamSubscription<void>? _socketConnectionSubscription;
   double _lastUnmutedVolume = 100;
   bool _remoteMuted = false;
   bool _hasCheckedWriteAccess = false;
@@ -153,7 +155,11 @@ class SessionRepository {
     }
 
     try {
-      return await switchCurrentSession(serverId: serverId, userId: userId);
+      return await switchCurrentSession(
+        serverId: serverId,
+        userId: userId,
+        validateToken: true,
+      );
     } catch (error) {
       // Secure storage refuses on a machine whose keychain the app cannot
       // reach, and an escape from here leaves the session mid switch forever,
@@ -169,6 +175,7 @@ class SessionRepository {
     required String userId,
     String? username,
     String? password,
+    bool validateToken = false,
   }) async {
     _setState(SessionState.switching);
     _pluginSyncService.resetState();
@@ -209,6 +216,31 @@ class SessionRepository {
     client.accessToken = accessToken;
     client.userId = userId;
 
+    // A stored token can be long dead, and everything past this point fires
+    // authenticated requests in parallel. One rejected probe here keeps a dead
+    // token to a single 401 instead of a burst that trips fail2ban jails.
+    ServerUser? validatedUser;
+    if (validateToken) {
+      try {
+        validatedUser = await client.usersApi.getCurrentUser();
+      } on DioException catch (e) {
+        if (e.response?.statusCode == 401) {
+          _logger.w('Stored access token was rejected. Logging out.');
+          // Point the teardown at this session so it removes the right
+          // stored credentials.
+          _activeServerId = serverId;
+          _activeUserId = userId;
+          await destroyCurrentSession(tokenKnownInvalid: true);
+          appRouter.go(
+            '${Destinations.login}?serverId=$serverId&username=${Uri.encodeComponent(user.name)}',
+          );
+          return false;
+        }
+        // Anything else is the server being unreachable, and startup still
+        // has to reach the offline experience.
+      } catch (_) {}
+    }
+
     setActiveServerClient(client);
     resetUserScopedSingletons();
     setActiveStreamResolver(client);
@@ -221,6 +253,7 @@ class SessionRepository {
       _socketHandler.connectTo(client);
     }
     _bindRemoteCommandHandling();
+    _bindCapabilityReporting(client);
     _bindPluginEventHandling(client);
     _refreshCarBrowseTree(signedIn: true);
 
@@ -239,6 +272,7 @@ class SessionRepository {
       serverId,
       username,
       password,
+      preFetchedServerUser: validatedUser,
     ).catchError((_) {});
 
     if (shouldPrioritizeInitialSync) {
@@ -262,16 +296,23 @@ class SessionRepository {
     PrivateUser user,
     String serverId,
     String? username,
-    String? password,
-  ) async {
+    String? password, {
+    ServerUser? preFetchedServerUser,
+  }) async {
     await _reportRemoteCapabilities(client);
 
+    // A server is signed in now, so crash reports from earlier runs can go.
     try {
-      final serverUser = await client.usersApi.getCurrentUser();
+      unawaited(GetIt.instance<CrashReportService>().flushPending());
+    } catch (_) {}
+
+    try {
+      final serverUser =
+          preFetchedServerUser ?? await client.usersApi.getCurrentUser();
       final isAdmin = serverUser.policy?.isAdministrator ?? false;
       final canDownload = serverUser.policy?.enableContentDownloading ?? false;
       final canManageSubtitles =
-          serverUser.policy?.enableSubtitleManagement ?? false;
+          serverUser.policy?.canFetchRemoteSubtitles ?? false;
       final canManageCollections =
           serverUser.policy?.enableCollectionManagement ?? false;
 
@@ -298,7 +339,7 @@ class SessionRepository {
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
         _logger.w('Access token expired or unauthorized. Logging out.');
-        await destroyCurrentSession();
+        await destroyCurrentSession(tokenKnownInvalid: true);
         appRouter.go(
           '${Destinations.login}?serverId=$serverId&username=${Uri.encodeComponent(user.name)}',
         );
@@ -343,7 +384,12 @@ class SessionRepository {
   /// if it was dropped while backgrounded.
   void onAppResumed() {
     _cancelSocketIdleTimer();
-    if (!_socketSuspended) return;
+    if (!_socketSuspended) {
+      // A socket that dropped while the app sat idle is waiting out its
+      // backoff, and the user is here now, so do not make them wait for it.
+      _socketHandler.retryNow();
+      return;
+    }
     _socketSuspended = false;
     final serverId = _activeServerId;
     if (serverId == null) return;
@@ -351,6 +397,13 @@ class SessionRepository {
     if (client != null) {
       _socketHandler.connectTo(client);
     }
+  }
+
+  /// Called when the device regains a network, so a socket part way through
+  /// its backoff reconnects now rather than at the end of the wait.
+  void onNetworkRegained() {
+    if (_socketSuspended) return;
+    _socketHandler.retryNow();
   }
 
   void _evaluateSocketIdle() {
@@ -400,7 +453,10 @@ class SessionRepository {
     return false;
   }
 
-  Future<void> destroyCurrentSession() async {
+  /// [tokenKnownInvalid] is set when the server has already rejected the
+  /// token. The push unregister and the logout both authenticate with it, so
+  /// sending them would only add 401s to the burst that got us here.
+  Future<void> destroyCurrentSession({bool tokenKnownInvalid = false}) async {
     final serverId = _activeServerId;
     final userId = _activeUserId;
 
@@ -409,7 +465,7 @@ class SessionRepository {
 
     // Drop this device's push registration while the session/token is still
     // live, otherwise the plugin keeps sending closed-app pushes after logout.
-    if (PlatformDetection.isMobile) {
+    if (PlatformDetection.isMobile && !tokenKnownInvalid) {
       try {
         if (GetIt.instance.isRegistered<PushMessagingService>()) {
           await GetIt.instance<PushMessagingService>().unregister();
@@ -419,7 +475,7 @@ class SessionRepository {
 
     _pluginSyncService.resetState();
 
-    if (serverId != null) {
+    if (serverId != null && !tokenKnownInvalid) {
       try {
         final client = _clientFactory.getClientIfExists(serverId);
         await client?.authApi.logout();
@@ -430,6 +486,8 @@ class SessionRepository {
     _remoteCommandSubscription = null;
     _pluginEventSubscription?.cancel();
     _pluginEventSubscription = null;
+    _socketConnectionSubscription?.cancel();
+    _socketConnectionSubscription = null;
     _socketHandler.disconnect();
 
     if (serverId != null) {
@@ -489,6 +547,17 @@ class SessionRepository {
     _remoteCommandSubscription?.cancel();
     _remoteCommandSubscription = _socketHandler.events.listen(
       (event) => unawaited(_handleRemoteCommand(event)),
+    );
+  }
+
+  /// A server that restarts forgets every session it held, and the one it
+  /// builds for the next request carries no capabilities, which is what makes
+  /// it refuse remote control. Saying them again on each connect is what puts
+  /// the session back in a controllable state.
+  void _bindCapabilityReporting(MediaServerClient client) {
+    _socketConnectionSubscription?.cancel();
+    _socketConnectionSubscription = _socketHandler.connections.listen(
+      (_) => unawaited(_reportRemoteCapabilities(client)),
     );
   }
 

@@ -83,6 +83,7 @@ import '../../../playback/hdr_stream_capability.dart';
 import '../../../playback/known_defects.dart';
 import '../../../syncplay/syncplay_manager.dart';
 import '../../../util/audio_labels.dart';
+import '../../../util/detail_trailer.dart';
 import '../../../util/download_utils.dart';
 import '../../../util/episode_playability.dart';
 import '../../../util/season_queue_context.dart';
@@ -126,6 +127,24 @@ void _animateScrollToTop(ScrollPosition position) {
 
 const _destructiveRed = Color(0xFFD32F2F);
 const _destructiveRedDim = Color(0xFFB71C1C);
+
+/// Types a personal rating can attach to. The servers store user data per
+/// item, so a series, season and episode each carry their own rating with no
+/// propagation between them. People, photos and playlists stay out.
+const _ratableItemTypes = {
+  'Movie',
+  'Series',
+  'Season',
+  'Episode',
+  'Video',
+  'MusicVideo',
+  'MusicAlbum',
+  'MusicArtist',
+  'Audio',
+  'AudioBook',
+  'Book',
+  'BoxSet',
+};
 
 String _deleteFailureMessage(
   AppLocalizations l10n,
@@ -846,6 +865,14 @@ class _DetailContentState extends State<_DetailContent> {
   }
 
   FocusNode? _headerOverviewFocusNode(AggregatedItem item) {
+    if (hidesMediaDescription(
+      itemType: item.type,
+      hideMediaDescription: prefs.get(
+        UserPreferences.hideDetailsMediaDescription,
+      ),
+    )) {
+      return null;
+    }
     final overview = item.overview?.trim();
     if (overview == null || overview.isEmpty) {
       return null;
@@ -3352,6 +3379,7 @@ class _DetailContentState extends State<_DetailContent> {
                   selectedTrack.id,
                   serverId: selectedTrack.serverId,
                   type: selectedTrack.type,
+                  channelId: selectedTrack.channelId,
                 ),
               );
               return;
@@ -3941,12 +3969,14 @@ class _HeaderSection extends StatelessWidget {
         ),
         if (viewModel.ratings.isNotEmpty ||
             item.communityRating != null ||
-            item.criticRating != null) ...[
+            item.criticRating != null ||
+            item.personalRating != null) ...[
           const SizedBox(height: 8),
           RatingsRow(
             ratings: viewModel.ratings,
             communityRating: item.communityRating,
             criticRating: item.criticRating,
+            personalRating: item.personalRating,
             enableAdditionalRatings: prefs.get(
               UserPreferences.enableAdditionalRatings,
             ),
@@ -3972,7 +4002,14 @@ class _HeaderSection extends StatelessWidget {
             textAlign: isMobile ? TextAlign.center : null,
           ),
         ],
-        if (item.overview != null && item.overview!.isNotEmpty) ...[
+        if (item.overview != null &&
+            item.overview!.isNotEmpty &&
+            !hidesMediaDescription(
+              itemType: item.type,
+              hideMediaDescription: prefs.get(
+                UserPreferences.hideDetailsMediaDescription,
+              ),
+            )) ...[
           const SizedBox(height: 8),
           _OverviewText(
             text: item.overview!,
@@ -4275,6 +4312,44 @@ class DetailPosterImage extends StatelessWidget {
   }
 }
 
+/// The thumb endpoint only takes a width, so a card that reserves its space by
+/// height asks for the 16:9 width that fills it.
+int _landscapeWidthFor(int height) => (height * 16 / 9).round();
+
+/// The parent series artwork, for standing in where an episode still or a
+/// chapter frame would give something away. Null when the series offers nothing
+/// to show, which leaves the caller on the picture it would have used.
+String? _resolveSeriesLandscapeThumbnailUrl(
+  AggregatedItem item,
+  ImageApi imageApi, {
+  required int maxWidth,
+}) {
+  final thumbId = item.parentThumbItemId ?? item.seriesId;
+  final thumbTag = item.parentThumbImageTag ?? item.seriesThumbImageTag;
+  if (thumbId != null &&
+      thumbId.isNotEmpty &&
+      thumbTag != null &&
+      thumbTag.isNotEmpty) {
+    return imageApi.getThumbImageUrl(thumbId, maxWidth: maxWidth, tag: thumbTag);
+  }
+
+  final seriesId = item.seriesId ?? item.parentPrimaryImageItemId;
+  final seriesPrimaryTag =
+      item.seriesPrimaryImageTag ?? item.parentPrimaryImageTag;
+  if (seriesId != null &&
+      seriesId.isNotEmpty &&
+      seriesPrimaryTag != null &&
+      seriesPrimaryTag.isNotEmpty) {
+    return imageApi.getPrimaryImageUrl(
+      seriesId,
+      maxWidth: maxWidth,
+      tag: seriesPrimaryTag,
+    );
+  }
+
+  return null;
+}
+
 class _EpisodeThumbnail extends StatelessWidget {
   final AggregatedItem item;
   final ImageApi imageApi;
@@ -4287,8 +4362,25 @@ class _EpisodeThumbnail extends StatelessWidget {
     final desktopScale = _desktopUiScale();
     final w = isMobile ? 200.0 : 280.0 * desktopScale;
     final h = isMobile ? 113.0 : 158.0 * desktopScale;
+    final maxW = isMobile ? 400 : (560 * desktopScale).round();
 
-    if (item.primaryImageTag == null) return SizedBox(width: w, height: h);
+    final seriesThumbUrl =
+        GetIt.instance<UserPreferences>().get(
+          UserPreferences.detailUseSeriesThumbnails,
+        )
+        ? _resolveSeriesLandscapeThumbnailUrl(item, imageApi, maxWidth: maxW)
+        : null;
+
+    final imageUrl = seriesThumbUrl ??
+        (item.primaryImageTag != null
+            ? imageApi.getPrimaryImageUrl(
+                item.id,
+                maxWidth: maxW,
+                tag: item.primaryImageTag,
+              )
+            : null);
+
+    if (imageUrl == null) return SizedBox(width: w, height: h);
 
     return SizedBox(
       width: w,
@@ -4298,11 +4390,7 @@ class _EpisodeThumbnail extends StatelessWidget {
           ClipRRect(
             borderRadius: AppRadius.circular(8),
             child: OfflineAwareImage(
-              imageUrl: imageApi.getPrimaryImageUrl(
-                item.id,
-                maxWidth: isMobile ? 400 : (560 * desktopScale).round(),
-                tag: item.primaryImageTag,
-              ),
+              imageUrl: imageUrl,
               width: w,
               height: h,
               fit: BoxFit.cover,
@@ -5693,15 +5781,52 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
     _focusTarget(widget.downTarget, alignment: 0.42);
   }
 
+  /// The width both button kinds are laid out at when focused, and the one the
+  /// circles are actually capped to.
+  static const _modernFocusedFloor = 200.0;
+
+  /// The width the focused Play pill actually takes, which is its label plus
+  /// the icon, the gap and the padding around them. The circles are capped at
+  /// [_modernFocusedFloor] but the pill only has that as a floor, so a long
+  /// label makes it wider and the row has to be measured against the real
+  /// thing rather than the floor.
+  double _modernPlayFocusedWidth(String? label) {
+    if (label == null) return _modernFocusedFloor;
+    // Matching what _buildModernChild lays out around the label.
+    const iconWidth = 24.0;
+    const iconGap = 2.0;
+    const horizontalPadding = 24.0;
+    final painter = TextPainter(
+      text: TextSpan(
+        text: label,
+        // The second line of a two line label is a point smaller, so measuring
+        // both at the larger size can only leave room to spare.
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+          fontSize: 13,
+          height: 1.1,
+        ),
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+    final measured = painter.width + iconWidth + iconGap + horizontalPadding;
+    painter.dispose();
+    return measured < _modernFocusedFloor ? _modernFocusedFloor : measured;
+  }
+
   /// The widest a modern row of [buttonCount] buttons can get. Only one
   /// button is focused at a time, so the worst case is everything at rest
   /// except the one grown to its focused width, whichever of the two that
   /// leaves wider. The sizes match what _buildModernChild lays out.
-  double _modernRowWorstWidth(int buttonCount, double spacing) {
+  double _modernRowWorstWidth(
+    int buttonCount,
+    double spacing,
+    double playFocused,
+  ) {
     const playResting = 54.0;
-    const playFocused = 200.0;
     const circleResting = 52.0;
-    const circleFocused = 200.0;
+    const circleFocused = _modernFocusedFloor;
 
     final circles = buttonCount - 1;
     if (circles <= 0) return playFocused;
@@ -6346,8 +6471,12 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
         ),
       if (viewModel.isSeerrOnly
           ? seerrTrailer != null && shows(DetailButton.trailer)
-          : (item.type == 'Series' || _hasTrailer(item)) &&
-              shows(DetailButton.trailer))
+          // A series keeps the button even when nothing was counted for it,
+          // since a trailer in a season folder belongs to that season and
+          // isn't counted against the series it came from.
+          : (item.type == 'Series' ||
+                    hasTrailer(item, viewModel.features)) &&
+                shows(DetailButton.trailer))
         DetailButton.trailer: _DetailActionButton(
           label: l10n.trailer,
           icon: Icons.movie_outlined,
@@ -6384,7 +6513,8 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
           isActive: item.isFavorite,
           activeColor: const Color(0xFFFF4757),
         ),
-      if (item.type == 'Movie' && shows(DetailButton.personalRating))
+      if (_ratableItemTypes.contains(item.type) &&
+          shows(DetailButton.personalRating))
         DetailButton.personalRating: _DetailActionButton(
           label: _personalRatingActionLabel(l10n, item),
           icon: switch (_personalRatingStyle()) {
@@ -6634,8 +6764,18 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
     // column and behind the Next Up card. Hosts that do not report a width
     // fall back to the count for this device.
     final rowBudget = widget.rowMaxWidth;
+    final playLabel = allButtons
+        .whereType<_DetailActionButton>()
+        .where((button) => button.isPrimary)
+        .map((button) => button.label)
+        .firstOrNull;
     final fitsOneLine = widget.modernStyle && rowBudget != null
-        ? _modernRowWorstWidth(allButtons.length, buttonSpacing) <= rowBudget
+        ? _modernRowWorstWidth(
+                allButtons.length,
+                buttonSpacing,
+                _modernPlayFocusedWidth(playLabel),
+              ) <=
+              rowBudget
         : allButtons.length <= maxVisible;
 
     if (isTwoColumnLayout && fitsOneLine) {
@@ -8871,23 +9011,12 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
     return mediaStreamsForItem(item, selectedSource);
   }
 
-  bool _hasTrailer(AggregatedItem item) {
-    if (item.remoteTrailers.isNotEmpty) return true;
-    return viewModel.features.any(_isTrailerFeatureItem);
-  }
-
-  bool _isTrailerFeatureItem(AggregatedItem feature) {
-    final extraType = feature.rawData['ExtraType'] as String?;
-    final type = feature.type;
-    return extraType == 'Trailer' || type == 'Trailer';
-  }
-
   AggregatedItem? _firstLocalTrailerFromFeatures(
     List<AggregatedItem> features,
   ) {
     final candidates = features
         .where(
-          (feature) => _isTrailerFeatureItem(feature) && feature.id.isNotEmpty,
+          (feature) => isTrailerFeature(feature) && feature.id.isNotEmpty,
         )
         .toList(growable: false);
     return _preferredLocalTrailer(candidates);
@@ -9065,7 +9194,6 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
   }
 
   bool _canDownloadRemoteSubtitles(AggregatedItem item) {
-    final client = GetIt.instance<MediaServerClient>();
     final user = GetIt.instance<UserRepository>().currentUser;
     final mediaType = item.rawData['MediaType'] as String?;
     final isAudio =
@@ -9074,8 +9202,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
         item.type == 'AudioBook' ||
         mediaType == 'Audio';
 
-    return client.serverType == ServerType.jellyfin &&
-        (user?.canManageSubtitles ?? false) &&
+    return (user?.canManageSubtitles ?? false) &&
         item.mediaSources.isNotEmpty &&
         item.type != 'Photo' &&
         !_isReadableBookItem(item) &&
@@ -10549,17 +10676,19 @@ class _PersonalRatingActionIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (style) {
       PersonalRatingStyle.thumbs => likes == null
-          ? Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.thumb_up_outlined, color: color, size: size * 0.5),
-                SizedBox(width: size * 0.08),
-                Icon(
-                  Icons.thumb_down_outlined,
-                  color: color,
-                  size: size * 0.5,
-                ),
-              ],
+          ? Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.thumb_up_outlined, color: color, size: size * 0.5),
+                  SizedBox(width: size * 0.08),
+                  Icon(
+                    Icons.thumb_down_outlined,
+                    color: color,
+                    size: size * 0.5,
+                  ),
+                ],
+              ),
             )
           : Icon(
               likes! ? Icons.thumb_up : Icons.thumb_down,
@@ -11695,6 +11824,16 @@ class DetailChaptersRow extends StatelessWidget {
     final chapterCardWidth = isMobile ? 220.0 : 280.0 * desktopScale;
     final devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
     final chapterImageWidth = (chapterCardWidth * devicePixelRatio).ceil();
+    final seriesThumbUrl =
+        GetIt.instance<UserPreferences>().get(
+          UserPreferences.detailUseSeriesThumbnails,
+        )
+        ? _resolveSeriesLandscapeThumbnailUrl(
+            item,
+            imageApi,
+            maxWidth: chapterImageWidth,
+          )
+        : null;
 
     return SizedBox(
       height: isMobile ? 180 : 210 * desktopScale,
@@ -11714,12 +11853,13 @@ class DetailChaptersRow extends StatelessWidget {
               ? (chapter['Name'] as String)
               : AppLocalizations.of(context).chapterNumber(index + 1);
           final imageTag = chapter['ImageTag'] as String?;
-          final chapterImageUrl = imageApi.getChapterImageUrl(
-            item.id,
-            index: index,
-            maxWidth: chapterImageWidth,
-            tag: imageTag,
-          );
+          final chapterImageUrl = seriesThumbUrl ??
+              imageApi.getChapterImageUrl(
+                item.id,
+                index: index,
+                maxWidth: chapterImageWidth,
+                tag: imageTag,
+              );
 
           return _ChapterListCard(
             chapterName: name,
@@ -12919,11 +13059,26 @@ class _EpisodeListCardState extends State<_EpisodeListCard>
               ? '${runtime.inHours}h ${runtime.inMinutes.remainder(60)}m'
               : '${runtime.inMinutes}m')
         : null;
-    final focusColor = Color(
-      GetIt.instance<UserPreferences>()
-          .get(UserPreferences.focusColor)
-          .colorValue,
-    );
+    final prefs = GetIt.instance<UserPreferences>();
+    final focusColor = Color(prefs.get(UserPreferences.focusColor).colorValue);
+    final maxH = widget.isMobile ? 250 : (250 * desktopScale).round();
+    final seriesThumbUrl =
+        prefs.get(UserPreferences.detailUseSeriesThumbnails)
+        ? _resolveSeriesLandscapeThumbnailUrl(
+            ep,
+            widget.imageApi,
+            maxWidth: _landscapeWidthFor(maxH),
+          )
+        : null;
+
+    final epImageUrl = seriesThumbUrl ??
+        (ep.primaryImageTag != null
+            ? widget.imageApi.getPrimaryImageUrl(
+                ep.id,
+                maxHeight: maxH,
+                tag: ep.primaryImageTag,
+              )
+            : null);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -12968,15 +13123,9 @@ class _EpisodeListCardState extends State<_EpisodeListCard>
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          if (ep.primaryImageTag != null)
+                          if (epImageUrl != null)
                             OfflineAwareImage(
-                              imageUrl: widget.imageApi.getPrimaryImageUrl(
-                                ep.id,
-                                maxHeight: widget.isMobile
-                                    ? 250
-                                    : (250 * desktopScale).round(),
-                                tag: ep.primaryImageTag,
-                              ),
+                              imageUrl: epImageUrl,
                               fit: BoxFit.cover,
                               errorWidget: (_, _, _) => Container(
                                 color: Colors.white.withValues(alpha: 0.05),
@@ -13142,14 +13291,28 @@ class DetailNextUpCardState extends State<DetailNextUpCard>
     final subtitle = [?label, episode.name].join(' - ');
 
     final isMobile = _isCompact(context);
-    final focusColor = Color(
-      GetIt.instance<UserPreferences>()
-          .get(UserPreferences.focusColor)
-          .colorValue,
-    );
-    final cardExpansion = GetIt.instance<UserPreferences>().get(
-      UserPreferences.cardFocusExpansion,
-    );
+    final prefs = GetIt.instance<UserPreferences>();
+    final focusColor = Color(prefs.get(UserPreferences.focusColor).colorValue);
+    final cardExpansion = prefs.get(UserPreferences.cardFocusExpansion);
+    final maxH = isMobile ? 240 : (240 * desktopScale).round();
+    final seriesThumbUrl =
+        prefs.get(UserPreferences.detailUseSeriesThumbnails)
+        ? _resolveSeriesLandscapeThumbnailUrl(
+            episode,
+            widget.imageApi,
+            maxWidth: _landscapeWidthFor(maxH),
+          )
+        : null;
+
+    final epThumbTag = episode.primaryImageTag;
+    final epImageUrl = seriesThumbUrl ??
+        (epThumbTag != null
+            ? widget.imageApi.getPrimaryImageUrl(
+                episode.id,
+                maxHeight: maxH,
+                tag: epThumbTag,
+              )
+            : null);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -13193,15 +13356,9 @@ class DetailNextUpCardState extends State<DetailNextUpCard>
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            if (episode.primaryImageTag != null)
+                            if (epImageUrl != null)
                               OfflineAwareImage(
-                                imageUrl: widget.imageApi.getPrimaryImageUrl(
-                                  episode.id,
-                                  maxHeight: isMobile
-                                      ? 240
-                                      : (240 * desktopScale).round(),
-                                  tag: episode.primaryImageTag,
-                                ),
+                                imageUrl: epImageUrl,
                                 fit: BoxFit.cover,
                                 errorWidget: (_, _, _) => const SizedBox.shrink(),
                               ),
@@ -13349,15 +13506,29 @@ class DetailEpisodeCardState extends State<DetailEpisodeCard>
               : '${runtime.inMinutes}m')
         : null;
 
-    final focusColor = Color(
-      GetIt.instance<UserPreferences>()
-          .get(UserPreferences.focusColor)
-          .colorValue,
-    );
-    final cardExpansion = GetIt.instance<UserPreferences>().get(
-      UserPreferences.cardFocusExpansion,
-    );
+    final prefs = GetIt.instance<UserPreferences>();
+    final focusColor = Color(prefs.get(UserPreferences.focusColor).colorValue);
+    final cardExpansion = prefs.get(UserPreferences.cardFocusExpansion);
     final isMobile = _isCompact(context);
+    final maxH = isMobile ? 220 : (220 * desktopScale).round();
+    final seriesThumbUrl =
+        prefs.get(UserPreferences.detailUseSeriesThumbnails)
+        ? _resolveSeriesLandscapeThumbnailUrl(
+            episode,
+            widget.imageApi,
+            maxWidth: _landscapeWidthFor(maxH),
+          )
+        : null;
+
+    final epThumbTag = episode.primaryImageTag;
+    final epImageUrl = seriesThumbUrl ??
+        (epThumbTag != null
+            ? widget.imageApi.getPrimaryImageUrl(
+                episode.id,
+                maxHeight: maxH,
+                tag: epThumbTag,
+              )
+            : null);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -13410,15 +13581,9 @@ class DetailEpisodeCardState extends State<DetailEpisodeCard>
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              if (episode.primaryImageTag != null)
+                              if (epImageUrl != null)
                                 OfflineAwareImage(
-                                  imageUrl: widget.imageApi.getPrimaryImageUrl(
-                                    episode.id,
-                                    maxHeight: isMobile
-                                        ? 220
-                                        : (220 * desktopScale).round(),
-                                    tag: episode.primaryImageTag,
-                                  ),
+                                  imageUrl: epImageUrl,
                                   fit: BoxFit.cover,
                                   errorWidget: (_, _, _) => Container(
                                     color: Colors.white.withValues(alpha: 0.05),

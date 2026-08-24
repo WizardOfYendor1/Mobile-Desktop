@@ -256,6 +256,7 @@ private class DoviCompatTrackOutput(
     private var sampleLayout = "unknown"
     private var emittedFormat: Format? = null
     private var nextProgressReport = 10
+    private var bytesAwaitingFirstSample = 0L
 
     /** What samples are filtered as, before and after the format settles. */
     private val effectiveMode: DoviCompatMode?
@@ -614,6 +615,7 @@ private class DoviCompatTrackOutput(
     fun resetSampleState() {
         pendingLength = 0
         pendingRpuLength = 0
+        bytesAwaitingFirstSample = 0
     }
 
     // Escape hatch for states this filter must not touch. It releases the
@@ -641,6 +643,22 @@ private class DoviCompatTrackOutput(
         }
         System.arraycopy(source, position, pending, pendingLength, length)
         pendingLength += length
+
+        // The player never finishes preparing while this track's format is
+        // held back, so a first sample that never completes would sit on a
+        // silent black screen forever while this buffer grows without bound.
+        // No real access unit comes near this size, so once this much data
+        // arrives with no sample landing, stand down and let the format out
+        // untouched so the failure surfaces where the player can recover.
+        if (!formatDecided) {
+            bytesAwaitingFirstSample += length
+            if (bytesAwaitingFirstSample > FIRST_SAMPLE_BYTE_BUDGET) {
+                disarm(
+                    "the first sample never completed within " +
+                        "${FIRST_SAMPLE_BYTE_BUDGET shr 20}MB of data",
+                )
+            }
+        }
     }
 
     private fun flushPendingVerbatim() {
@@ -744,6 +762,7 @@ private class DoviCompatTrackOutput(
         const val NAL_UNSPEC63 = 63
         const val INITIAL_BUFFER_BYTES = 512 * 1024
         const val SCRATCH_BYTES = 64 * 1024
+        const val FIRST_SAMPLE_BYTE_BUDGET = 64 * 1024 * 1024
         const val ZERO = 0.toByte()
         const val ONE = 1.toByte()
     }

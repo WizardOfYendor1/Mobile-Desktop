@@ -301,6 +301,11 @@ class MediaBarRepository {
     }
   }
 
+  /// How many titles each source hands the selector. The random source reads
+  /// this many from a random place in the library, and the dated ones read
+  /// this many of the newest.
+  static const _poolSize = 40;
+
   Future<List<Map<String, dynamic>>> _fetchItems(
     List<String>? itemTypes,
     int limit, {
@@ -309,6 +314,11 @@ class MediaBarRepository {
     if (!GetIt.instance.isRegistered<MediaBarRepository>() ||
         GetIt.instance<MediaBarRepository>() != this) {
       return const <Map<String, dynamic>>[];
+    }
+    final sourceType = _prefs.get(UserPreferences.mediaBarSourceType);
+    if (sourceType == UserPreferences.mediaBarSourceRecentlyAdded ||
+        sourceType == UserPreferences.mediaBarSourceRecentlyReleased) {
+      return _fetchDatedItems(sourceType, itemTypes, limit, parentId: parentId);
     }
     try {
       // Get the total count for this parent so we can pick a random window.
@@ -336,8 +346,7 @@ class MediaBarRepository {
 
       // Fetch a random window with the fields and backdrop tags the selector
       // needs. A small library takes its whole set starting from the first item.
-      const requestLimit = 40;
-      final windowSize = math.min(total, requestLimit);
+      final windowSize = math.min(total, _poolSize);
       final maxStartIndex = total - windowSize;
       final startIndex = maxStartIndex > 0
           ? _random.nextInt(maxStartIndex + 1)
@@ -384,6 +393,51 @@ class MediaBarRepository {
         limit,
         parentId: parentId,
       );
+    }
+  }
+
+  /// The newest titles a dated source offers, ordered and cut off the same way
+  /// the matching home row does, so the two surfaces agree on what recent
+  /// means.
+  Future<List<Map<String, dynamic>>> _fetchDatedItems(
+    String sourceType,
+    List<String>? itemTypes,
+    int limit, {
+    String? parentId,
+  }) async {
+    try {
+      final response =
+          sourceType == UserPreferences.mediaBarSourceRecentlyReleased
+          ? await _client.itemsApi
+                .getRecentlyReleasedItems(
+                  includeItemTypes: itemTypes,
+                  parentId: parentId,
+                  recursive: true,
+                  limit: _poolSize,
+                  fields: _fields,
+                  enableImageTypes: 'Backdrop,Logo',
+                )
+                .timeout(const Duration(seconds: 15))
+          : await _client.itemsApi
+                .getLatestItems(
+                  includeItemTypes: itemTypes,
+                  parentId: parentId,
+                  limit: _poolSize,
+                  fields: _fields,
+                  enableImageTypes: 'Backdrop,Logo',
+                )
+                .timeout(const Duration(seconds: 15));
+
+      final rawItems = response['Items'] as List? ?? [];
+      return rawItems.cast<Map<String, dynamic>>();
+    } catch (error) {
+      final statusCode = error is DioException
+          ? (error.response?.statusCode ?? 0)
+          : 0;
+      if (statusCode == 401 || statusCode == 403) {
+        return const <Map<String, dynamic>>[];
+      }
+      return _fetchItemsFromFallbackSource(itemTypes, limit, parentId: parentId);
     }
   }
 
@@ -441,6 +495,33 @@ class MediaBarRepository {
     if (excluded.isEmpty) return false;
     final genres = (item['Genres'] as List?)?.cast<String>() ?? [];
     return genres.any((g) => excluded.contains(g));
+  }
+
+  /// Items for the setup wizard previews, free of the bar's own rules.
+  ///
+  /// The bar refuses to run without a movies or series library, and again
+  /// without backdrop artwork, and both refusals hold for the whole session
+  /// no matter how often it is asked. The previews only need something real
+  /// to draw, so this takes the newest items across everything the user can
+  /// see and keeps whatever comes back, posters and all.
+  Future<List<MediaBarSlideItem>> fetchPreviewItems({int limit = 10}) async {
+    try {
+      final response = await _client.itemsApi
+          .getItems(
+            includeItemTypes: const ['Movie', 'Series'],
+            sortBy: 'DateCreated',
+            sortOrder: 'Descending',
+            recursive: true,
+            limit: limit,
+            fields: _fields,
+          )
+          .timeout(const Duration(seconds: 15));
+      final items = (response['Items'] as List? ?? [])
+          .cast<Map<String, dynamic>>();
+      return items.map(_toSlideItem).toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
   }
 
   MediaBarSlideItem _toSlideItem(Map<String, dynamic> data) {

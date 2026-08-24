@@ -39,7 +39,12 @@ class JellyfinMediaServerClient extends MediaServerClient {
   }) : _dio = Dio(BaseOptions(
          baseUrl: baseUrl,
          followRedirects: false,
-         connectTimeout: const Duration(seconds: 30),
+         // Connecting is just the handshake, which a reachable server clears
+         // in well under a second. Thirty seconds meant every request to an
+         // unreachable LAN address held the app that long off network. The
+         // reachability probe judges the server at five, so anything it
+         // passes clears this too.
+         connectTimeout: const Duration(seconds: 8),
          receiveTimeout: const Duration(seconds: 30),
        )) {
     _baseUrl = baseUrl;

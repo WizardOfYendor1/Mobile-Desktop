@@ -163,14 +163,20 @@ class WatchNextService {
     };
   }
 
+  /// The launcher card is 16:9, so a wide image is asked for first and the
+  /// upright poster is only a last resort.
   static String? _moviePoster(AggregatedItem item, ImageApi imageApi) {
-    final tag = item.primaryImageTag;
-    if (tag != null && tag.isNotEmpty) {
-      return imageApi.getPrimaryImageUrl(item.id, maxHeight: 720, tag: tag);
+    final thumb = item.thumbImageTag;
+    if (thumb != null && thumb.isNotEmpty) {
+      return imageApi.getThumbImageUrl(item.id, maxWidth: 960, tag: thumb);
     }
     final backdrops = item.backdropImageTags;
     if (backdrops.isNotEmpty) {
       return imageApi.getBackdropImageUrl(item.id, maxWidth: 960, tag: backdrops.first);
+    }
+    final tag = item.primaryImageTag;
+    if (tag != null && tag.isNotEmpty) {
+      return imageApi.getPrimaryImageUrl(item.id, maxHeight: 720, tag: tag);
     }
     return null;
   }

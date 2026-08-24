@@ -48,7 +48,7 @@ class AppLocalizationsCy extends AppLocalizations {
       'Rhowch y cod hwn ar ddangosfwrdd gwe eich gweinydd:';
 
   @override
-  String get waitingForAuthorization => 'Aros am awdurdodiad...';
+  String get waitingForAuthorization => 'Aros am awdurdodiad…';
 
   @override
   String get back => 'Yn ôl';
@@ -205,6 +205,25 @@ class AppLocalizationsCy extends AppLocalizations {
   String get interfaceStyleMaterial => 'Material';
 
   @override
+  String get interfaceLayout => 'Interface Layout';
+
+  @override
+  String get interfaceLayoutSubtitle =>
+      'Override the detected layout when this device is read wrong. Restart Moonfin for changes to take effect.';
+
+  @override
+  String get interfaceLayoutAutomatic => 'Automatic';
+
+  @override
+  String get interfaceLayoutTv => 'TV';
+
+  @override
+  String get interfaceLayoutDesktop => 'Desktop';
+
+  @override
+  String get interfaceLayoutPhone => 'Phone';
+
+  @override
   String get glassQuality => 'Ansawdd y Gwydr';
 
   @override
@@ -313,10 +332,10 @@ class AppLocalizationsCy extends AppLocalizations {
 
   @override
   String get loadingLinkedServers =>
-      'Wrthi\'n llwytho gweinyddion cysylltiedig...';
+      'Wrthi\'n llwytho gweinyddion cysylltiedig…';
 
   @override
-  String get connectingToServerEllipsis => 'Wrthi\'n cysylltu â\'r gweinydd...';
+  String get connectingToServerEllipsis => 'Wrthi\'n cysylltu â\'r gweinydd…';
 
   @override
   String get noReachableAddress => 'Ni ddarparwyd cyfeiriad cyraeddadwy';
@@ -1204,7 +1223,7 @@ class AppLocalizationsCy extends AppLocalizations {
 
   @override
   String downloadingTitle(String title, int count) {
-    return 'Wrthi\'n llwytho i lawr $title ($count items)...';
+    return 'Wrthi\'n llwytho i lawr $title ($count items)…';
   }
 
   @override
@@ -1233,7 +1252,7 @@ class AppLocalizationsCy extends AppLocalizations {
   String get none => 'Dim';
 
   @override
-  String get downloadSubtitlesLabel => 'Lawrlwythwch isdeitlau...';
+  String get downloadSubtitlesLabel => 'Lawrlwythwch isdeitlau…';
 
   @override
   String get searchOpenSubtitlesPlugin =>
@@ -1285,7 +1304,7 @@ class AppLocalizationsCy extends AppLocalizations {
 
   @override
   String downloadingItem(String name, String quality) {
-    return 'Wrthi\'n lawrlwytho $name ($quality)...';
+    return 'Wrthi\'n lawrlwytho $name ($quality)…';
   }
 
   @override
@@ -1308,6 +1327,9 @@ class AppLocalizationsCy extends AppLocalizations {
 
   @override
   String get director => 'CYFARWYDDWR';
+
+  @override
+  String get starring => 'STARRING';
 
   @override
   String get directors => 'CYFARWYDDWYR';
@@ -1724,7 +1746,7 @@ class AppLocalizationsCy extends AppLocalizations {
   }
 
   @override
-  String get updating => 'Wrthi\'n diweddaru...';
+  String get updating => 'Wrthi\'n diweddaru…';
 
   @override
   String get markUnread => 'Marcio Heb ei Ddarllen';
@@ -1757,7 +1779,7 @@ class AppLocalizationsCy extends AppLocalizations {
   String get addBookmark => 'Ychwanegu Nod tudalen';
 
   @override
-  String get bookmarksEllipsis => 'Llyfrnodau...';
+  String get bookmarksEllipsis => 'Llyfrnodau…';
 
   @override
   String get markedAsRead => 'Wedi ei nodi fel wedi ei ddarllen';
@@ -1789,7 +1811,7 @@ class AppLocalizationsCy extends AppLocalizations {
   String get invertColorsPdf => 'Lliwiau Gwrthdro (PDF)';
 
   @override
-  String get preparingInAppReader => 'Wrthi\'n paratoi darllenydd mewn-app...';
+  String get preparingInAppReader => 'Wrthi\'n paratoi darllenydd mewn-app…';
 
   @override
   String get pdfDataNotAvailable => 'Data PDF ddim ar gael.';
@@ -1903,6 +1925,19 @@ class AppLocalizationsCy extends AppLocalizations {
   String get unableToCreateRecording => 'Methu creu recordiad';
 
   @override
+  String get recordSeries => 'Record Series';
+
+  @override
+  String get seriesSetToRecord => 'Series set to record';
+
+  @override
+  String get seriesRecordingCancelled => 'Series recording cancelled';
+
+  @override
+  String get unableToCreateSeriesRecording =>
+      'Unable to create series recording';
+
+  @override
   String get watch => 'Gwylio';
 
   @override
@@ -1971,10 +2006,10 @@ class AppLocalizationsCy extends AppLocalizations {
       'Wedi methu canslo recordiad cyfres';
 
   @override
-  String get searchThisLibrary => 'Chwiliwch y llyfrgell hon...';
+  String get searchThisLibrary => 'Chwiliwch y llyfrgell hon…';
 
   @override
-  String get searchEllipsis => 'Chwilio...';
+  String get searchEllipsis => 'Chwilio…';
 
   @override
   String noResultsForQuery(String query) {
@@ -2271,6 +2306,9 @@ class AppLocalizationsCy extends AppLocalizations {
   String get always => 'Bob amser';
 
   @override
+  String get mixedRowsOnly => 'Mixed rows only';
+
+  @override
   String get hideUnwatched => 'Cuddio Heb ei wylio';
 
   @override
@@ -2428,6 +2466,12 @@ class AppLocalizationsCy extends AppLocalizations {
   String get disabled => 'Wedi\'i analluogi';
 
   @override
+  String get manual => 'Manual';
+
+  @override
+  String get autoDetect => 'Auto Detect';
+
+  @override
   String get scaleOnTv => 'Graddfa ar y teledu';
 
   @override
@@ -2453,6 +2497,13 @@ class AppLocalizationsCy extends AppLocalizations {
   @override
   String get osdLockButtonDescription =>
       'Dangoswch fotwm clo sy\'n rhwystro mewnbwn cyffwrdd nes ei fod wedi\'i wasgu\'n hir';
+
+  @override
+  String get playerSwipeGestures => 'Volume and Brightness Swipes';
+
+  @override
+  String get playerSwipeGesturesDescription =>
+      'Slide up or down on the player to change brightness on the left and volume on the right';
 
   @override
   String get osdButtons => 'Player Buttons';
@@ -3060,7 +3111,7 @@ class AppLocalizationsCy extends AppLocalizations {
   String get loadProfile => 'Proffil Llwyth';
 
   @override
-  String get syncing => 'Wrthi\'n cysoni...';
+  String get syncing => 'Wrthi\'n cysoni…';
 
   @override
   String get syncToProfile => 'Cysoni i Broffil';
@@ -3142,7 +3193,7 @@ class AppLocalizationsCy extends AppLocalizations {
   String get manage => 'Rheoli';
 
   @override
-  String get calculating => 'Wrthi\'n cyfrifo...';
+  String get calculating => 'Wrthi\'n cyfrifo…';
 
   @override
   String get downloadLocation => 'Lleoliad Lawrlwytho';
@@ -3398,6 +3449,18 @@ class AppLocalizationsCy extends AppLocalizations {
   String get mediaBarModeOff => 'I ffwrdd';
 
   @override
+  String get mediaBarModeBookshelf => 'Bookshelf';
+
+  @override
+  String get mediaBarModeGallery => 'Gallery';
+
+  @override
+  String get mediaBarModeBanner => 'Banner';
+
+  @override
+  String get mediaBarModeAya => 'Aya';
+
+  @override
   String get enableMediaBar => 'Galluogi Media Bar';
 
   @override
@@ -3406,6 +3469,12 @@ class AppLocalizationsCy extends AppLocalizations {
 
   @override
   String get contentType => 'Math o Gynnwys';
+
+  @override
+  String get mediaBarSourceType => 'Source';
+
+  @override
+  String get mediaBarSourceRandom => 'Random';
 
   @override
   String get moviesAndTvShows => 'Ffilmiau a Sioeau Teledu';
@@ -3483,6 +3552,13 @@ class AppLocalizationsCy extends AppLocalizations {
   String get recentlyReleased => 'Rhyddhawyd yn Ddiweddar';
 
   @override
+  String get recentlyReleasedSeriesType => 'Recently Released Series Sort By';
+
+  @override
+  String get recentlyReleasedSeriesTypeDescription =>
+      'Sort Recently Released Series home rows by series, latest season, or latest episode air date';
+
+  @override
   String get myMedia => 'Fy Cyfryngau';
 
   @override
@@ -3505,6 +3581,9 @@ class AppLocalizationsCy extends AppLocalizations {
 
   @override
   String get liveTV => 'Teledu byw';
+
+  @override
+  String get favoriteChannels => 'Favorite Channels';
 
   @override
   String get homeSections => 'Adrannau Cartref';
@@ -3977,7 +4056,7 @@ class AppLocalizationsCy extends AppLocalizations {
   String get readReleaseNotes => 'Darllenwch Nodiadau Rhyddhau';
 
   @override
-  String get downloadingUpdate => 'Wrthi\'n lawrlwytho diweddariad...';
+  String get downloadingUpdate => 'Wrthi\'n lawrlwytho diweddariad…';
 
   @override
   String get updateDownloadFailed =>
@@ -4304,7 +4383,7 @@ class AppLocalizationsCy extends AppLocalizations {
 
   @override
   String requestingProgress(int current, int total) {
-    return 'Wrthi\'n gwneud cais am $current o $total...';
+    return 'Wrthi\'n gwneud cais am $current o $total…';
   }
 
   @override
@@ -5710,7 +5789,7 @@ class AppLocalizationsCy extends AppLocalizations {
   String get adminBackupTrickplay => 'Delweddau Trickplay';
 
   @override
-  String get adminCreatingBackup => 'Wrthi\'n creu copi wrth gefn...';
+  String get adminCreatingBackup => 'Wrthi\'n creu copi wrth gefn…';
 
   @override
   String get adminBackupCreated => 'Crëwyd copi wrth gefn yn llwyddiannus';
@@ -5738,7 +5817,7 @@ class AppLocalizationsCy extends AppLocalizations {
   String get adminConfirmRestore => 'Cadarnhau Adfer';
 
   @override
-  String get adminRestoringBackup => 'Wrthi\'n adfer copi wrth gefn...';
+  String get adminRestoringBackup => 'Wrthi\'n adfer copi wrth gefn…';
 
   @override
   String adminRestoreFailed(String error) {
@@ -5864,7 +5943,7 @@ class AppLocalizationsCy extends AppLocalizations {
   String get adminDayOfWeek => 'Diwrnod yr wythnos';
 
   @override
-  String get adminSearchPlugins => 'Chwilio ategion...';
+  String get adminSearchPlugins => 'Chwilio ategion…';
 
   @override
   String adminPluginToggleFailed(String error) {
@@ -5945,7 +6024,7 @@ class AppLocalizationsCy extends AppLocalizations {
 
   @override
   String adminPluginUpdating(String name, String version) {
-    return 'Wrthi\'n diweddaru \"$name\" i v$version...';
+    return 'Wrthi\'n diweddaru \"$name\" i v$version…';
   }
 
   @override
@@ -7023,7 +7102,7 @@ class AppLocalizationsCy extends AppLocalizations {
 
   @override
   String adminPluginsInstalling(String name) {
-    return 'Mae \"$name\" yn cael ei osod...';
+    return 'Mae \"$name\" yn cael ei osod…';
   }
 
   @override
@@ -7481,10 +7560,10 @@ class AppLocalizationsCy extends AppLocalizations {
       'Nid oes unrhyw dasgau yn cyfateb i\'r hidlydd cyfredol';
 
   @override
-  String get adminTaskCancelling => 'Wrthi\'n canslo...';
+  String get adminTaskCancelling => 'Wrthi\'n canslo…';
 
   @override
-  String get adminTaskRunning => 'Yn rhedeg...';
+  String get adminTaskRunning => 'Yn rhedeg…';
 
   @override
   String get adminTaskNeverRun => 'Peidiwch byth â rhedeg';
@@ -8026,7 +8105,7 @@ class AppLocalizationsCy extends AppLocalizations {
   String get remoteControl => 'Rheolaeth Anghysbell';
 
   @override
-  String get mediaBarLoading => 'Wrthi\'n llwytho bar cyfryngau...';
+  String get mediaBarLoading => 'Wrthi\'n llwytho bar cyfryngau…';
 
   @override
   String get mediaBarError => 'Methodd bar cyfryngau llwytho';
@@ -8254,7 +8333,7 @@ class AppLocalizationsCy extends AppLocalizations {
 
   @override
   String trackActionDownloading(String name) {
-    return 'Wrthi\'n llwytho i lawr $name...';
+    return 'Wrthi\'n llwytho i lawr $name…';
   }
 
   @override
@@ -8860,7 +8939,7 @@ class AppLocalizationsCy extends AppLocalizations {
       'Yn rheoli a ddylai ffrydiau haen gwella proffil Dolby Vision 7 gyfeirio chwarae.';
 
   @override
-  String get settingsAutoAftkrtEnabled => 'Auto (AFTKRT wedi\'i alluogi)';
+  String get settingsAutoAftkrtEnabled => 'Auto';
 
   @override
   String get settingsEnabledOnThisDevice => 'Wedi\'i alluogi ar y ddyfais hon';
@@ -9435,7 +9514,7 @@ class AppLocalizationsCy extends AppLocalizations {
 
   @override
   String get loadingInstalledPlayers =>
-      'Wrthi\'n llwytho chwaraewyr sydd wedi\'u gosod...';
+      'Wrthi\'n llwytho chwaraewyr sydd wedi\'u gosod…';
 
   @override
   String get connection => 'Cysylltiad';
@@ -9930,7 +10009,7 @@ class AppLocalizationsCy extends AppLocalizations {
   String get closeGenrePanel => 'Panel genre agos';
 
   @override
-  String get loadingShuffle => 'Wrthi\'n llwytho siffrwd...';
+  String get loadingShuffle => 'Wrthi\'n llwytho siffrwd…';
 
   @override
   String get libraryShuffleLabel => 'HAPCHWARAE\'R LLYFRGELL';
@@ -10315,7 +10394,7 @@ class AppLocalizationsCy extends AppLocalizations {
   }
 
   @override
-  String get checkingDirectPlay => 'Yn gwirio\'r gallu Direct Play...';
+  String get checkingDirectPlay => 'Yn gwirio\'r gallu Direct Play…';
 
   @override
   String get directPlayCapabilityLabel => 'Gallu Direct Play: ';
@@ -10661,6 +10740,9 @@ class AppLocalizationsCy extends AppLocalizations {
   String get personalRatingRated => 'Rated';
 
   @override
+  String get personalRatingMine => 'My Rating';
+
+  @override
   String get personalRatingSaveFailed => 'Could not save rating';
 
   @override
@@ -10678,4 +10760,162 @@ class AppLocalizationsCy extends AppLocalizations {
   String personalRatingOutOfFive(String rating) {
     return '$rating / 5';
   }
+
+  @override
+  String get filterInProgress => 'In Progress';
+
+  @override
+  String get filterUnreleased => 'Unreleased';
+
+  @override
+  String get filterTrailers => 'Trailers';
+
+  @override
+  String get filterExtras => 'Extras';
+
+  @override
+  String get filterThemeSongs => 'Theme Songs';
+
+  @override
+  String get filterThemeVideos => 'Theme Videos';
+
+  @override
+  String get source => 'Source';
+
+  @override
+  String get years => 'Years';
+
+  @override
+  String get audioLanguage => 'Audio Language';
+
+  @override
+  String get subtitleLanguage => 'Subtitle Language';
+
+  @override
+  String get clearFilters => 'Clear Filters';
+
+  @override
+  String get seerrShortcutsRow => 'Seerr Browse';
+
+  @override
+  String get seerrReleased => 'Released';
+
+  @override
+  String get seerrMinRating => 'Minimum Rating';
+
+  @override
+  String get seerrMinVotes => 'Minimum Votes';
+
+  @override
+  String get seerrOriginalLanguage => 'Original Language';
+
+  @override
+  String get seerrRuntime => 'Runtime';
+
+  @override
+  String get subtitleHdrSeparate => 'Separate HDR Style';
+
+  @override
+  String get subtitleHdrSeparateSubtitle =>
+      'White is much brighter in HDR than in SDR, so a dimmer style here avoids the glare';
+
+  @override
+  String get scrollSensitivity => 'Scroll Sensitivity';
+
+  @override
+  String get scrollSensitivitySubtitle =>
+      'How far one mouse wheel notch scrolls';
+
+  @override
+  String get mediaDetailsAndSpoilers => 'Media Details and Spoilers';
+
+  @override
+  String get hideDetailsMediaDescription =>
+      'Hide Media Description on Details Page';
+
+  @override
+  String get hideDetailsMediaDescriptionSubtitle =>
+      'Hide the movie or episode descriptive text.';
+
+  @override
+  String get detailUseSeriesThumbnails =>
+      'Use Series Thumbnails on Details Page';
+
+  @override
+  String get detailUseSeriesThumbnailsSubtitle =>
+      'Replace all thumbnails on Classic details page with series thumbnail';
+
+  @override
+  String get hideHomeMediaDescription =>
+      'Hide Media Description on Home Screen';
+
+  @override
+  String get hideHomeMediaDescriptionSubtitle =>
+      'Hide the movie or episode descriptive text.';
+
+  @override
+  String get continueWatchingAndNextUpHeader => 'Continue Watching and Next Up';
+
+  @override
+  String get setupSkip => 'Skip setup';
+
+  @override
+  String get setupNavbarQuestion => 'Where should navigation go?';
+
+  @override
+  String get setupMediaBarQuestion =>
+      'How should the top of your Home screen look?';
+
+  @override
+  String get setupHomeRowsQuestion => 'How should your rows look?';
+
+  @override
+  String get setupDetailQuestion =>
+      'How should a movie or show look when you open it?';
+
+  @override
+  String get setupTourQuestion => 'You\'re set. Here\'s what else is in here.';
+
+  @override
+  String get setupStyleClassic => 'Classic';
+
+  @override
+  String get setupStyleModern => 'Modern';
+
+  @override
+  String get setupRowsClassicHint => 'Compact. More rows on screen at once.';
+
+  @override
+  String get setupRowsModernHint => 'Larger cards with titles underneath.';
+
+  @override
+  String get setupDetailClassicHint => 'Everything centred in one stack.';
+
+  @override
+  String get setupDetailModernHint =>
+      'Cinematic, with tabs for cast and extras.';
+
+  @override
+  String get setupPickALook => 'Pick a look';
+
+  @override
+  String get setupTourMoreHeader => 'There is more waiting in Settings';
+
+  @override
+  String get setupTourBulletRequests => 'Seerr requests';
+
+  @override
+  String get setupTourBulletSyncPlay => 'SyncPlay watch parties';
+
+  @override
+  String get setupTourBulletThemes => 'Custom themes';
+
+  @override
+  String get setupTourBulletDownloads => 'Offline downloads';
+
+  @override
+  String get setupTourBulletMore => 'And plenty more';
+
+  @override
+  String get runSetupAgain => 'Run setup again';
 }

@@ -35,6 +35,7 @@ import '../../data/services/retro_artwork/retro_artwork_disk_cache.dart';
 import '../../data/services/custom_external_lists_service.dart';
 import '../../data/services/row_data_source.dart';
 import '../../data/services/socket_handler.dart';
+import '../../data/services/pending_rating_store.dart';
 import '../../data/services/sync_service.dart';
 import '../../data/services/theme_music_service.dart';
 import '../../data/viewmodels/media_bar_view_model.dart';
@@ -44,6 +45,7 @@ import '../../preference/seerr_preferences.dart';
 import '../../preference/user_preferences.dart';
 import '../../ui/screensaver/screensaver_controller.dart';
 import '../../ui/screens/home/home_view_model.dart';
+import '../../ui/screens/setup/setup_wizard_gate.dart';
 
 final _getIt = GetIt.instance;
 
@@ -96,6 +98,7 @@ void registerAppModule() {
     ),
     dispose: (controller) => controller.dispose(),
   );
+  _getIt.registerLazySingleton(() => SetupWizardGate(_getIt<UserPreferences>()));
   _getIt.registerLazySingleton(() => const NativeCastChannel());
   _getIt.registerLazySingleton(() => const NativeDlnaChannel());
   _getIt.registerLazySingleton(() => const NativeAirPlayChannel());
@@ -139,8 +142,11 @@ void registerAppModule() {
       _getIt<SessionRepository>(),
     ),
   );
+  _getIt.registerLazySingleton<PendingRatingStore>(
+    () => PendingRatingStore(_getIt<PreferenceStore>()),
+  );
   _getIt.registerLazySingleton<SyncService>(
-    () => SyncService(_getIt<OfflineRepository>()),
+    () => SyncService(_getIt<OfflineRepository>(), _getIt<PendingRatingStore>()),
   );
   _getIt.registerLazySingleton(() => const ExternalPlayerService());
 

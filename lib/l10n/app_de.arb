@@ -9033,5 +9033,27 @@
     "castMembers": "Besetzung",
     "@castMembers": {
         "description": "Section title for the list of actors and performers in movie and TV metadata. Not the casting-to-a-device action"
+    },
+    "failedToDeleteItemWithError": "Löschen fehlgeschlagen mit folgendem Fehler: {error}",
+    "@failedToDeleteItemWithError": {
+        "description": "Error message when item deletion fails, including the specific error details",
+        "placeholders": {
+            "error": {
+                "type": "String",
+                "example": "Permission denied"
+            }
+        }
+    },
+    "settingsSearchHint": "Einstellungen durschsuchen",
+    "@settingsSearchHint": {
+        "description": "Hint text in the settings search field"
+    },
+    "oledModeSubtitle": "Tiefere Schwarztöne und sattere Grafiken. Besonders gut auf OLED-Displays.",
+    "@oledModeSubtitle": {
+        "description": "Explanation under the OLED Mode setting"
+    },
+    "finalizingDownload": "Fertigstellung…",
+    "@finalizingDownload": {
+        "description": "Status label shown while a finished download is being moved to its final location and validated"
     }
 }

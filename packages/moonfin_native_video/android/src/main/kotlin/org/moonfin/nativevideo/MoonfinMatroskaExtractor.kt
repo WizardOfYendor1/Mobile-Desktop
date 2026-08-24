@@ -15,7 +15,6 @@ import androidx.media3.extractor.mkv.EbmlProcessor
 import androidx.media3.extractor.mkv.MatroskaExtractor
 import androidx.media3.extractor.text.SubtitleParser
 import io.github.peerless2012.ass.media.AssHandler
-import io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory
 import io.github.peerless2012.ass.media.type.AssRenderType
 import java.util.regex.Pattern
 
@@ -160,7 +159,9 @@ class MoonfinMatroskaExtractor(
                 if (attachmentMime in fontMimeTypes) {
                     val data = ByteArray(contentSize)
                     input.readFully(data, 0, contentSize)
-                    assHandler.addFont(attachmentName, data)
+                    // ass_add_font reallocs the library font table, so it must
+                    // not run while the overlay is inside ass_render_frame.
+                    synchronized(assHandler) { assHandler.addFont(attachmentName, data) }
                 } else {
                     input.skipFully(contentSize)
                 }
@@ -214,7 +215,7 @@ class MoonfinMatroskaExtractor(
 /** Swaps media3's Matroska extractor for [MoonfinMatroskaExtractor]. */
 @OptIn(UnstableApi::class)
 fun ExtractorsFactory.withMoonfinMkvSupport(
-    assSubtitleParserFactory: AssSubtitleParserFactory,
+    assSubtitleParserFactory: SubtitleParser.Factory,
     assHandler: AssHandler,
 ): ExtractorsFactory {
     return ExtractorsFactory {
@@ -290,14 +291,18 @@ private class AssDialogueTrackOutput(
             val rawDuration = sample.data.decodeToString(endIndex, lineIndex - 1)
             val durationUs = parseTimecodeUs(rawDuration)
 
-            assHandler.readTrackDialogue(
-                trackId = trackId,
-                start = timeUs / 1000,
-                duration = durationUs / 1000,
-                data = sample.data,
-                offset = lineIndex,
-                length = sample.limit() - lineIndex,
-            )
+            // ass_process_chunk grows the track's event array while the
+            // render thread walks it, so both sides take the AssHandler monitor.
+            synchronized(assHandler) {
+                assHandler.readTrackDialogue(
+                    trackId = trackId,
+                    start = timeUs / 1000,
+                    duration = durationUs / 1000,
+                    data = sample.data,
+                    offset = lineIndex,
+                    length = sample.limit() - lineIndex,
+                )
+            }
         }
         delegate.sampleMetadata(timeUs, flags, size, offset, cryptoData)
     }

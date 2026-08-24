@@ -1,5 +1,43 @@
+import 'package:background_downloader/background_downloader.dart' as bgd;
+import 'package:path/path.dart' as p;
+
 import '../data/models/aggregated_item.dart';
 import '../data/models/download_quality.dart';
+import 'platform_detection.dart';
+
+/// The base directory, directory and filename a download task needs to write
+/// [savePath].
+///
+/// On Windows, Task.split strips the drive and pairs what is left with the root
+/// base directory, which resolves to an empty string there, so the task writes
+/// relative to the working directory instead of the drive the user picked. The
+/// package wants the drive kept in the directory when the base is root.
+Future<(bgd.BaseDirectory, String, String)> splitDownloadPath(
+  String savePath,
+) async {
+  if (PlatformDetection.isWindows) {
+    return (
+      bgd.BaseDirectory.root,
+      p.windows.normalize(p.windows.dirname(savePath)),
+      p.windows.basename(savePath),
+    );
+  }
+  return bgd.Task.split(filePath: savePath);
+}
+
+/// A download ETA as a short "1h 04m" or "4m 30s" style figure, coarse on
+/// purpose since a transcode's pace drifts.
+String formatEta(int seconds) {
+  if (seconds >= 3600) {
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    return '${hours}h ${minutes.toString().padLeft(2, '0')}m';
+  }
+  if (seconds >= 60) {
+    return '${seconds ~/ 60}m ${(seconds % 60).toString().padLeft(2, '0')}s';
+  }
+  return '${seconds}s';
+}
 
 String formatBytes(int bytes) {
   if (bytes < 1024) return '$bytes B';

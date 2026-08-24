@@ -116,9 +116,13 @@ class TizenPlayerBackend extends PlayerBackend {
   Future<void> play(
     dynamic mediaItem,
     {Duration startPosition = Duration.zero}) async {
+    final payload = mediaItem is Map ? mediaItem : const <String, dynamic>{};
+
+    final autoPlay = payload['autoPlay'] != false;
+
     final url = mediaItem is String
         ? mediaItem
-        : (mediaItem is Map ? mediaItem['url']?.toString() ?? '' : '');
+        : payload['url']?.toString() ?? '';
     if (url.isEmpty) return;
 
     await _disposeController();
@@ -141,7 +145,9 @@ class TizenPlayerBackend extends PlayerBackend {
       await controller.seekTo(startPosition);
     }
     await controller.setPlaybackSpeed(_speed);
-    await controller.play();
+    if (autoPlay) {
+      await controller.play();
+    }
     _onValue();
   }
 

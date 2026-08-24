@@ -18,6 +18,7 @@ List<String> mergeTranscodeReasons({
   int? sourceBitrate,
   int? maxStreamingBitrate,
   int? audioStreamIndex,
+  int? subtitleStreamIndex,
   Map<String, dynamic>? deviceProfile,
 }) {
   final reasons = List<String>.of(serverReasons);
@@ -65,13 +66,84 @@ List<String> mergeTranscodeReasons({
   }
 
   final audioCodec = _codecOf(
-    _selectedAudioStream(mediaStreams, audioStreamIndex),
+    _selectedStream(mediaStreams, 'audio', audioStreamIndex),
   );
   if (audioCodec != null && _rejects(profiles, 'AudioCodec', audioCodec)) {
     add('AudioCodecNotSupported');
   }
 
+  // A transcode caused only by the subtitle did not carry a reason in
+  // TranscodingReasons, so the reason list reads as empty. Projecting
+  // the profile against the picked stream gives it back.
+  final subtitleProfiles = _subtitleProfiles(deviceProfile);
+  if (subtitleProfiles.isNotEmpty &&
+      subtitleStreamIndex != null &&
+      subtitleStreamIndex >= 0) {
+    final subtitleStream = _selectedStream(
+      mediaStreams,
+      'subtitle',
+      subtitleStreamIndex,
+    );
+    final subtitleCodec = _codecOf(subtitleStream);
+    if (subtitleCodec != null &&
+        _subtitleNeedsBurnIn(subtitleProfiles, subtitleCodec)) {
+      add('SubtitleCodecNotSupported');
+    }
+  }
+
   return reasons;
+}
+
+List<Map<String, dynamic>> _subtitleProfiles(
+  Map<String, dynamic>? deviceProfile,
+) {
+  final raw = deviceProfile?['SubtitleProfiles'];
+  if (raw is! List) return const <Map<String, dynamic>>[];
+  return raw
+      .whereType<Map>()
+      .map((e) => e.cast<String, dynamic>())
+      .toList(growable: false);
+}
+
+/// The methods that hand the subtitle over as it is. Anything else, Encode
+/// above all, means the server has to burn it into the picture.
+const Set<String> _directSubtitleMethods = <String>{'embed', 'external', 'hls'};
+
+/// Whether the profile has no way to carry [format] without burning it in.
+bool _subtitleNeedsBurnIn(
+  List<Map<String, dynamic>> subtitleProfiles,
+  String format,
+) {
+  for (final profile in subtitleProfiles) {
+    final formats = (profile['Format']?.toString() ?? '')
+        .split(',')
+        .map((e) => e.trim().toLowerCase());
+    if (!formats.contains(format)) continue;
+    final methods = (profile['Method']?.toString() ?? '')
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .toSet();
+    if (_directSubtitleMethods.intersection(methods).isNotEmpty) return false;
+  }
+  return true;
+}
+
+/// The stream the server worked from, falling back to the first of that
+/// [type] when nothing said which. Guessing the wrong track would name a
+/// codec the stream never carried.
+Map<String, dynamic>? _selectedStream(
+  List<Map<String, dynamic>> mediaStreams,
+  String type,
+  int? streamIndex,
+) {
+  final ofType = _streamsOfType(mediaStreams, type);
+  if (ofType.isEmpty) return null;
+  if (streamIndex != null) {
+    for (final stream in ofType) {
+      if (stream['Index'] == streamIndex) return stream;
+    }
+  }
+  return ofType.first;
 }
 
 /// Whether [value] is missing from what the profiles list under [key]. A
@@ -114,23 +186,6 @@ List<Map<String, dynamic>> _streamsOfType(
 ) => mediaStreams
     .where((s) => s['Type']?.toString().toLowerCase() == type)
     .toList(growable: false);
-
-/// The audio track the server actually worked from, falling back to the first
-/// when nothing said which. Guessing the wrong track would name a codec the
-/// stream never carried.
-Map<String, dynamic>? _selectedAudioStream(
-  List<Map<String, dynamic>> mediaStreams,
-  int? audioStreamIndex,
-) {
-  final audio = _streamsOfType(mediaStreams, 'audio');
-  if (audio.isEmpty) return null;
-  if (audioStreamIndex != null) {
-    for (final stream in audio) {
-      if (stream['Index'] == audioStreamIndex) return stream;
-    }
-  }
-  return audio.first;
-}
 
 String? _codecOf(Map<String, dynamic>? stream) {
   final codec = stream?['Codec']?.toString().toLowerCase().trim();

@@ -244,7 +244,7 @@ class _ServerSelectScreenState extends State<ServerSelectScreen> {
         imageTag: currentUser.primaryImageTag,
         isAdministrator: currentUser.policy?.isAdministrator ?? false,
         canDownload: currentUser.policy?.enableContentDownloading ?? false,
-        canManageSubtitles: currentUser.policy?.enableSubtitleManagement ??
+        canManageSubtitles: currentUser.policy?.canFetchRemoteSubtitles ??
             false,
         canManageCollections:
           currentUser.policy?.enableCollectionManagement ?? false,
@@ -871,6 +871,14 @@ class _AddServerDialogState extends State<AddServerDialog> {
   bool _dialogDismissed = false;
   bool get _isMoonfin => ThemeRegistry.active.id == ThemeRegistry.moonfinId;
 
+  /// Known server addresses, freshest first, offered as keyboard chips so
+  /// re-adding a server is one press instead of a typed URL.
+  List<String> get _recentServerAddresses {
+    final servers = [...widget.serverRepo.servers]
+      ..sort((a, b) => b.dateLastAccessed.compareTo(a.dateLastAccessed));
+    return [for (final server in servers) server.address];
+  }
+
   Color _dialogForeground(double alpha) {
     return (_isMoonfin ? Colors.white : AppColorScheme.onSurface).withValues(
       alpha: alpha,
@@ -1057,6 +1065,7 @@ class _AddServerDialogState extends State<AddServerDialog> {
                   controller: widget.controller,
                   isFocused: focused,
                   inputPurpose: InputPurpose.url,
+                  recentSuggestions: _recentServerAddresses,
                   preferSystemIme: _userPreferences.get(
                     UserPreferences.preferSystemImeKeyboard,
                   ),

@@ -16,7 +16,9 @@ import 'package:screen_brightness_platform_interface/screen_brightness_platform_
 import 'package:volume_controller/volume_controller.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../../playback/subtitle_style.dart';
 import '../../../util/fullscreen_helper.dart';
+import '../../../util/scroll_sensitivity_binding.dart';
 import '../../widgets/playback/playback_time_row.dart';
 import '../../widgets/playback/seek_icons.dart';
 import '../../widgets/playback/trickplay_tile_image.dart';
@@ -142,6 +144,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   double _audioDelay = 0.0;
   double _subtitleDelay = 0.0;
   bool _subtitleActive = false;
+  int? _subtitleIndexBeforeQuickOff;
   bool _subtitleReapplyRetryScheduled = false;
   bool _isStopping = false;
   bool _readyToPop = false;
@@ -159,12 +162,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   final GlobalKey _videoSurfaceKey = GlobalKey();
   bool _forcedLandscape = false;
   double _playerVolume = 100.0;
+  static const double _scrollWheelNotch = 40.0;
+  double _scrollWheelAccumulated = 0.0;
   double _volumeBeforeMute = 1.0;
   int _media3VolumeBoostLevel = 0;
   bool _didRequestIosPiPForBackground = false;
   bool _isStartingIosPiPForBackground = false;
   bool _didHandleBackgroundSuspend = false;
-  bool _videoWasDisabledByLifecycle = false;
   bool _videoNeedsReattachAfterScreenOff = false;
   Timer? _tvBackgroundExitTimer;
   Timer? _tvTemporarySpeedHoldTimer;
@@ -183,6 +187,11 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
   MediaSegment? _skipSegment;
   Duration? _skipTo;
+  /// True when the auto-hide setting is on for the current segment.
+  bool _skipSegmentAutoHideEnabled = false;
+  /// True while the auto-hide cooldown is still running.
+  bool _skipSegmentAutoHidePending = false;
+  Timer? _skipSegmentAutoHideTimer;
   bool _showNextUp = false;
   AggregatedItem? _nextUpItem;
   bool _nextUpDismissed = false;
@@ -382,7 +391,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   }
 
   bool _canDownloadRemoteSubtitles(AggregatedItem item) {
-    final client = _clientForItem(item);
     final user = GetIt.instance<UserRepository>().currentUser;
     final mediaType = item.rawData['MediaType'] as String?;
     final isAudio =
@@ -391,8 +399,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         item.type == 'AudioBook' ||
         mediaType == 'Audio';
 
-    return client.serverType == ServerType.jellyfin &&
-        (user?.canManageSubtitles ?? false) &&
+    return (user?.canManageSubtitles ?? false) &&
         item.mediaSources.isNotEmpty &&
         item.type != 'Photo' &&
         item.type != 'Book' &&
@@ -800,7 +807,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight,
       ]);
-    } else {
+    } else if (!PlatformDetection.isTV) {
       SystemChrome.setPreferredOrientations([
         DeviceOrientation.landscapeLeft,
         DeviceOrientation.landscapeRight,
@@ -877,10 +884,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       _syncMedia3VolumeBoostLevel();
       unawaited(_syncAutoHdrSwitching());
       final isPreroll = _isCurrentPreroll;
+      _resetSkipSegmentAutoHide();
       setState(() {
         _nextUpDismissed = false;
         _showNextUp = false;
         _skipSegment = null;
+        // Stream indexes belong to the file they came from, so the next item
+        // must not have a track from the last one put back on it.
+        _subtitleIndexBeforeQuickOff = null;
         if (isPreroll) {
           _controlsVisible = false;
           _isOsdLocked = false;
@@ -958,6 +969,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     }
     _cancelTvTemporarySpeedHold();
     _hideTimer?.cancel();
+    _skipSegmentAutoHideTimer?.cancel();
     _displayPlayingDebounce?.cancel();
     _endsAtTicker?.cancel();
     _scrubSeekDebounceTimer?.cancel();
@@ -1261,23 +1273,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     switch (lifecycleState) {
       case AppLifecycleState.inactive:
         // iOS reports inactive for system UI like the AirPlay picker or
-        // Control Center, not just for backgrounding, and starting PiP there
-        // pulls the player out from under whatever just opened. Real
-        // backgrounding still gets PiP from the paused case below and from
-        // the automatic inline start.
-        if (PlatformDetection.isIOS) return;
-        if (PlatformDetection.isAndroid && !PlatformDetection.isTV) {
-          return;
-        }
-        if (PlatformDetection.isTV ||
-            PlatformDetection.isDesktop ||
-            PlatformDetection.isWeb) {
-          return;
-        }
-        if (_isInPiP || _isStopping || _pipService.isScreenLocked) return;
-        _videoWasDisabledByLifecycle = true;
-        _capturePositionBeforeVideoDisable();
-        _activeMediaKitBackend?.setVideoEnabled(false);
+        // Control Center, and desktops report it whenever the window loses
+        // focus, so nothing should react this early.
+        break;
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
         if (PlatformDetection.isAndroid && !PlatformDetection.isTV) {
@@ -1296,10 +1294,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           _tryStartIosPiPForBackground();
           return;
         }
-        if (_isInPiP || _isStopping || _pipService.isScreenLocked) return;
-        _videoWasDisabledByLifecycle = true;
-        _capturePositionBeforeVideoDisable();
-        _activeMediaKitBackend?.setVideoEnabled(false);
+        // Desktop reaches here, and it keeps the video track running while
+        // the window is hidden. Turning it off makes mpv reopen the source on
+        // restore, which rewinds server transcodes to the start of their own
+        // stream, and window moves and fullscreen toggles on some compositors
+        // report hidden long enough to trip that.
+        break;
       case AppLifecycleState.resumed:
         _didHandleBackgroundSuspend = false;
         _cancelTvBackgroundExit();
@@ -1307,13 +1307,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         if (PlatformDetection.isIOS && _isInPiP) {
           _pipService.enableAutoPiP(false);
         }
-        final needsReattach = _videoNeedsReattachAfterScreenOff;
-        _videoNeedsReattachAfterScreenOff = false;
-        if (_videoWasDisabledByLifecycle) {
-          _videoWasDisabledByLifecycle = false;
-          _activeMediaKitBackend?.setVideoEnabled(true);
-          _restorePositionAfterScreenLock();
-        } else if (needsReattach) {
+        if (_videoNeedsReattachAfterScreenOff) {
+          _videoNeedsReattachAfterScreenOff = false;
           unawaited(_reattachVideoOutput());
         }
         _ensureDesktopOverlayFocus();
@@ -1354,15 +1349,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     await backend.setVideoEnabled(false);
     if (!mounted || _isStopping) return;
     await backend.setVideoEnabled(true);
-  }
-
-  /// Notes where playback is before the video track is turned off, which is
-  /// what the restore on resume compares against. Turning the track back on
-  /// reopens the source, and a server side transcode reopens at the start of
-  /// its own stream rather than where the viewer was.
-  void _capturePositionBeforeVideoDisable() {
-    _positionBeforeScreenLock = _activeBackend?.position ?? _state.position;
-    _wasPlayingBeforeScreenLock = _state.isPlaying;
   }
 
   void _onScreenLock(bool locked) {
@@ -2204,6 +2190,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     final hadNextUpPrompt = _showNextUp;
     if (!hadSkipPrompt && !hadNextUpPrompt) return;
 
+    if (hadSkipPrompt) {
+      _resetSkipSegmentAutoHide();
+    }
     setState(() {
       if (hadSkipPrompt) {
         _skipSegment = null;
@@ -2261,6 +2250,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         _controlsVisible = false;
       });
       _hideTimer?.cancel();
+      _scheduleSkipSegmentAutoHide();
       _focusTvSkipSegment();
     } else if (result.isNone && _skipSegment != null) {
       _clearSkipSegment();
@@ -2364,6 +2354,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     if (nextItem == null) return;
 
     _manager.suppressAutoNext = true;
+    _resetSkipSegmentAutoHide();
     setState(() {
       _showNextUp = true;
       _nextUpItem = nextItem;
@@ -2494,6 +2485,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     if (_skipTo != null) {
       _manager.seekTo(_skipTo!);
     }
+    _resetSkipSegmentAutoHide();
     setState(() {
       _skipSegment = null;
       _skipTo = null;
@@ -2507,9 +2499,48 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   }
 
   void _clearSkipSegment() {
+    _resetSkipSegmentAutoHide();
     setState(() {
       _skipSegment = null;
       _skipTo = null;
+    });
+  }
+
+  void _resetSkipSegmentAutoHide() {
+    _skipSegmentAutoHideTimer?.cancel();
+    _skipSegmentAutoHideTimer = null;
+    _skipSegmentAutoHideEnabled = false;
+    _skipSegmentAutoHidePending = false;
+  }
+
+  /// Whether the skip button is currently drawn. While the auto-hide cooldown
+  /// runs it stays up on its own; afterwards it rides along with the OSD.
+  /// With auto-hide off it stays up until the segment ends.
+  bool get _isSkipSegmentButtonVisible =>
+      _skipSegment != null &&
+      (!_skipSegmentAutoHideEnabled ||
+          _skipSegmentAutoHidePending ||
+          _controlsVisible);
+
+  /// Hides the skip button after the user-configured cooldown. Once it has
+  /// elapsed the button no longer clears the segment outright: it only hides
+  /// while the OSD is up, and reappears whenever the OSD reappears.
+  void _scheduleSkipSegmentAutoHide() {
+    _skipSegmentAutoHideTimer?.cancel();
+    _skipSegmentAutoHideTimer = null;
+    _skipSegmentAutoHideEnabled = false;
+    _skipSegmentAutoHidePending = false;
+    final seconds = _prefs.get(UserPreferences.mediaSegmentAutoHide).seconds;
+    if (seconds <= 0) return;
+    _skipSegmentAutoHideEnabled = true;
+    _skipSegmentAutoHidePending = true;
+    _skipSegmentAutoHideTimer = Timer(Duration(seconds: seconds), () {
+      _skipSegmentAutoHideTimer = null;
+      if (!mounted || _skipSegment == null) return;
+      _skipSegmentAutoHidePending = false;
+      // If the OSD is hidden the button hides with it; if the OSD is up it
+      // stays, and from now on it follows the OSD visibility.
+      setState(() {});
     });
   }
 
@@ -2665,7 +2696,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       _focusTvNextUpPlay();
       return;
     }
-    if (_skipSegment != null) {
+    if (_isSkipSegmentButtonVisible) {
       _focusTvSkipSegment();
       return;
     }
@@ -2929,14 +2960,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   }
 
   SubtitleViewConfiguration _buildSubtitleConfig() {
-    final textColor = Color(_prefs.get(UserPreferences.subtitlesTextColor));
-    final bgColor = Color(_prefs.get(UserPreferences.subtitlesBackgroundColor));
-    final strokeColor = Color(
-      _prefs.get(UserPreferences.subtitleTextStrokeColor),
+    final style = SubtitleStyle.forResolution(
+      _prefs,
+      _manager.currentResolution,
     );
-    final prefSize = _prefs.get(UserPreferences.subtitlesTextSize);
-    final fontWeight = _prefs.get(UserPreferences.subtitlesTextWeight);
-    final offset = _prefs.get(UserPreferences.subtitlesOffsetPosition);
+    final textColor = Color(style.textColor);
+    final bgColor = Color(style.backgroundColor);
+    final strokeColor = Color(style.strokeColor);
+    final prefSize = style.fontSize;
+    final fontWeight = style.fontWeight;
+    final offset = style.verticalOffset;
 
     final baseSize = PlatformDetection.useMobileUi ? 40.0 : 32.0;
     final fontSize = (prefSize / 24.0) * baseSize;
@@ -2982,14 +3015,16 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     final backend = _activeBackend;
     if (backend == null) return;
 
-    final textColor = _prefs.get(UserPreferences.subtitlesTextColor);
-    final backgroundColor = _prefs.get(
-      UserPreferences.subtitlesBackgroundColor,
+    final style = SubtitleStyle.forResolution(
+      _prefs,
+      _manager.currentResolution,
     );
-    final strokeColor = _prefs.get(UserPreferences.subtitleTextStrokeColor);
-    final fontSize = _prefs.get(UserPreferences.subtitlesTextSize);
-    final fontWeight = _prefs.get(UserPreferences.subtitlesTextWeight);
-    final verticalOffset = _prefs.get(UserPreferences.subtitlesOffsetPosition);
+    final textColor = style.textColor;
+    final backgroundColor = style.backgroundColor;
+    final strokeColor = style.strokeColor;
+    final fontSize = style.fontSize;
+    final fontWeight = style.fontWeight;
+    final verticalOffset = style.verticalOffset;
 
     // Embedded-style overrides are Media3-specific (Android only) and live on
     // the Media3PlayerBackend's wider signature, not the base PlayerBackend.
@@ -3166,7 +3201,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         final isBoundaryFocus =
             primaryFocus == _tvTransportLastFocus ||
             primaryFocus == _tvSeekbarFocus;
-        if (isBoundaryFocus && _skipSegment != null) {
+        if (isBoundaryFocus && _isSkipSegmentButtonVisible) {
           _focusTvSkipSegment();
           return KeyEventResult.handled;
         }
@@ -3203,7 +3238,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
             _handleNextUpDismiss();
             return KeyEventResult.handled;
           }
-          if (_skipSegment != null) {
+          if (_isSkipSegmentButtonVisible) {
             _dismissSkipSegment();
             return KeyEventResult.handled;
           }
@@ -3361,6 +3396,50 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         _changeVolumeBy(-0.05);
         _showControls();
         return KeyEventResult.handled;
+      case LogicalKeyboardKey.keyK:
+        _togglePlayPause();
+        _showControls();
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.keyJ:
+        _seekRelative(
+          -_accelerateSeekStep(
+            _prefs.get(UserPreferences.skipBackLength),
+            event,
+          ),
+        );
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.keyL:
+        _seekRelative(
+          _accelerateSeekStep(
+            _prefs.get(UserPreferences.skipForwardLength),
+            event,
+          ),
+        );
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.keyH:
+        if (event is! KeyRepeatEvent) {
+          _exitPlayback();
+        }
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.keyF:
+        if (PlatformDetection.useDesktopUi) {
+          unawaited(_toggleDesktopFullscreen());
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      case LogicalKeyboardKey.keyM:
+        _toggleMute();
+        _showControls();
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.keyC:
+        unawaited(_toggleSubtitlesQuick());
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.comma:
+        _stepPlaybackSpeed(-1);
+        return KeyEventResult.handled;
+      case LogicalKeyboardKey.period:
+        _stepPlaybackSpeed(1);
+        return KeyEventResult.handled;
       case LogicalKeyboardKey.keyI:
         _showStreamInfo();
         _showControls();
@@ -3388,6 +3467,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   @override
   Widget build(BuildContext context) {
     final hideOsdForPreroll = _isCurrentPreroll;
+    // Volume and brightness ride on the vertical swipe, which is easy to brush
+    // by accident when a phone changes hands, so it turns off on its own
+    // rather than by locking the whole OSD.
+    final swipeGestures =
+        PlatformDetection.useMobileUi &&
+        !_isOsdLocked &&
+        _prefs.get(UserPreferences.playerSwipeGestures);
     if (_isInPiP) {
       return Scaffold(
         backgroundColor: Colors.black,
@@ -3406,7 +3492,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           _handleNextUpDismiss();
           return;
         }
-        if (_skipSegment != null) {
+        if (_isSkipSegmentButtonVisible) {
           _dismissSkipSegment();
           return;
         }
@@ -3437,29 +3523,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
             onDoubleTap: PlatformDetection.useDesktopUi
                 ? null
                 : _handleDoubleTapGesture,
-            onVerticalDragStart: PlatformDetection.isTV
-                ? null
-                : PlatformDetection.useMobileUi && !_isOsdLocked
-                ? _onVerticalDragStart
-                : null,
-            onVerticalDragUpdate: PlatformDetection.isTV
-                ? null
-                : PlatformDetection.useMobileUi && !_isOsdLocked
-                ? _onVerticalDragUpdate
-                : null,
-            onVerticalDragEnd: PlatformDetection.isTV
-                ? null
-                : PlatformDetection.useMobileUi && !_isOsdLocked
-                ? _onVerticalDragEnd
-                : null,
-            onVerticalDragCancel: PlatformDetection.isTV
-                ? null
-                : PlatformDetection.useMobileUi && !_isOsdLocked
-                ? _onVerticalDragCancel
-                : null,
-            onPanDown: PlatformDetection.useDesktopUi
-                ? (_) => _showControls()
-                : null,
+            onVerticalDragStart: swipeGestures ? _onVerticalDragStart : null,
+            onVerticalDragUpdate: swipeGestures ? _onVerticalDragUpdate : null,
+            onVerticalDragEnd: swipeGestures ? _onVerticalDragEnd : null,
+            onVerticalDragCancel: swipeGestures ? _onVerticalDragCancel : null,
             behavior: HitTestBehavior.opaque,
             child: Listener(
               onPointerSignal: PlatformDetection.useDesktopUi
@@ -3485,6 +3552,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                       child: ColoredBox(color: Colors.black),
                     ),
                     _buildVideoSurface(),
+                    if (PlatformDetection.isWeb)
+                      const Positioned.fill(
+                        child: ColoredBox(color: Colors.transparent),
+                      ), // Workaround for a Flutter web issue where the video surface can block pointer events.
                     _buildBringupOverlay(context),
                     if (_isRestoringPosition)
                       const Positioned.fill(
@@ -3509,7 +3580,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                       _buildDoubleTapSkipOverlay(),
                     if (_isOsdLocked && !hideOsdForPreroll)
                       _buildLockedOverlay(),
-                    if (_skipSegment != null)
+                    if (_isSkipSegmentButtonVisible)
                       SkipSegmentOverlay(
                         segment: _skipSegment!,
                         onSkip: _skipCurrentSegment,
@@ -3518,9 +3589,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                             : null,
                         onDismiss: _clearSkipSegment,
                         positionStream: _state.positionStream,
-                        autoHideSeconds: _prefs
-                            .get(UserPreferences.mediaSegmentAutoHide)
-                            .seconds,
+                        initialPosition: _state.position,
                       ),
                     if (_showNextUp && _nextUpItem != null)
                       NextUpOverlay(
@@ -5205,8 +5274,27 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     final dy = event.scrollDelta.dy;
     if (dy == 0) return;
     final action = _prefs.get(UserPreferences.desktopScrollWheelAction);
+    if (action == DesktopScrollWheelAction.off) return;
+    // A mouse wheel notch arrives as one event of forty to sixty logical
+    // pixels depending on the platform, but a trackpad spreads the same
+    // motion over a stream of tiny ones, and stepping on every event slams
+    // the volume to an end stop on a single swipe. Deltas pool until they
+    // add up to a notch, and each notch is one step.
+    if (dy.sign != _scrollWheelAccumulated.sign) {
+      _scrollWheelAccumulated = 0.0;
+    }
+    _scrollWheelAccumulated += dy;
+    // Scroll sensitivity scales mouse deltas but leaves a trackpad alone, so
+    // the notch follows the same rule. Without it a turned down setting would
+    // take several turns to move one step, and a turned up one would make a
+    // trackpad swipe a long way for the same.
+    final notch = event.kind == PointerDeviceKind.mouse
+        ? _scrollWheelNotch * ScrollSensitivityBinding.current
+        : _scrollWheelNotch;
+    if (_scrollWheelAccumulated.abs() < notch) return;
     // scrollDelta.dy is negative when scrolling up / away from the user.
-    final scrollingUp = dy < 0;
+    final scrollingUp = _scrollWheelAccumulated < 0;
+    _scrollWheelAccumulated = 0.0;
     switch (action) {
       case DesktopScrollWheelAction.off:
         return;
@@ -5382,6 +5470,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   }
 
   void _handleDoubleTapGesture() {
+    if (_isCurrentPreroll) {
+      return;
+    }
     if (PlatformDetection.useDesktopUi) {
       return;
     }
@@ -6023,13 +6114,66 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     );
   }
 
+  static const _speedSteps = <double>[0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
+
+  /// Nudges the playback speed one step along the same ladder the speed
+  /// picker offers, from whichever step sits nearest the current speed.
+  void _stepPlaybackSpeed(int direction) {
+    final current = _state.playbackSpeed;
+    var nearest = 0;
+    for (var i = 1; i < _speedSteps.length; i++) {
+      if ((current - _speedSteps[i]).abs() <
+          (current - _speedSteps[nearest]).abs()) {
+        nearest = i;
+      }
+    }
+    final target = (nearest + direction).clamp(0, _speedSteps.length - 1);
+    final speed = _speedSteps[target];
+    if ((current - speed).abs() < 0.001) return;
+    unawaited(() async {
+      final changed = await _runSinglePlayerMutation(
+        'speed_$speed',
+        () async => _manager.setPlaybackSpeed(speed),
+      );
+      if (changed && mounted) {
+        setState(() {});
+      }
+    }());
+    _showControls();
+  }
+
+  /// One key that puts the subtitles out and back. Turning them off remembers
+  /// the track, turning them on brings that track back, and with nothing to
+  /// bring back the selector opens so there is always a visible response.
+  Future<void> _toggleSubtitlesQuick() async {
+    final activeIndex = _manager.subtitleStreamIndex ?? -1;
+    if (activeIndex >= 0) {
+      _subtitleIndexBeforeQuickOff = activeIndex;
+      await _runSinglePlayerMutation(
+        'subtitles_off',
+        _manager.disableSubtitles,
+      );
+    } else {
+      final remembered = _subtitleIndexBeforeQuickOff;
+      if (remembered == null || remembered < 0) {
+        _showTrackSelector(audio: false);
+        return;
+      }
+      await _runSinglePlayerMutation(
+        'subtitles_on_$remembered',
+        () => _manager.changeSubtitleTrack(remembered),
+      );
+    }
+    _syncSubtitleActive();
+    _showControls();
+  }
+
   void _showSpeedSelector() {
-    const speedOptions = <double>[0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
     final l10n = AppLocalizations.of(context);
-    final options = speedOptions
+    final options = _speedSteps
         .map((s) => TrackOption(label: '${s}x'))
         .toList();
-    final currentIdx = speedOptions.indexWhere(
+    final currentIdx = _speedSteps.indexWhere(
       (s) => (_state.playbackSpeed - s).abs() < 0.001,
     );
     unawaited(() async {
@@ -6041,7 +6185,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       );
       _suppressBackNavigation();
       if (result == null || !mounted) return;
-      final speed = speedOptions[result];
+      final speed = _speedSteps[result];
       final changed = await _runSinglePlayerMutation(
         'speed_$speed',
         () async => _manager.setPlaybackSpeed(speed),

@@ -17,13 +17,54 @@ const _profile = <String, dynamic>{
   ],
 };
 
+const _videoDirectPlay = [
+  {
+    'Type': 'Video',
+    'Container': 'mkv,mp4,ts',
+    'VideoCodec': 'h264,hevc',
+    'AudioCodec': 'aac,ac3',
+  },
+];
+
+Map<String, dynamic> _withSubtitleProfiles(
+  List<Map<String, String>> profiles,
+) => {'DirectPlayProfiles': _videoDirectPlay, 'SubtitleProfiles': profiles};
+
+// Encode is the server burning the frames in, so a PGS stream can only reach
+// the client through a transcode.
+final _subtitleProfileEncodeOnly = _withSubtitleProfiles(const [
+  {'Format': 'vtt', 'Method': 'Embed'},
+  {'Format': 'vtt', 'Method': 'External'},
+  {'Format': 'srt', 'Method': 'Embed'},
+  {'Format': 'srt', 'Method': 'External'},
+  {'Format': 'pgs', 'Method': 'Encode'},
+  {'Format': 'pgssub', 'Method': 'Encode'},
+]);
+
+final _subtitleProfilePgsEmbed = _withSubtitleProfiles(const [
+  {'Format': 'pgs', 'Method': 'Embed'},
+  {'Format': 'pgs', 'Method': 'Encode'},
+  {'Format': 'pgssub', 'Method': 'Embed'},
+  {'Format': 'pgssub', 'Method': 'Encode'},
+]);
+
+final _subtitleProfileNoPgs = _withSubtitleProfiles(const [
+  {'Format': 'vtt', 'Method': 'Embed'},
+  {'Format': 'srt', 'Method': 'Embed'},
+]);
+
 List<Map<String, dynamic>> _streams({
   String? videoCodec = 'h264',
   String audioCodec = 'aac',
   int audioIndex = 1,
+  String? subtitleCodec,
+  int subtitleIndex = 4,
 }) => [
   if (videoCodec != null) {'Type': 'Video', 'Index': 0, 'Codec': videoCodec},
   {'Type': 'Audio', 'Index': audioIndex, 'Codec': audioCodec},
+  if (subtitleCodec != null) {
+    'Type': 'Subtitle', 'Index': subtitleIndex, 'Codec': subtitleCodec
+  },
 ];
 
 void main() {
@@ -169,6 +210,93 @@ void main() {
         ),
         isEmpty,
       );
+    });
+
+    test('subtitle: names PGS when the profile can only burn it in', () {
+      final reasons = mergeTranscodeReasons(
+        playMethod: StreamPlayMethod.transcode,
+        mediaStreams: _streams(
+          videoCodec: 'hevc',
+          subtitleCodec: 'pgssub',
+        ),
+        container: 'mkv',
+        subtitleStreamIndex: 4,
+        deviceProfile: _subtitleProfileEncodeOnly,
+      );
+      expect(reasons, ['SubtitleCodecNotSupported']);
+    });
+
+    test('subtitle: quiet when the profile already carries PGS direct', () {
+      final reasons = mergeTranscodeReasons(
+        playMethod: StreamPlayMethod.transcode,
+        mediaStreams: _streams(
+          videoCodec: 'hevc',
+          subtitleCodec: 'pgssub',
+        ),
+        container: 'mkv',
+        subtitleStreamIndex: 4,
+        sourceBitrate: 20000000,
+        maxStreamingBitrate: 10000000,
+        deviceProfile: _subtitleProfilePgsEmbed,
+      );
+      expect(reasons, ['VideoBitrateNotSupported']);
+    });
+
+    test('subtitle: names PGS when the profile never lists it', () {
+      final reasons = mergeTranscodeReasons(
+        playMethod: StreamPlayMethod.transcode,
+        mediaStreams: _streams(
+          videoCodec: 'hevc',
+          subtitleCodec: 'pgssub',
+        ),
+        container: 'mkv',
+        subtitleStreamIndex: 4,
+        deviceProfile: _subtitleProfileNoPgs,
+      );
+      expect(reasons, ['SubtitleCodecNotSupported']);
+    });
+
+    test('subtitle: stays quiet when no subtitle stream is picked', () {
+      expect(
+        mergeTranscodeReasons(
+          playMethod: StreamPlayMethod.transcode,
+          mediaStreams: _streams(videoCodec: 'h264'),
+          container: 'mkv',
+          deviceProfile: _subtitleProfileEncodeOnly,
+        ),
+        isEmpty,
+      );
+    });
+
+    test('subtitle: quiet when the profile can carry the stream directly', () {
+      expect(
+        mergeTranscodeReasons(
+          playMethod: StreamPlayMethod.transcode,
+          mediaStreams: _streams(
+            videoCodec: 'h264',
+            subtitleCodec: 'srt',
+          ),
+          container: 'mkv',
+          subtitleStreamIndex: 4,
+          deviceProfile: _subtitleProfileEncodeOnly,
+        ),
+        isEmpty,
+      );
+    });
+
+    test('subtitle: does not repeat a reason the server already sent', () {
+      final reasons = mergeTranscodeReasons(
+        playMethod: StreamPlayMethod.transcode,
+        serverReasons: const ['SubtitleCodecNotSupported'],
+        mediaStreams: _streams(
+          videoCodec: 'hevc',
+          subtitleCodec: 'pgssub',
+        ),
+        container: 'mkv',
+        subtitleStreamIndex: 4,
+        deviceProfile: _subtitleProfileEncodeOnly,
+      );
+      expect(reasons, ['SubtitleCodecNotSupported']);
     });
   });
 }

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 
 import '../../models/aggregated_item.dart';
+import '../log_service.dart';
 import 'cast_provider.dart';
 import 'cast_target.dart';
 import 'cast_transport_controls.dart';
@@ -94,6 +95,11 @@ class CastService {
         remoteStateNotifier.value = state;
         remotePositionNotifier.value = (event['positionTicks'] as int?) ?? 0;
       case 'error':
+        castDiag(
+          'receiver error (${castKind.name}): '
+          '${event['message'] ?? 'unknown'}',
+          level: LogLevel.warning,
+        );
         if (activeKindNotifier.value == castKind) {
           remoteErrorNotifier.value =
               event['message'] as String? ?? 'Playback failed on the receiver';
@@ -193,6 +199,11 @@ class CastService {
     final provider = _providers.firstWhere(
       (p) => p.supportedKinds.contains(target.kind),
       orElse: () => throw StateError('No cast provider found for target'),
+    );
+    castDiag(
+      'playToTarget ${target.kind.name} "${target.title}" item=${item.id} '
+      'audio=$audioStreamIndex subtitle=$subtitleStreamIndex '
+      'source=$mediaSourceId',
     );
     await provider.playToTarget(
       target,

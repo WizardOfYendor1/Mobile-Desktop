@@ -26,6 +26,10 @@ class AggregatedItem {
   String? get sortName => rawData['SortName'] as String?;
   String? get type => rawData['Type'] as String?;
 
+  /// The channel a live TV program belongs to. Read through toString because
+  /// Emby returns numeric ids.
+  String? get channelId => rawData['ChannelId']?.toString();
+
   /// Whether this item is music/audio content (track, audiobook, or any item
   /// whose server MediaType is Audio). Used to decide when to show the music
   /// mini-player and when to keep the audio media session alive.
@@ -235,6 +239,13 @@ class AggregatedItem {
 
   List<Map<String, dynamic>> get remoteTrailers =>
       _toListOfMaps(rawData['RemoteTrailers']);
+
+  /// Trailers stored alongside the media, counted by the server.
+  ///
+  /// A trailers folder, a bare trailer file and a name ending in a trailer
+  /// suffix all land in this one count, so it answers for every layout the
+  /// server recognizes.
+  int get localTrailerCount => _toInt(rawData['LocalTrailerCount']) ?? 0;
 
   List<Map<String, dynamic>> get chapters => _toListOfMaps(rawData['Chapters']);
 

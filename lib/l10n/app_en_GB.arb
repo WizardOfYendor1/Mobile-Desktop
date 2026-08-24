@@ -33,7 +33,7 @@
     "@quickConnectInstruction": {
         "description": "Instruction text for Quick Connect code entry"
     },
-    "waitingForAuthorization": "Waiting for authorization...",
+    "waitingForAuthorization": "Waiting for authorization…",
     "@waitingForAuthorization": {
         "description": "Quick Connect polling status text"
     },
@@ -49,7 +49,7 @@
     "@loginFailed": {
         "description": "Generic login failure message"
     },
-    "quickConnectUnavailable": "QuickConnect unavailable: {detail}",
+    "quickConnectUnavailable": "Quick Connect unavailable: {detail}",
     "@quickConnectUnavailable": {
         "description": "Quick Connect generic error message",
         "placeholders": {
@@ -58,7 +58,7 @@
             }
         }
     },
-    "quickConnectUnavailableWithStatus": "QuickConnect unavailable ({status}): {detail}",
+    "quickConnectUnavailableWithStatus": "Quick Connect unavailable ({status}): {detail}",
     "@quickConnectUnavailableWithStatus": {
         "description": "Quick Connect error message with HTTP status info",
         "placeholders": {
@@ -224,11 +224,11 @@
     "@embyConnectNetworkError": {
         "description": "Generic network error during Emby Connect flow"
     },
-    "loadingLinkedServers": "Loading linked servers...",
+    "loadingLinkedServers": "Loading linked servers…",
     "@loadingLinkedServers": {
         "description": "Status text while fetching Emby Connect server list"
     },
-    "connectingToServerEllipsis": "Connecting to server...",
+    "connectingToServerEllipsis": "Connecting to server…",
     "@connectingToServerEllipsis": {
         "description": "Status text while connecting to a selected server"
     },
@@ -1229,7 +1229,7 @@
             }
         }
     },
-    "downloadingTitle": "Downloading {title} ({count} items)...",
+    "downloadingTitle": "Downloading {title} ({count} items)…",
     "@downloadingTitle": {
         "description": "Snackbar message when downloading album tracks",
         "placeholders": {
@@ -1279,7 +1279,7 @@
     "@none": {
         "description": "Option label for no subtitle selected"
     },
-    "downloadSubtitlesLabel": "Download subtitles...",
+    "downloadSubtitlesLabel": "Download subtitles…",
     "@downloadSubtitlesLabel": {
         "description": "Label for the download subtitles option"
     },
@@ -1350,7 +1350,7 @@
     "@noEpisodesLoaded": {
         "description": "Message when no episodes are available for download"
     },
-    "downloadingItem": "Downloading {name} ({quality})...",
+    "downloadingItem": "Downloading {name} ({quality})…",
     "@downloadingItem": {
         "description": "Snackbar message when downloading an item",
         "placeholders": {
@@ -1991,7 +1991,7 @@
             }
         }
     },
-    "updating": "Updating...",
+    "updating": "Updating…",
     "@updating": {
         "description": "Button label while updating"
     },
@@ -2036,7 +2036,7 @@
     "@addBookmark": {
         "description": "Tooltip for add bookmark button"
     },
-    "bookmarksEllipsis": "Bookmarks...",
+    "bookmarksEllipsis": "Bookmarks…",
     "@bookmarksEllipsis": {
         "description": "Menu item to view bookmarks"
     },
@@ -2081,7 +2081,7 @@
     "@invertColorsPdf": {
         "description": "Menu item to invert colors for PDF"
     },
-    "preparingInAppReader": "Preparing in-app reader...",
+    "preparingInAppReader": "Preparing in-app reader…",
     "@preparingInAppReader": {
         "description": "Loading text while reader is being prepared"
     },
@@ -2282,11 +2282,11 @@
     "@failedToCancelSeriesRecording": {
         "description": "Error when cancelling a series recording fails"
     },
-    "searchThisLibrary": "Search this library...",
+    "searchThisLibrary": "Search this library…",
     "@searchThisLibrary": {
         "description": "Search hint when scoped to a specific library"
     },
-    "searchEllipsis": "Search...",
+    "searchEllipsis": "Search…",
     "@searchEllipsis": {
         "description": "Search hint placeholder"
     },
@@ -3272,7 +3272,7 @@
     "@loadProfile": {
         "description": "Button to load a profile"
     },
-    "syncing": "Syncing...",
+    "syncing": "Syncing…",
     "@syncing": {
         "description": "Label while syncing"
     },
@@ -3320,7 +3320,7 @@
     "@manage": {
         "description": "Button to manage storage"
     },
-    "calculating": "Calculating...",
+    "calculating": "Calculating…",
     "@calculating": {
         "description": "Label while calculating"
     },
@@ -3520,7 +3520,7 @@
     "@showInNavigation": {
         "description": "Toggle for showing library in navigation"
     },
-    "showInLatestMedia": "Show in latest media",
+    "showInLatestMedia": "Show in recently added/released media",
     "@showInLatestMedia": {
         "description": "Toggle for showing library in recently added/released media"
     },
@@ -3641,11 +3641,11 @@
     "@previewAudio": {
         "description": "Setting for preview audio"
     },
-    "enablePreviewAudio": "Enable audio for trailer and episode previews",
+    "enablePreviewAudio": "Enable audio for media previews",
     "@enablePreviewAudio": {
         "description": "Description for preview audio"
     },
-    "latestMedia": "Latest Media",
+    "latestMedia": "Recently Added Media",
     "@latestMedia": {
         "description": "Home section: recently added media"
     },
@@ -4191,7 +4191,7 @@
     "@readReleaseNotes": {
         "description": "Option to read the release notes in a browser"
     },
-    "downloadingUpdate": "Downloading update...",
+    "downloadingUpdate": "Downloading update…",
     "@downloadingUpdate": {
         "description": "Label shown while an update is being downloaded"
     },
@@ -4219,7 +4219,7 @@
     "@navbarStyleToolbarAppearance": {
         "description": "Navigation settings subtitle"
     },
-    "reorderToggleHomeRows": "Reorder and toggle home rows",
+    "reorderToggleHomeRows": "Reorder and toggle both library and external-based home rows",
     "@reorderToggleHomeRows": {
         "description": "Home sections settings subtitle"
     },
@@ -5019,7 +5019,7 @@
             }
         }
     },
-    "adminCreatingBackup": "Creating backup...",
+    "adminCreatingBackup": "Creating backup…",
     "adminBackupCreated": "Backup created successfully",
     "adminBackupCreateFailed": "Failed to create backup: {error}",
     "@adminBackupCreateFailed": {
@@ -5047,7 +5047,7 @@
         }
     },
     "adminConfirmRestore": "Confirm Restore",
-    "adminRestoringBackup": "Restoring backup...",
+    "adminRestoringBackup": "Restoring backup…",
     "adminRestoreFailed": "Failed to restore backup: {error}",
     "@adminRestoreFailed": {
         "placeholders": {
@@ -5158,7 +5158,7 @@
         }
     },
     "adminDayOfWeek": "Day of week",
-    "adminSearchPlugins": "Search plugins...",
+    "adminSearchPlugins": "Search plugins…",
     "adminPluginToggleFailed": "Failed to toggle plugin: {error}",
     "@adminPluginToggleFailed": {
         "placeholders": {
@@ -5247,7 +5247,7 @@
             }
         }
     },
-    "adminPluginUpdating": "Updating \"{name}\" to v{version}...",
+    "adminPluginUpdating": "Updating \"{name}\" to v{version}…",
     "@adminPluginUpdating": {
         "placeholders": {
             "name": {
@@ -5845,7 +5845,7 @@
     },
     "adminPluginsCatalogNoSearchResults": "No packages match your search",
     "adminPluginsCatalogEmpty": "No packages available",
-    "adminPluginsInstalling": "\"{name}\" is being installed...",
+    "adminPluginsInstalling": "\"{name}\" is being installed…",
     "@adminPluginsInstalling": {
         "placeholders": {
             "name": {
@@ -5977,8 +5977,8 @@
     "adminTrickplayProcessing": "Processing",
     "adminTasksEmpty": "No scheduled tasks found",
     "adminTasksNoFilterMatch": "No tasks match the current filter",
-    "adminTaskCancelling": "Cancelling...",
-    "adminTaskRunning": "Running...",
+    "adminTaskCancelling": "Cancelling…",
+    "adminTaskRunning": "Running…",
     "adminTaskNeverRun": "Never run",
     "adminTaskStop": "Stop",
     "adminTaskRun": "Run",
@@ -6260,7 +6260,7 @@
     "noItems": "No items",
     "switchUser": "Switch User",
     "remoteControl": "Remote Control",
-    "mediaBarLoading": "Loading media bar...",
+    "mediaBarLoading": "Loading media bar…",
     "mediaBarError": "Media bar failed to load",
     "offlineServerUnavailable": "Connected to the internet, but the current server is unavailable.",
     "offlineNoInternet": "You are offline. Only downloaded content is available.",
@@ -6378,7 +6378,7 @@
     "trackActionAddToFavorites": "Add to Favorites",
     "trackActionGoToAlbum": "Go to Album",
     "trackActionGoToArtist": "Go to Artist",
-    "trackActionDownloading": "Downloading {name}...",
+    "trackActionDownloading": "Downloading {name}…",
     "@trackActionDownloading": {
         "placeholders": {
             "name": {
@@ -6525,7 +6525,7 @@
     "settingsPrivacyAndSafetySection": "PRIVACY & SAFETY",
     "settingsBlockedRatings": "Blocked Ratings",
     "settingsGeneralStyle": "General Style",
-    "settingsGeneralStyleSubtitle": "Theme accents, backdrops, watched indicators, and theme music",
+    "settingsGeneralStyleSubtitle": "Theme accents, backdrops, and watched indicators",
     "settingsHomePage": "Home Page",
     "settingsHomePageSubtitle": "Sections, image types, overlays, and media previews",
     "settingsLibrariesSubtitle": "Library visibility, folder view, and multi-server behavior",
@@ -6605,8 +6605,8 @@
     "settingsDolbyVisionProfile7DirectPlay": "Dolby Vision Profile 7 Direct Play",
     "settingsDolbyVisionProfile7DirectPlayDescription": "Controls whether Dolby Vision profile 7 enhancement-layer streams should direct play.",
     "settingsAutoAftkrtEnabled": "Auto",
-    "settingsEnabledOnThisDevice": "Enabled on this device",
-    "settingsDisabledPreferTranscode": "Disabled (prefer transcode)",
+    "settingsEnabledOnThisDevice": "Enabled",
+    "settingsDisabledPreferTranscode": "Off",
     "settingsResumeRewindDescription": "When resuming playback (from Continue Watching or a media item page), how many seconds should be rewound?",
     "settingsUnpauseRewindDescription": "When resuming playback after pressing the pause button, how many seconds should be rewound?",
     "settingsSkipBackLengthDescription": "How many seconds to jump back after pressing the rewind button.",
@@ -6667,7 +6667,7 @@
             }
         }
     },
-    "latestLibraryName": "Latest {libraryName}",
+    "latestLibraryName": "Recently Added {libraryName}",
     "@latestLibraryName": {
         "description": "Row title for recently added media in a specific library",
         "placeholders": {
@@ -6980,11 +6980,11 @@
     "@disableTunnelingSubtitle": {
         "description": "Setting subtitle for disable tunneling"
     },
-    "mapDolbyVisionP7Title": "Map Dolby Vision profile 7 to HEVC",
+    "mapDolbyVisionP7Title": "Always play Dolby Vision profile 7 as HDR10",
     "@mapDolbyVisionP7Title": {
         "description": "Setting title: play DV P7 as HDR10 HEVC on non-DV devices"
     },
-    "mapDolbyVisionP7Subtitle": "Play Dolby Vision profile 7 streams as HDR10-compatible HEVC on non-DV devices.",
+    "mapDolbyVisionP7Subtitle": "Skip the profile 8 conversion and strip Dolby Vision profile 7 streams to HDR10-compatible HEVC. Use this if converted streams look wrong.",
     "@mapDolbyVisionP7Subtitle": {
         "description": "Setting subtitle for DV P7 to HEVC mapping"
     },
@@ -7081,7 +7081,7 @@
     "cardSize": "Home Row Card Display Size",
     "externalPlayerApp": "External player app",
     "externalPlayerAskEachTimeSubtitle": "Show app chooser when playback starts.",
-    "loadingInstalledPlayers": "Loading installed players...",
+    "loadingInstalledPlayers": "Loading installed players…",
     "connection": "Connection",
     "audioTranscodeTarget": "Audio Transcode Target",
     "passthrough": "Passthrough",
@@ -7307,7 +7307,7 @@
     "cb7ExtractionUnavailable": "CB7 extraction is not available on this platform.",
     "cb7ExtractionPluginUnavailable": "CB7 extraction plugin is not available on this platform.",
     "closeGenrePanel": "Close genre panel",
-    "loadingShuffle": "Loading shuffle...",
+    "loadingShuffle": "Loading shuffle…",
     "libraryShuffleLabel": "LIBRARY SHUFFLE",
     "randomShuffleLabel": "RANDOM SHUFFLE",
     "genresShuffleLabel": "GENRES SHUFFLE",
@@ -7466,7 +7466,7 @@
     "homeRowDisplay": "Home Row Display",
     "homeRowSections": "Home Row Sections",
     "homeRowToggles": "Home Row Toggles",
-    "homeRowTogglesSubtitle": "Enable or disable different home row categories",
+    "homeRowTogglesSubtitle": "Enable or disable library-based home row categories",
     "homeRowTogglesDescription": "Enable the following toggles to display the rows in Home Sections.",
     "displayPlaylistsRows": "Display Playlist Rows",
     "displayPlaylistsRowsSubtitle": "Show Playlist rows in Home Sections.",
@@ -8540,7 +8540,7 @@
             }
         }
     },
-    "requestingProgress": "Requesting {current} of {total}...",
+    "requestingProgress": "Requesting {current} of {total}…",
     "@requestingProgress": {
         "description": "Progress label while collection requests are submitted",
         "placeholders": {
@@ -9290,7 +9290,7 @@
             }
         }
     },
-    "checkingDirectPlay": "Checking Direct Play capability...",
+    "checkingDirectPlay": "Checking Direct Play capability…",
     "directPlayCapabilityLabel": "Direct Play Capability: ",
     "forced": "Forced",
     "transcodeContainerNotSupported": "Container format is not supported by the player.",
@@ -9374,7 +9374,7 @@
     "@adminRepoSortNameDesc": {
         "description": "Repository sort option, alphabetical descending"
     },
-    "adminAnalyticsLoadingProgress": "Loading Server Analytics... {percentage}%",
+    "adminAnalyticsLoadingProgress": "Loading Server Analytics… {percentage}%",
     "@adminAnalyticsLoadingProgress": {
         "description": "Progress label shown while server analytics load",
         "placeholders": {

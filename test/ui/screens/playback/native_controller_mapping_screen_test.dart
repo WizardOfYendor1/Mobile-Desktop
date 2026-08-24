@@ -461,6 +461,92 @@ void main() {
     expect(find.text('Player assignment'), findsNothing);
   });
 
+  testWidgets('a media keycode binding renders its name', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              NativeControllerMappingScreen(
+                devices: const [
+                  NativeControllerDevice(id: 'a', name: 'Pad A', port: 0),
+                ],
+                mappings: const {
+                  'a': NativeControllerMapping({85: RetroPadButton.a}),
+                },
+                onMappingChanged: (_, _) async {},
+                onClose: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Play/Pause'), findsOneWidget);
+  });
+
+  testWidgets('an unlisted keycode still renders "Key code N"', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              NativeControllerMappingScreen(
+                devices: const [
+                  NativeControllerDevice(id: 'a', name: 'Pad A', port: 0),
+                ],
+                mappings: const {
+                  'a': NativeControllerMapping({9999: RetroPadButton.a}),
+                },
+                onMappingChanged: (_, _) async {},
+                onClose: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Key code 9999'), findsOneWidget);
+  });
+
+  testWidgets('the synthetic trigger codes still render their labels', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              NativeControllerMappingScreen(
+                devices: const [
+                  NativeControllerDevice(id: 'a', name: 'Pad A', port: 0),
+                ],
+                mappings: const {
+                  'a': NativeControllerMapping({
+                    0x10012: RetroPadButton.a,
+                    0x10013: RetroPadButton.b,
+                  }),
+                },
+                onMappingChanged: (_, _) async {},
+                onClose: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('Left trigger (L2)'), findsOneWidget);
+    expect(find.text('Right trigger (R2)'), findsOneWidget);
+  });
+
   testWidgets('an unpinned keyboard can be given a player slot', (
     tester,
   ) async {

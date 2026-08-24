@@ -4,6 +4,7 @@ import 'package:server_core/server_core.dart' hide ImageType;
 
 import '../../preference/preference_constants.dart';
 import '../../preference/user_preferences.dart';
+import '../../util/network_errors.dart';
 import '../models/aggregated_item.dart';
 import '../repositories/mdblist_repository.dart';
 
@@ -55,6 +56,8 @@ class FavoritesViewModel extends ChangeNotifier {
 
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
+  bool _isNetworkError = false;
+  bool get isNetworkError => _isNetworkError;
 
   AggregatedItem? _focusedItem;
   AggregatedItem? get focusedItem => _focusedItem;
@@ -153,6 +156,7 @@ class FavoritesViewModel extends ChangeNotifier {
       _state = FavoritesState.ready;
     } catch (e) {
       _errorMessage = e.toString();
+      _isNetworkError = isNetworkException(e);
       _state = FavoritesState.error;
     }
     notifyListeners();

@@ -14,6 +14,7 @@ import '../../../data/services/storage_path_service.dart';
 import '../../../di/providers.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../preference/user_preferences.dart';
+import '../../../util/download_grouping.dart';
 import '../../../util/download_utils.dart';
 import '../../../util/platform_detection.dart';
 import '../../navigation/destinations.dart';
@@ -305,6 +306,7 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
 
   Widget _buildItemsSection() {
     final l10n = AppLocalizations.of(context);
+    final groups = groupDownloads(_itemsBySize!);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -317,69 +319,134 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
           ),
         ),
         const SizedBox(height: 8),
-        ..._itemsBySize!.map((item) {
-          final isSelected = _selected.contains(item.itemId);
-          // A book opens a reader rather than a player.
-          final isBook = item.type == 'Book';
-          return ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: _selectMode
-                ? Checkbox(
-                    value: isSelected,
-                    onChanged: (_) => setState(() {
-                      isSelected
-                          ? _selected.remove(item.itemId)
-                          : _selected.add(item.itemId);
-                    }),
-                  )
-                : Icon(switch (item.type) {
-                    'Audio' || 'AudioBook' => Icons.music_note_outlined,
-                    'Book' => Icons.menu_book_outlined,
-                    _ => Icons.movie_outlined,
-                  }, color: AppColorScheme.onSurface.withValues(alpha: 0.38)),
-            title: Text(
-              item.name,
-              style: TextStyle(color: AppColorScheme.onSurface),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Text(
-              '${item.type} • ${item.qualityPreset}',
-              style: TextStyle(
-                color: AppColorScheme.onSurface.withValues(alpha: 0.38),
-                fontSize: 12,
-              ),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  formatBytes(item.fileSizeBytes),
-                  style: TextStyle(
-                    color: AppColorScheme.onSurface.withValues(alpha: 0.54),
-                  ),
-                ),
-                // While selecting, a tap belongs to the selection.
-                if (!_selectMode && !isBook)
-                  IconButton(
-                    icon: const Icon(Icons.play_arrow),
-                    tooltip: l10n.play,
-                    onPressed: () => _playItem(item),
-                  ),
-              ],
-            ),
-            onTap: _selectMode
-                ? () => setState(() {
-                    isSelected
-                        ? _selected.remove(item.itemId)
-                        : _selected.add(item.itemId);
-                  })
-                : isBook
-                ? null
-                : () => _playItem(item),
-          );
-        }),
+        ...groups.map(
+          (group) => group.isSeries
+              ? _buildSeriesGroup(group)
+              : _buildItemTile(group.first),
+        ),
       ],
+    );
+  }
+
+  /// A series collapses to one row saying how many episodes are actually on the
+  /// device, which a flat list of episode names never answered, and opens to
+  /// show which ones they are.
+  Widget _buildSeriesGroup(DownloadGroup group) {
+    final l10n = AppLocalizations.of(context);
+    final ids = group.itemIds;
+    final selectedCount = ids.where(_selected.contains).length;
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(left: 16),
+        leading: _selectMode
+            ? Checkbox(
+                value: selectedCount == ids.length,
+                tristate: true,
+                onChanged: (_) => setState(() {
+                  // A part selected series fills up first, so one tap always
+                  // means take all of it.
+                  if (selectedCount == ids.length) {
+                    _selected.removeAll(ids);
+                  } else {
+                    _selected.addAll(ids);
+                  }
+                }),
+              )
+            : Icon(
+                Icons.video_library_outlined,
+                color: AppColorScheme.onSurface.withValues(alpha: 0.38),
+              ),
+        title: Text(
+          group.title,
+          style: TextStyle(color: AppColorScheme.onSurface),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          l10n.episodeCount(group.items.length),
+          style: TextStyle(
+            color: AppColorScheme.onSurface.withValues(alpha: 0.38),
+            fontSize: 12,
+          ),
+        ),
+        trailing: Text(
+          formatBytes(group.totalBytes),
+          style: TextStyle(
+            color: AppColorScheme.onSurface.withValues(alpha: 0.54),
+          ),
+        ),
+        children: group.items.map(_buildItemTile).toList(),
+      ),
+    );
+  }
+
+  Widget _buildItemTile(DownloadedItem item) {
+    final l10n = AppLocalizations.of(context);
+    final isSelected = _selected.contains(item.itemId);
+    // A book opens a reader rather than a player.
+    final isBook = item.type == 'Book';
+    final numberLabel = episodeNumberLabel(item);
+    final subtitle = item.type == 'Episode' && numberLabel != null
+        ? '$numberLabel • ${item.qualityPreset}'
+        : '${item.type} • ${item.qualityPreset}';
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: _selectMode
+          ? Checkbox(
+              value: isSelected,
+              onChanged: (_) => setState(() {
+                isSelected
+                    ? _selected.remove(item.itemId)
+                    : _selected.add(item.itemId);
+              }),
+            )
+          : Icon(switch (item.type) {
+              'Audio' || 'AudioBook' => Icons.music_note_outlined,
+              'Book' => Icons.menu_book_outlined,
+              _ => Icons.movie_outlined,
+            }, color: AppColorScheme.onSurface.withValues(alpha: 0.38)),
+      title: Text(
+        item.name,
+        style: TextStyle(color: AppColorScheme.onSurface),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(
+          color: AppColorScheme.onSurface.withValues(alpha: 0.38),
+          fontSize: 12,
+        ),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            formatBytes(item.fileSizeBytes),
+            style: TextStyle(
+              color: AppColorScheme.onSurface.withValues(alpha: 0.54),
+            ),
+          ),
+          // While selecting, a tap belongs to the selection.
+          if (!_selectMode && !isBook)
+            IconButton(
+              icon: const Icon(Icons.play_arrow),
+              tooltip: l10n.play,
+              onPressed: () => _playItem(item),
+            ),
+        ],
+      ),
+      onTap: _selectMode
+          ? () => setState(() {
+              isSelected
+                  ? _selected.remove(item.itemId)
+                  : _selected.add(item.itemId);
+            })
+          : isBook
+          ? null
+          : () => _playItem(item),
     );
   }
 
@@ -580,7 +647,9 @@ class _ActiveDownloadsSection extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4),
                           child: Text(
-                            l10n.transcodingTimeRemainingUnavailable,
+                            p.etaSeconds != null
+                                ? l10n.timeRemaining(formatEta(p.etaSeconds!))
+                                : l10n.transcodingTimeRemainingUnavailable,
                             style: TextStyle(
                               color: AppColorScheme.onSurface.withValues(
                                 alpha: 0.7,

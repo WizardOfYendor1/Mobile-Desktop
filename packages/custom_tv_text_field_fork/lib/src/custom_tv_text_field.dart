@@ -124,6 +124,7 @@ class CustomTVTextFieldState extends State<CustomTVTextField>
   final ValueNotifier<String?> _errorText = ValueNotifier<String?>(null);
   final FocusNode _keyboardFocusNode = FocusNode();
   final FocusNode _systemInputFocusNode = FocusNode();
+  final GlobalKey _caretKey = GlobalKey(debugLabel: 'tvFieldCaret');
   FocusNode? _focusToRestoreAfterOverlay;
   BuildContext? _keyboardOverlayContext;
 
@@ -219,18 +220,33 @@ class CustomTVTextFieldState extends State<CustomTVTextField>
   }
 
   void _onTextChanged() {
-    _scrollToEnd();
+    _scrollToCursor();
   }
 
-  void _scrollToEnd() {
+  /// Keeps the caret in view, following it wherever it sits in the text
+  /// rather than always chasing the end of the line.
+  void _scrollToCursor() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+      if (!mounted || !_scrollController.hasClients) return;
+
+      final caretRender = widget.maxLines == 1
+          ? _caretKey.currentContext?.findRenderObject()
+          : null;
+      if (caretRender != null && caretRender.attached) {
+        _scrollController.position.ensureVisible(
+          caretRender,
+          alignment: 0.5,
           duration: const Duration(milliseconds: 100),
           curve: Curves.easeOut,
         );
+        return;
       }
+
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 100),
+        curve: Curves.easeOut,
+      );
     });
   }
 
@@ -266,6 +282,9 @@ class CustomTVTextFieldState extends State<CustomTVTextField>
   }
 
   void _onKeyboardStateChanged() {
+    // A caret move on its own changes no text, but the view still needs
+    // to follow it.
+    _scrollToCursor();
     if (!_keyboardController.isVisible && _isOverlayOpen.value) {
       _isOverlayOpen.value = false;
       if (widget.popParentOnKeyboardClose &&
@@ -323,7 +342,7 @@ class CustomTVTextFieldState extends State<CustomTVTextField>
     if (widget.isFocused != oldWidget.isFocused) {
       if (widget.isFocused) {
         _blinkController.repeat(reverse: true);
-        _scrollToEnd();
+        _scrollToCursor();
       } else {
         _blinkController.stop();
       }
@@ -577,6 +596,10 @@ class CustomTVTextFieldState extends State<CustomTVTextField>
                           _keyboardController.isVisible ||
                           _isSystemImeActive,
                       showCursor: _keyboardController.isVisible || _isSystemImeActive,
+                      cursorIndex: _keyboardController.isVisible
+                          ? _keyboardController.cursor
+                          : null,
+                      caretKey: _caretKey,
                       blinkAnimation: _blinkAnimation,
                       hasError: error != null,
                       scrollController: _scrollController,
@@ -612,6 +635,10 @@ class _FieldDisplay extends StatelessWidget {
   final CustomTVTextField widget;
   final bool hasFocus;
   final bool showCursor;
+
+  /// Caret position in code units, or null to sit at the end of the text.
+  final int? cursorIndex;
+  final GlobalKey caretKey;
   final Animation<double> blinkAnimation;
   final bool hasError;
   final ScrollController scrollController;
@@ -620,6 +647,8 @@ class _FieldDisplay extends StatelessWidget {
     required this.widget,
     required this.hasFocus,
     required this.showCursor,
+    required this.cursorIndex,
+    required this.caretKey,
     required this.blinkAnimation,
     required this.scrollController,
     this.hasError = false,
@@ -686,30 +715,46 @@ class _FieldDisplay extends StatelessWidget {
               valueListenable: widget.controller,
               builder: (context, value, _) {
                 final isEmpty = value.text.isEmpty;
-                final displayText = isEmpty
-                    ? null
-                    : (widget.obscureText ? _maskText(value.text) : value.text);
+
+                final cursorSpan = WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: Visibility(
+                    visible: showCursor,
+                    maintainSize: true,
+                    maintainAnimation: true,
+                    maintainState: true,
+                    child: _Cursor(
+                      key: caretKey,
+                      animation: blinkAnimation,
+                      height: fontSize * 1.1,
+                    ),
+                  ),
+                );
+
+                // The caret splits the text at the editing position, so
+                // characters land and delete where the user put it.
+                final splitAt = (cursorIndex ?? value.text.length).clamp(
+                  0,
+                  value.text.length,
+                );
+                final beforeRaw = value.text.substring(0, splitAt);
+                final afterRaw = value.text.substring(splitAt);
+                final before = widget.obscureText
+                    ? _maskText(beforeRaw)
+                    : beforeRaw;
+                final after = widget.obscureText
+                    ? _maskText(afterRaw)
+                    : afterRaw;
 
                 final textSpan = TextSpan(
                   children: [
-                    TextSpan(
-                      text: isEmpty ? widget.hint : displayText,
-                      style: isEmpty ? hintStyle : textStyle,
-                    ),
-                    WidgetSpan(
-                      alignment: PlaceholderAlignment.middle,
-                      child: Visibility(
-                        visible: showCursor,
-                        maintainSize: true,
-                        maintainAnimation: true,
-                        maintainState: true,
-                        child: _Cursor(
-                          key: const ValueKey('field_cursor'),
-                          animation: blinkAnimation,
-                          height: fontSize * 1.1,
-                        ),
-                      ),
-                    ),
+                    if (isEmpty)
+                      TextSpan(text: widget.hint, style: hintStyle)
+                    else if (before.isNotEmpty)
+                      TextSpan(text: before, style: textStyle),
+                    cursorSpan,
+                    if (after.isNotEmpty)
+                      TextSpan(text: after, style: textStyle),
                   ],
                 );
 

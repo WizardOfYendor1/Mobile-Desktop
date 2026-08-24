@@ -1546,8 +1546,12 @@ class _BookReaderScreenState extends State<BookReaderScreen>
   Future<void> _previousComicPage() =>
       _goToComicPage(_currentComicPage - _comicNavigationStep);
 
+  /// Anything above a whisker over 1 counts as zoomed, since a pinch rarely
+  /// lands exactly back on 1.
+  bool get _comicZoomed => _comicZoom > 1.01;
+
   void _handleComicTap(TapUpDetails details) {
-    if (_comicZoom > 1.01) {
+    if (_comicZoomed) {
       _toggleOverlay();
       return;
     }
@@ -1590,7 +1594,7 @@ class _BookReaderScreenState extends State<BookReaderScreen>
   }
 
   void _toggleComicZoom() {
-    if (_comicZoom > 1.01) {
+    if (_comicZoomed) {
       _resetComicZoom();
     } else {
       _setComicZoom(2.2);
@@ -2243,6 +2247,10 @@ class _BookReaderScreenState extends State<BookReaderScreen>
         child: PageView.builder(
           controller: _pageController,
           reverse: _comicDirection == _ComicDirection.rtl,
+          // A page view that keeps its scrolling wins the drag, so a zoomed
+          // page never moves. Giving the gesture up while zoomed lets the
+          // drag pan the page, and normal zoom brings paging back.
+          physics: _comicZoomed ? const NeverScrollableScrollPhysics() : null,
           itemCount: _comicViewportCount,
           onPageChanged: (viewportIndex) {
             final pageIndex = _pageIndexFromViewport(viewportIndex);

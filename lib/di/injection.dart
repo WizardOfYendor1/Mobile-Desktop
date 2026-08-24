@@ -12,6 +12,7 @@ import '../data/database/offline_database.dart';
 import '../data/offline/offline_catalog.dart';
 import '../data/repositories/offline_repository.dart';
 import '../data/services/connectivity_service.dart';
+import '../data/services/crash_report_service.dart';
 import '../data/services/log_service.dart';
 import '../data/services/media_server_client_factory.dart';
 import '../data/services/recent_searches_store.dart';
@@ -448,6 +449,13 @@ Future<void> configureDependencies() async {
       getIt<UserPreferences>(),
       getIt<MediaServerClientFactory>(),
       getIt<DeviceInfo>(),
+    ),
+  );
+
+  getIt.registerSingleton<CrashReportService>(
+    CrashReportService(
+      getIt<UserPreferences>(),
+      getIt<MediaServerClientFactory>(),
     ),
   );
 }

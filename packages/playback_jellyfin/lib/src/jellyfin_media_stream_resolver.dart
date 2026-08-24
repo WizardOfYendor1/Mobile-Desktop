@@ -157,6 +157,8 @@ class JellyfinMediaStreamResolver implements MediaStreamResolver {
       sourceBitrate: source.bitrate,
       maxStreamingBitrate: maxStreamingBitrate,
       audioStreamIndex: audioStreamIndex ?? source.defaultAudioStreamIndex,
+      subtitleStreamIndex:
+          subtitleStreamIndex ?? source.defaultSubtitleStreamIndex,
       deviceProfile: deviceProfile,
     );
 
@@ -238,6 +240,9 @@ class JellyfinMediaStreamResolver implements MediaStreamResolver {
       selectedSubtitleStreamIndex: source.defaultSubtitleStreamIndex,
       transcodingReasons: reasons,
       hybridAudioUrl: hybridAudioUrl,
+      serverOfferedDirectPlay: source.supportsDirectPlay,
+      directPlayRequested: enableDirectPlay,
+      sourceBitrate: source.bitrate,
     );
   }
 

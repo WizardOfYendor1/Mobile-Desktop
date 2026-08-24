@@ -49,6 +49,29 @@ class _GeneralStyleScreenState extends State<_GeneralStyleScreen> {
                       InterfaceStyle.material => l10n.interfaceStyleMaterial,
                     },
                   ),
+                  if (PlatformDetection.canOverrideInterfaceLayout)
+                    EnumPreferenceTile<InterfaceLayout>(
+                      preference: UserPreferences.interfaceLayout,
+                      title: l10n.interfaceLayout,
+                      description: l10n.interfaceLayoutSubtitle,
+                      icon: Icons.tv_outlined,
+                      // Only the layouts this platform reaches on its own,
+                      // since the other pairings have never run.
+                      values: [
+                        InterfaceLayout.automatic,
+                        InterfaceLayout.tv,
+                        if (PlatformDetection.isDesktop)
+                          InterfaceLayout.desktop,
+                        if (PlatformDetection.isAndroid) InterfaceLayout.phone,
+                      ],
+                      labelOf: (v) => switch (v) {
+                        InterfaceLayout.automatic =>
+                          l10n.interfaceLayoutAutomatic,
+                        InterfaceLayout.tv => l10n.interfaceLayoutTv,
+                        InterfaceLayout.desktop => l10n.interfaceLayoutDesktop,
+                        InterfaceLayout.phone => l10n.interfaceLayoutPhone,
+                      },
+                    ),
                   _TvSettingsListTile(
                     leading: const Icon(Icons.palette_outlined),
                     title: Text(l10n.settingsAppearanceTheme),
@@ -151,6 +174,18 @@ class _GeneralStyleScreenState extends State<_GeneralStyleScreen> {
                     },
                     onChanged: _pushPersonalizationSync,
                   ),
+                  if (PlatformDetection.useDesktopUi)
+                    SliderPreferenceTile(
+                      preference: UserPreferences.desktopScrollSensitivity,
+                      title: l10n.scrollSensitivity,
+                      description: l10n.scrollSensitivitySubtitle,
+                      icon: Icons.mouse,
+                      min: 50,
+                      max: 300,
+                      divisions: 25,
+                      labelOf: (v) => '${(v / 100).toStringAsFixed(1)}x',
+                      onChangeEnd: _pushPersonalizationSync,
+                    ),
                   SwitchPreferenceTile(
                     preference: UserPreferences.backdropEnabled,
                     title: l10n.backgroundBackdrops,
