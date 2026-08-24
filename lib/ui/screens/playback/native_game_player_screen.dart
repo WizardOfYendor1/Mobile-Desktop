@@ -77,6 +77,8 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
   double? _progress;
   String? _coreMessage;
   Timer? _coreMessageTimer;
+  String? _inputNotice;
+  Timer? _inputNoticeTimer;
   int? _textureId;
   double _aspect = 4 / 3;
   int _controllers = 1;
@@ -257,6 +259,7 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     _gamepadEvents?.cancel();
     _startHoldTimer?.cancel();
     _coreMessageTimer?.cancel();
+    _inputNoticeTimer?.cancel();
     _overlayScroll.dispose();
     _settingsScroll.dispose();
     _pickerScroll.dispose();
@@ -305,7 +308,7 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
         }
         if (navigationOnly && !_notifiedNavigationOnly) {
           _notifiedNavigationOnly = true;
-          _showCoreMessage(
+          _showInputNotice(
             'No game controller connected — playing with the remote.',
           );
         }
@@ -370,6 +373,17 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     setState(() => _coreMessage = message);
     _coreMessageTimer = Timer(const Duration(seconds: 6), () {
       if (mounted) setState(() => _coreMessage = null);
+    });
+  }
+
+  // Kept separate from _coreMessage: the core emits its own messages at
+  // session start and would otherwise clobber this notice.
+  void _showInputNotice(String? message) {
+    if (message == null || message.isEmpty || !mounted) return;
+    _inputNoticeTimer?.cancel();
+    setState(() => _inputNotice = message);
+    _inputNoticeTimer = Timer(const Duration(seconds: 6), () {
+      if (mounted) setState(() => _inputNotice = null);
     });
   }
 
@@ -985,9 +999,6 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     String saveId,
   ) async {
     final blob = await games.getSave(saveId, kind: 'settings');
-    debugPrint(
-      '[moonfin_settings] read $saveId -> ${blob == null || blob.isEmpty ? 'absent' : '${blob.length} bytes'}',
-    );
     if (blob == null || blob.isEmpty) return null;
     final text = String.fromCharCodes(blob);
     final map = <String, String>{};
@@ -1073,7 +1084,6 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
       case AppLifecycleState.resumed:
         // The overlay is the one pause the user can see, so it decides
         // whether coming back to the app should start the game moving again.
-        debugPrint('[moonfin_life] resumed overlayOpen=$_overlayOpen');
         if (!_overlayOpen) _player.resume();
       case AppLifecycleState.inactive:
         // Transient and common (a system dialog, the volume panel). Pausing
@@ -1082,7 +1092,6 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
       case AppLifecycleState.paused:
       case AppLifecycleState.hidden:
       case AppLifecycleState.detached:
-        debugPrint('[moonfin_life] backgrounded ($state) - pausing');
         _player.pause();
     }
   }
@@ -1272,7 +1281,6 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     if (!_coreOptionsReadable) {
       throw StateError('emulator settings were not readable this session');
     }
-    debugPrint('[moonfin_settings] write ${_gameOptionsSaveId(coreId)}');
     return retryOnTransientFailure(
       () => games.putSave(
         _gameOptionsSaveId(coreId),
@@ -2052,6 +2060,33 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
                   iconSize: 32,
                   onPressed: _backOut,
+                ),
+              ),
+            ),
+          if (_inputNotice != null && _error == null)
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: 88,
+              // Purely informational, so it never takes a press meant for the
+              // on-screen pad underneath it.
+              child: IgnorePointer(
+                child: SafeArea(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black87,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      _inputNotice!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ),
                 ),
               ),
             ),

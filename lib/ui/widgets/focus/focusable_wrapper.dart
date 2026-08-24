@@ -29,6 +29,7 @@ class FocusableWrapper extends StatefulWidget {
   final bool descendantsAreFocusable;
   final bool disableScale;
   final bool useBackgroundFocus;
+  final bool alwaysShowFocusBorder;
   final Color? focusColor;
   final bool enableLongPress;
   final Duration longPressDuration;
@@ -57,6 +58,7 @@ class FocusableWrapper extends StatefulWidget {
     this.descendantsAreFocusable = true,
     this.disableScale = false,
     this.useBackgroundFocus = false,
+    this.alwaysShowFocusBorder = false,
     this.focusColor,
     this.enableLongPress = false,
     this.longPressDuration = const Duration(milliseconds: 500),
@@ -229,7 +231,9 @@ class _FocusableWrapperState extends State<FocusableWrapper>
     final borders = ThemeRegistry.active.borders;
     final effectiveRadius = AppColorScheme.isPixel ? 0.0 : widget.borderRadius;
     final borderWidth = FocusTheme.borderWidth;
-    final showOverlayBorder = _focused && !widget.useBackgroundFocus;
+    // alwaysShowFocusBorder opts a background-fill widget into the ring too.
+    final showOverlayBorder =
+        _focused && (!widget.useBackgroundFocus || widget.alwaysShowFocusBorder);
     final childWithOverlay = Stack(
       clipBehavior: Clip.none,
       fit: StackFit.passthrough,

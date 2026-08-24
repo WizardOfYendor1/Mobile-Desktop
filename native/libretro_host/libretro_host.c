@@ -876,7 +876,7 @@ static void notify_geometry(struct lh_host *h, unsigned width, unsigned height,
   // for why 8192 and why this matters on 32-bit size_t.
   if (width == 0 || height == 0 || width > LH_MAX_FRAME_DIMENSION ||
       height > LH_MAX_FRAME_DIMENSION) {
-    host_log(h, "Rejected geometry %ux%u (out of bounds)", width, height);
+    diagnostic_log("Rejected geometry %ux%u (out of bounds)", width, height);
     return;
   }
   h->av.width = (int)width;
@@ -1287,7 +1287,9 @@ static bool RETRO_CALLCONV environment_cb(unsigned cmd, void *data) {
       int was_quarter = (h->av.rotation == 1 || h->av.rotation == 3);
       int is_quarter = (rot == 1 || rot == 3);
       h->av.rotation = (int)rot;
-      host_log(h, "SET_ROTATION rot=%u", rot);
+      // diagnostic_log, not host_log: every vertical cabinet sends this on a
+      // normal load, and host_log surfaces it as a user-facing core message.
+      diagnostic_log("SET_ROTATION rot=%u", rot);
       // Geometry recorded before this request describes the other orientation.
       // Only the axes move; the aspect the core reported already describes the
       // final display (see apply_rotation_to_av).
@@ -1387,7 +1389,7 @@ static int convert_frame(struct lh_host *h, const void *src, int width,
   // buffer entirely - which is an out-of-bounds read the core fully controls.
   // Reject it here rather than trusting the core to report a sane pitch.
   if (pitch < (size_t)width * (size_t)bpp) {
-    host_log(h, "Rejected frame: pitch %zu too small for %dx%d bpp %d", pitch,
+    diagnostic_log("Rejected frame: pitch %zu too small for %dx%d bpp %d", pitch,
              width, height, bpp);
     return 0;
   }
@@ -1409,7 +1411,7 @@ static int convert_frame(struct lh_host *h, const void *src, int width,
   // guards against).
   if (out_height <= 0 || out_width <= 0 ||
       (size_t)out_width > (SIZE_MAX / 4) / (size_t)out_height) {
-    host_log(h, "Rejected frame: %dx%d overflows frame buffer size", out_width,
+    diagnostic_log("Rejected frame: %dx%d overflows frame buffer size", out_width,
              out_height);
     return 0;
   }
@@ -1493,7 +1495,7 @@ static void RETRO_CALLCONV video_refresh_cb(const void *data, unsigned width,
   // no separate announcement step to reject first), so the same
   // LH_MAX_FRAME_DIMENSION bound has to be enforced here too.
   if (width > LH_MAX_FRAME_DIMENSION || height > LH_MAX_FRAME_DIMENSION) {
-    host_log(h, "Rejected frame %ux%u (out of bounds)", width, height);
+    diagnostic_log("Rejected frame %ux%u (out of bounds)", width, height);
     return;
   }
   if (!data) {  // duped frame: re-signal the last one

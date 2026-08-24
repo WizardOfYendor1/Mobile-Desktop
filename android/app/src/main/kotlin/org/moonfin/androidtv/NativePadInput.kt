@@ -235,10 +235,6 @@ internal class NativePadInput(
         for (index in 0 until padStates.size()) {
             val state = padStates.valueAt(index)
             state.snap = snapModes[state.profileId] ?: StickSnap.OFF
-            android.util.Log.i(
-                "moonfin_snap",
-                "port=${state.port} profile=${state.profileId} snap=${state.snap.wireName}",
-            )
         }
     }
 

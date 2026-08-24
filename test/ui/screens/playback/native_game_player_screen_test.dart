@@ -176,6 +176,10 @@ class _FakeNativeGamePlayer implements NativeGamePlayer {
     });
   }
 
+  void emitCoreMessage(String message) {
+    _eventsController.add({'event': 'coreMessage', 'message': message});
+  }
+
   void dispose() => _eventsController.close();
 
   /// The settings the screen resolved for this game and handed to the core.
@@ -825,6 +829,58 @@ void main() {
         await tester.pump();
 
         expect(find.textContaining('playing with the remote'), findsNothing);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    },
+  );
+
+  testWidgets(
+    'the remote notice and a core message can be visible at the same time',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        final router = GoRouter(
+          initialLocation: '/game',
+          routes: [
+            GoRoute(
+              path: '/game',
+              builder: (context, state) => NativeGamePlayerScreen(
+                libraryId: 'lib1',
+                gameId: 'game1',
+                core: 'snes',
+                startFresh: true,
+                player: player,
+              ),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        );
+        for (
+          var i = 0;
+          i < 60 && find.byType(Texture).evaluate().isEmpty;
+          i++
+        ) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 20)),
+          );
+          await tester.pump(const Duration(milliseconds: 20));
+        }
+        expect(find.byType(Texture), findsOneWidget);
+
+        player.emitControllersChanged(0, navigationOnly: true);
+        player.emitCoreMessage('SET_ROTATION rot=1');
+        await tester.pump();
+
+        expect(find.textContaining('playing with the remote'), findsOneWidget);
+        expect(find.text('SET_ROTATION rot=1'), findsOneWidget);
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }
