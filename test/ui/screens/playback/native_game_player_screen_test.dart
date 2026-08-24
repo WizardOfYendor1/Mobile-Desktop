@@ -817,8 +817,10 @@ void main() {
 
         expect(find.textContaining('playing with the remote'), findsOneWidget);
 
-        // Let the banner's own 6-second auto-dismiss timer fire.
-        await tester.pump(const Duration(seconds: 7));
+        // Still up at two seconds, gone after its own three-second timer.
+        await tester.pump(const Duration(seconds: 2));
+        expect(find.textContaining('playing with the remote'), findsOneWidget);
+        await tester.pump(const Duration(seconds: 2));
         expect(find.textContaining('playing with the remote'), findsNothing);
 
         // A second navigationOnly event (e.g. the remote's Bluetooth link

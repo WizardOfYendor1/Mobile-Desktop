@@ -382,7 +382,9 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     if (message == null || message.isEmpty || !mounted) return;
     _inputNoticeTimer?.cancel();
     setState(() => _inputNotice = message);
-    _inputNoticeTimer = Timer(const Duration(seconds: 6), () {
+    // Shorter than a core message's six seconds: this one says the same thing
+    // every launch, so it only has to register, not be read.
+    _inputNoticeTimer = Timer(const Duration(seconds: 3), () {
       if (mounted) setState(() => _inputNotice = null);
     });
   }
