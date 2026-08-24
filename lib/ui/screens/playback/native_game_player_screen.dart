@@ -296,7 +296,10 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
         if (!usesKeyboardInput && !usesOnScreenControls) {
           if (count == 0) {
             _player.pause();
-          } else {
+          } else if (!_overlayOpen) {
+            // The overlay owns the visible pause, so a device connecting or
+            // waking while it is open must not start the game moving
+            // underneath it. Closing the overlay resumes.
             _player.resume();
           }
         }
