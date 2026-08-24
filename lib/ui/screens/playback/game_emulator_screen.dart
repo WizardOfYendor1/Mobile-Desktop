@@ -18,6 +18,7 @@ import '../../../util/game_cores.dart';
 import '../../../util/platform_detection.dart';
 import '../../../util/focus/gamepad/gamepad_suppressor.dart';
 import '../../../util/focus/gamepad/android_gamepad_channel.dart';
+import '../../../util/emulator_host_messages.dart';
 import '../../../util/insecure_certificates.dart';
 import '../../../util/webview_environment.dart';
 import '../../screensaver/screensaver_controller.dart';
@@ -61,6 +62,7 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
   InAppWebViewController? _controller;
 
   String? _playerUrl;
+  void Function()? _disposeHostMessages;
   String? _error;
   bool _emulatorReady = false;
   // Set once by _exit and never reset. Unlike a "saving in progress" flag that
@@ -79,6 +81,13 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
   // fixed sentinel id + the "settings" save kind. Restored into localStorage at document start
   // (before EmulatorJS reads it) and saved back on exit.
   static const String _settingsId = 'moonfin-global';
+
+  // Always absent when the bridge asserts its contract, so reporting them is
+  // noise rather than a finding; see the contract-violation case below.
+  static const Set<String> _expectedAtReady = {
+    'emu.gameManager',
+    'emu.changeSettingOption',
+  };
   final List<UserScript> _userScripts = [];
 
   // Cached in build() so the gamepad-driven action list (built outside a build context) can
@@ -281,6 +290,29 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
 
     if (!mounted) return;
     setState(() => _playerUrl = url);
+
+    // flutter_inappwebview's JavaScript handler (registered on the WebView
+    // below) never fires on Flutter web -- see emulator_host_messages.dart --
+    // so also listen for the postMessage the player shell falls back to.
+    _disposeHostMessages?.call();
+    _disposeHostMessages = null;
+    final origin = _originOf(url);
+    if (origin != null) {
+      _disposeHostMessages = EmulatorHostMessages.subscribe(
+        allowedOrigin: origin,
+        onMessage: (message) => _onPlayerMessage([message]),
+      );
+    }
+  }
+
+  /// Uri.origin throws for anything that is not http(s) with an authority, and
+  /// this is evaluated on every platform even though only web subscribes.
+  static String? _originOf(String url) {
+    try {
+      return Uri.parse(url).origin;
+    } catch (_) {
+      return null;
+    }
   }
 
   void _enterImmersive() {
@@ -305,7 +337,8 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
       case 'gamepad':
         // JS-forwarded (iOS/desktop): standard Gamepad API indices; gameplay is read natively
         // by EmulatorJS, so this drives only the overlay, never injection.
-        final index = message['index'] as int;
+        // dartify() on web can hand back a double for a JS number, so tolerate both.
+        final index = (message['index'] as num).toInt();
         final pressed = message['pressed'] as bool;
         _handleGamepad(_semanticFromStandard(index), pressed, canInject: false);
         break;
@@ -323,16 +356,23 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
         unawaited(_onEmulatorControlsClosed(reason));
         break;
       case 'moonfin-emulator-contract-violation':
-        // player.html's moonfinAssertEmulatorContract reports (but never throws for) each
-        // EmulatorJS internal the native controller-menu adapter depends on that is missing at
-        // ready-time -- e.g. after an EmulatorJS upstream upgrade renamed or removed one. This
-        // has no user-visible effect on its own (the adapter's own per-access try/catch already
-        // degrades to an unresponsive control row rather than crashing), so it is only logged
-        // here for whoever investigates a "controller settings don't work" report.
+        // moonfin-bridge.js reports (but never throws for) each EmulatorJS internal it
+        // depends on that is absent at ready-time.
+        //
+        // `emu.gameManager` and `emu.changeSettingOption` are EXPECTED here and mean nothing
+        // is wrong: EmulatorJS fires `ready` from a setTimeout inside its constructor, before
+        // Start is clicked, while those two are assigned only once the core has downloaded
+        // and the game has started. Verified against EmulatorJS 4.2.3 and 4.3.0-pre; see
+        // bug-100. Any OTHER name is a real upstream rename worth investigating, and how bad
+        // that is depends on which: the DOM/control-menu entries only cost an unresponsive
+        // controller-settings row, but gameManager backs save, load, restart, fast-forward,
+        // pause and the core-options list.
         final missing = message['missing'] as String?;
-        debugPrint(
-          '[GameEmulatorScreen] EmulatorJS contract violation: missing $missing',
-        );
+        if (!_expectedAtReady.contains(missing)) {
+          debugPrint(
+            '[GameEmulatorScreen] EmulatorJS contract violation: missing $missing',
+          );
+        }
         break;
     }
   }
@@ -1052,6 +1092,7 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
 
   @override
   void dispose() {
+    _disposeHostMessages?.call();
     _releaseGameplayArtworkBlock();
     _releaseScreensaverBlock();
     releaseGameAudio();

@@ -16,6 +16,7 @@ import 'package:moonfin/ui/screens/playback/native_game_player_screen.dart';
 import 'package:moonfin/util/core_input_descriptors.dart';
 import 'package:moonfin/util/game_cores.dart';
 import 'package:moonfin/util/native_controller_mapping.dart';
+import 'package:moonfin/util/platform_detection.dart';
 // Transitive via path_provider; not worth promoting to a direct pubspec.yaml
 // dependency just for this test-only fake.
 // ignore: depend_on_referenced_packages
@@ -319,6 +320,9 @@ void main() {
     await GetIt.instance.reset();
     player.dispose();
     await tempRoot.delete(recursive: true);
+    // A couple of tests flip this to reach the TV-only notice gate; reset
+    // unconditionally so it never leaks into a later test in this file.
+    PlatformDetection.setTvMode(false);
   });
 
   testWidgets(
@@ -765,17 +769,18 @@ void main() {
   testWidgets(
     'a navigationOnly controllersChanged event shows the remote notice once',
     (tester) async {
-      // The blocking "connect a controller" panel is additionally gated on
-      // !usesKeyboardInput && !usesOnScreenControls, both platform checks
-      // that only read false on Android TV/tvOS -- a platform this harness
-      // cannot reach a live texture on without faking the whole
-      // download-manager/ABI resolution path the other tests here
-      // deliberately avoid by running on macOS. This test therefore covers
-      // the notice itself (platform-independent, since _showCoreMessage
-      // does not consult those checks) rather than the panel's visibility;
-      // the panel's condition is untouched by this change and was verified
-      // by inspection at native_game_player_screen.dart:2017-2029.
-      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      // The notice is gated on !usesKeyboardInput && !usesOnScreenControls,
+      // which only both read false on Android TV/tvOS. setTvMode(true) under
+      // an Android platform override reaches that combination without a live
+      // texture: the notice's render condition
+      // (`_inputNotice != null && _error == null`) never consults
+      // _textureId, and _prepare()'s real disk I/O never advances without
+      // tester.runAsync(), so _error stays null for the whole test regardless
+      // of platform.
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      PlatformDetection.setTvMode(true);
+      expect(usesKeyboardInput, isFalse);
+      expect(usesOnScreenControls, isFalse);
       try {
         final router = GoRouter(
           initialLocation: '/game',
@@ -800,17 +805,7 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
           ),
         );
-        for (
-          var i = 0;
-          i < 60 && find.byType(Texture).evaluate().isEmpty;
-          i++
-        ) {
-          await tester.runAsync(
-            () => Future<void>.delayed(const Duration(milliseconds: 20)),
-          );
-          await tester.pump(const Duration(milliseconds: 20));
-        }
-        expect(find.byType(Texture), findsOneWidget);
+        await tester.pump();
 
         player.emitControllersChanged(0, navigationOnly: true);
         await tester.pump();
@@ -840,7 +835,8 @@ void main() {
   testWidgets(
     'the remote notice and a core message can be visible at the same time',
     (tester) async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      PlatformDetection.setTvMode(true);
       try {
         final router = GoRouter(
           initialLocation: '/game',
@@ -865,17 +861,7 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
           ),
         );
-        for (
-          var i = 0;
-          i < 60 && find.byType(Texture).evaluate().isEmpty;
-          i++
-        ) {
-          await tester.runAsync(
-            () => Future<void>.delayed(const Duration(milliseconds: 20)),
-          );
-          await tester.pump(const Duration(milliseconds: 20));
-        }
-        expect(find.byType(Texture), findsOneWidget);
+        await tester.pump();
 
         player.emitControllersChanged(0, navigationOnly: true);
         player.emitCoreMessage('SET_ROTATION rot=1');
@@ -883,6 +869,54 @@ void main() {
 
         expect(find.textContaining('playing with the remote'), findsOneWidget);
         expect(find.text('SET_ROTATION rot=1'), findsOneWidget);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+    },
+  );
+
+  testWidgets(
+    'a navigationOnly event shows no remote notice on a platform with '
+    'on-screen controls',
+    (tester) async {
+      // Regression guard: Android phones ship the same native code as
+      // Android TV and can report navigationOnly too, but usesOnScreenControls
+      // already explains how to play there, so the notice must stay gated
+      // off. setTvMode(false) is the default, but set it explicitly since
+      // this is the case the gate exists for.
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      PlatformDetection.setTvMode(false);
+      expect(usesOnScreenControls, isTrue);
+      try {
+        final router = GoRouter(
+          initialLocation: '/game',
+          routes: [
+            GoRoute(
+              path: '/game',
+              builder: (context, state) => NativeGamePlayerScreen(
+                libraryId: 'lib1',
+                gameId: 'game1',
+                core: 'snes',
+                startFresh: true,
+                player: player,
+              ),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        );
+        await tester.pump();
+
+        player.emitControllersChanged(0, navigationOnly: true);
+        await tester.pump();
+
+        expect(find.textContaining('playing with the remote'), findsNothing);
       } finally {
         debugDefaultTargetPlatformOverride = null;
       }

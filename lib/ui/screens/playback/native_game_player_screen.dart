@@ -306,7 +306,15 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
             _player.resume();
           }
         }
-        if (navigationOnly && !_notifiedNavigationOnly) {
+        // Same platform gate as the pause above: the notice explains why the
+        // game is playable with no gamepad, which only needs saying where
+        // there is no keyboard or on-screen pad to answer it already. The
+        // native side ships to Android phones too, where an attached
+        // Bluetooth keyboard would otherwise report navigationOnly.
+        if (navigationOnly &&
+            !_notifiedNavigationOnly &&
+            !usesKeyboardInput &&
+            !usesOnScreenControls) {
           _notifiedNavigationOnly = true;
           _showInputNotice(
             'No game controller connected — playing with the remote.',
