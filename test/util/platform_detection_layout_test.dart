@@ -33,6 +33,22 @@ void main() {
     expect(PlatformDetection.useDesktopUi, isFalse);
   });
 
+  test('offline downloads are supported on Android TV', () {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    PlatformDetection.setTvMode(true);
+
+    expect(PlatformDetection.isTV, isTrue);
+    expect(PlatformDetection.supportsOfflineDownloads, isTrue);
+  });
+
+  test('offline downloads remain unavailable on other TV layouts', () {
+    debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+    PlatformDetection.setInterfaceLayout(InterfaceLayout.tv);
+
+    expect(PlatformDetection.isTV, isTrue);
+    expect(PlatformDetection.supportsOfflineDownloads, isFalse);
+  });
+
   test('desktop keeps a misdetected desktop out of the TV UI', () {
     debugDefaultTargetPlatformOverride = TargetPlatform.linux;
     PlatformDetection.setTvMode(true);

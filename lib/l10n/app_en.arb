@@ -1522,6 +1522,10 @@
   "@finalizingDownload": {
     "description": "Status label shown while a finished download is being moved to its final location and validated"
   },
+  "queuedDownload": "Queued",
+  "@queuedDownload": {
+    "description": "Status label for a download waiting in the queue for a free download slot"
+  },
   "downloadAll": "Download All",
   "@downloadAll": {
     "description": "Action button label to download all items"
@@ -4307,6 +4311,14 @@
   "wifiOnlyDownloads": "WiFi-Only Downloads",
   "@wifiOnlyDownloads": {
     "description": "Setting for wifi-only downloads"
+  },
+  "tvOfflineDownloads": "Enable offline downloads",
+  "@tvOfflineDownloads": {
+    "description": "TV-only toggle in the Offline Downloads settings: offer download actions on item pages"
+  },
+  "tvOfflineDownloadsSubtitle": "Show download actions on item pages",
+  "@tvOfflineDownloadsSubtitle": {
+    "description": "Subtitle for the TV-only offline downloads toggle"
   },
   "reportDownloadsActivity": "Show downloads on the server",
   "reportDownloadsActivitySubtitle": "Let the server admin see your transcoded downloads in the dashboard",
@@ -7392,8 +7404,69 @@
   "adminMetadataFieldOfficialRating": "Official rating",
   "adminMetadataFieldCommunityRating": "Community rating",
   "adminMetadataFieldCriticRating": "Critic rating",
+  "adminMetadataFieldCustomRating": "Custom rating",
   "adminMetadataFieldTagline": "Tagline",
   "adminMetadataFieldOverview": "Overview",
+  "adminMetadataFieldDisplayOrder": "Display order",
+  "adminMetadataDisplayOrderAired": "Aired",
+  "adminMetadataDisplayOrderOriginalAirDate": "Original air date",
+  "adminMetadataDisplayOrderAbsolute": "Absolute",
+  "adminMetadataDisplayOrderDvd": "DVD",
+  "adminMetadataDisplayOrderDigital": "Digital",
+  "adminMetadataDisplayOrderStoryArc": "Story arc",
+  "adminMetadataDisplayOrderProduction": "Production",
+  "adminMetadataDisplayOrderTv": "TV",
+  "adminMetadataDisplayOrderAlternate": "Alternate",
+  "adminMetadataDisplayOrderRegional": "Regional",
+  "adminMetadataDisplayOrderAlternateDvd": "Alternate DVD",
+  "adminMetadataDisplayOrderDateModified": "Date modified",
+  "adminMetadataDisplayOrderSortName": "Sort name",
+  "adminMetadataDisplayOrderReleaseDate": "Release date",
+  "adminMetadataSettings": "Metadata Settings",
+  "adminMetadataDownloadLanguage": "Preferred download language",
+  "adminMetadataCountryRegion": "Country/Region",
+  "adminMetadataInheritHelp": "Leave this on Default to inherit the setting from a parent item, or from the server default.",
+  "adminMetadataField3DFormat": "3D format",
+  "adminMetadataPersonKindUnknown": "Unknown",
+  "adminMetadataPersonKindActor": "Actor",
+  "adminMetadataPersonKindDirector": "Director",
+  "adminMetadataPersonKindComposer": "Composer",
+  "adminMetadataPersonKindWriter": "Writer",
+  "adminMetadataPersonKindGuestStar": "Guest star",
+  "adminMetadataPersonKindProducer": "Producer",
+  "adminMetadataPersonKindConductor": "Conductor",
+  "adminMetadataPersonKindLyricist": "Lyricist",
+  "adminMetadataPersonKindArranger": "Arranger",
+  "adminMetadataPersonKindEngineer": "Engineer",
+  "adminMetadataPersonKindMixer": "Mixer",
+  "adminMetadataPersonKindRemixer": "Remixer",
+  "adminMetadataPersonKindCreator": "Creator",
+  "adminMetadataPersonKindArtist": "Artist",
+  "adminMetadataPersonKindAlbumArtist": "Album artist",
+  "adminMetadataPersonKindAuthor": "Author",
+  "adminMetadataPersonKindIllustrator": "Illustrator",
+  "adminMetadataPersonKindPenciller": "Penciller",
+  "adminMetadataPersonKindInker": "Inker",
+  "adminMetadataPersonKindColorist": "Colorist",
+  "adminMetadataPersonKindLetterer": "Letterer",
+  "adminMetadataPersonKindCoverArtist": "Cover artist",
+  "adminMetadataPersonKindEditor": "Editor",
+  "adminMetadataPersonKindTranslator": "Translator",
+  "adminMetadataPersonKindNarrator": "Narrator",
+  "adminMetadataAirDays": "Air days",
+  "adminMetadataLockItem": "Lock this item to prevent future metadata changes",
+  "adminMetadataEnabledFields": "Enabled Fields",
+  "adminMetadataEnabledFieldsHelp": "Uncheck a field to lock it and prevent its data from being changed.",
+  "adminMetadataLockFieldName": "Name",
+  "adminMetadataLockFieldOverview": "Overview",
+  "adminMetadataLockFieldGenres": "Genres",
+  "adminMetadataLockFieldOfficialRating": "Parental rating",
+  "adminMetadataLockFieldCast": "People",
+  "adminMetadataLockFieldProductionLocations": "Production locations",
+  "adminMetadataLockFieldBirthLocation": "Birth location",
+  "adminMetadataLockFieldRuntime": "Runtime",
+  "adminMetadataLockFieldStudios": "Studios",
+  "adminMetadataLockFieldTags": "Tags",
   "adminMetadataGenres": "Genres",
   "adminMetadataTags": "Tags",
   "adminMetadataStudios": "Studios",
@@ -7469,8 +7542,20 @@
   "adminPluginsCatalog": "Catalog",
   "adminPluginsActive": "Active",
   "adminPluginsRestart": "Restart",
+  "adminPluginsRestartRequired": "Restart required",
+  "@adminPluginsRestartRequired": {
+    "description": "Label for the installed-plugin filter showing changes that require a server restart"
+  },
   "adminPluginsNoSearchResults": "No plugins match your search",
   "adminPluginsNoneInstalled": "No plugins installed",
+  "adminPluginsNoneActive": "No active plugins",
+  "@adminPluginsNoneActive": {
+    "description": "Empty state for the active installed-plugin filter"
+  },
+  "adminPluginsNoneRequireRestart": "No plugins require a server restart",
+  "@adminPluginsNoneRequireRestart": {
+    "description": "Empty state for the installed-plugin filter showing changes that require a server restart"
+  },
   "adminPluginsUpdateAvailable": "Update available: v{version}",
   "@adminPluginsUpdateAvailable": {
     "placeholders": {
@@ -8364,6 +8449,15 @@
   "settingsSyncplaySubtitle": "Synchronization logic for group sessions",
   "settingsAdvancedOptionsSubtitle": "Specialized player features. Use with caution, as some options may cause playback issues",
   "settingsSkipIntrosAndOutros": "Skip Intros and Outros?",
+  "settingsMediaSegmentTypeAction": "{segment} Segments",
+  "@settingsMediaSegmentTypeAction": {
+    "description": "Setting label for what to do with one type of media segment",
+    "placeholders": {
+      "segment": {
+        "type": "String"
+      }
+    }
+  },
   "settingsMediaSegmentCountdown": "Media Segment Countdown",
   "@settingsMediaSegmentCountdown": {
     "description": "Setting label for media segment countdown customizations"
@@ -8398,9 +8492,7 @@
   "settingsPlaybackEngineAndroidTv": "Playback Engine (Android TV)",
   "settingsPlaybackEngineAndroidTvDescription": "Choose the default playback engine on Android TV devices. Changes apply to the next playback session.",
   "settingsPlaybackEngineMedia3Recommended": "Media3 (recommended)",
-  "settingsPlaybackEngineMedia3Legacy": "Media3 (legacy)",
   "settingsPlaybackEngineMpvLegacy": "mpv (legacy)",
-  "settingsPlaybackEngineMpvRecommended": "mpv (recommended)",
   "settingsDolbyVisionFallback": "Dolby Vision Fallback",
   "settingsDolbyVisionFallbackDescription": "Behavior for Dolby Vision titles on devices without Dolby Vision decoding.",
   "settingsAskEachTime": "Ask each time",
@@ -9633,6 +9725,14 @@
   "mediaDetailsAndSpoilers": "Media Details and Spoilers",
   "@mediaDetailsAndSpoilers": {
     "description": "Section header for media details and spoiler settings"
+  },
+  "openTrailersExternally": "Open Trailers in External App",
+  "@openTrailersExternally": {
+    "description": "Details screen setting that hands trailers to the system"
+  },
+  "openTrailersExternallySubtitle": "Trailers open in the YouTube app or browser instead of the built-in player",
+  "@openTrailersExternallySubtitle": {
+    "description": "Subtitle for the external trailers setting"
   },
   "hideDetailsMediaDescription": "Hide Media Description on Details Page",
   "@hideDetailsMediaDescription": {

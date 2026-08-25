@@ -58,12 +58,17 @@ class NativeControllerPlayerAssignments {
     return NativeControllerPlayerAssignments(Map.unmodifiable(next));
   }
 
-  factory NativeControllerPlayerAssignments.fromJson(String json) {
+  factory NativeControllerPlayerAssignments.fromJson(String json) =>
+      tryFromJson(json) ?? empty;
+
+  /// Parses a complete assignment document, returning null when it cannot be
+  /// trusted as a persisted assignment payload.
+  static NativeControllerPlayerAssignments? tryFromJson(String json) {
     try {
       final decoded = jsonDecode(json);
-      if (decoded is! Map) return empty;
+      if (decoded is! Map) return null;
       final players = decoded['players'];
-      if (players is! Map) return empty;
+      if (players is! Map) return null;
       final parsed = <int, String>{};
       for (final entry in players.entries) {
         final player = int.tryParse(entry.key.toString());
@@ -74,7 +79,7 @@ class NativeControllerPlayerAssignments {
       }
       return NativeControllerPlayerAssignments(Map.unmodifiable(parsed));
     } catch (_) {
-      return empty;
+      return null;
     }
   }
 
@@ -88,20 +93,52 @@ class NativeControllerPlayerAssignments {
 
 const _assignmentsSaveId = 'moonfin-native-controller-players';
 
-/// A missing save or an unreachable server yields no assignments, which is the
-/// pre-assignment behaviour: the native side falls back to discovery order.
-/// Assignment never blocks a game from starting.
-Future<NativeControllerPlayerAssignments> loadControllerPlayerAssignments(
+/// The result of reading persisted player assignments.
+///
+/// An empty document is a known first-run state, while a failed read leaves
+/// the stored assignments unknown. Callers that may later write must preserve
+/// that distinction so a live, empty fallback cannot replace unseen pins.
+class ControllerPlayerAssignmentsLoad {
+  const ControllerPlayerAssignmentsLoad(
+    this.assignments, {
+    required this.reachable,
+  });
+
+  final NativeControllerPlayerAssignments assignments;
+
+  /// False when the saved document could not be read or decoded.
+  final bool reachable;
+}
+
+/// Loads persisted player assignments without blocking gameplay when the
+/// server is unavailable. The native side can still use discovery order, but
+/// callers that offer edits must not persist them when [reachable] is false.
+Future<ControllerPlayerAssignmentsLoad> loadControllerPlayerAssignmentsChecked(
   GamesApi games,
 ) async {
   try {
     final blob = await games.getSave(_assignmentsSaveId, kind: 'settings');
     if (blob == null || blob.isEmpty) {
-      return NativeControllerPlayerAssignments.empty;
+      return const ControllerPlayerAssignmentsLoad(
+        NativeControllerPlayerAssignments.empty,
+        reachable: true,
+      );
     }
-    return NativeControllerPlayerAssignments.fromJson(utf8.decode(blob));
+    final assignments = NativeControllerPlayerAssignments.tryFromJson(
+      utf8.decode(blob),
+    );
+    if (assignments == null) {
+      return const ControllerPlayerAssignmentsLoad(
+        NativeControllerPlayerAssignments.empty,
+        reachable: false,
+      );
+    }
+    return ControllerPlayerAssignmentsLoad(assignments, reachable: true);
   } catch (_) {
-    return NativeControllerPlayerAssignments.empty;
+    return const ControllerPlayerAssignmentsLoad(
+      NativeControllerPlayerAssignments.empty,
+      reachable: false,
+    );
   }
 }
 

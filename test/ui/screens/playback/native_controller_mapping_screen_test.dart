@@ -94,14 +94,14 @@ void main() {
       await tester.pump();
       key.currentState!.handleButton(7, true); // -> c
       await tester.pump();
-      expect(find.text('Unassigned — ${deviceC.name}'), findsOneWidget);
+      expect(find.text('${deviceC.name} - (Unassigned)'), findsOneWidget);
 
       // deviceC (currently selected) is gone; list is now shorter than the
       // stored index. Must not throw RangeError.
       await tester.pumpWidget(harness([deviceA], key));
       await tester.pump();
 
-      expect(find.text('Unassigned — ${deviceA.name}'), findsOneWidget);
+      expect(find.text('${deviceA.name} - (Unassigned)'), findsOneWidget);
     },
   );
 
@@ -127,13 +127,13 @@ void main() {
       await tester.pumpWidget(harness([deviceA, deviceB, deviceC], key));
       key.currentState!.handleButton(7, true); // -> b
       await tester.pump();
-      expect(find.text('Unassigned — ${deviceB.name}'), findsOneWidget);
+      expect(find.text('${deviceB.name} - (Unassigned)'), findsOneWidget);
 
       // Same device, new position in the list.
       await tester.pumpWidget(harness([deviceC, deviceA, deviceB], key));
       await tester.pump();
 
-      expect(find.text('Unassigned — ${deviceB.name}'), findsOneWidget);
+      expect(find.text('${deviceB.name} - (Unassigned)'), findsOneWidget);
     },
   );
 
@@ -193,6 +193,75 @@ void main() {
     await tester.pump();
     expect(copied, 'a');
   });
+
+  testWidgets(
+    'cancelling the copy confirmation restores the copy row cursor, not the '
+    'device row',
+    (tester) async {
+      final key = GlobalKey<NativeControllerMappingScreenState>();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                NativeControllerMappingScreen(
+                  key: key,
+                  devices: const [
+                    NativeControllerDevice(
+                      id: 'a',
+                      connectionId: 'a-connection',
+                      name: 'Pad A',
+                      port: 0,
+                    ),
+                    NativeControllerDevice(
+                      id: 'b',
+                      connectionId: 'b-connection',
+                      name: 'Pad B',
+                      port: 1,
+                    ),
+                  ],
+                  mappings: const {
+                    'a': NativeControllerMapping({96: RetroPadButton.a}),
+                  },
+                  onMappingChanged: (_, _) async {},
+                  onCopyMapping: (id) async {},
+                  onClose: () {},
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Navigate down to the copy row (stick snap, 16 buttons, then copy).
+      for (var i = 0; i < 18; i++) {
+        key.currentState!.handleButton(5, true);
+      }
+      key.currentState!.handleButton(0, true); // open copy confirmation
+      await tester.pump();
+      expect(
+        find.textContaining('copies Android button keycodes'),
+        findsOneWidget,
+      );
+
+      key.currentState!.handleButton(8, true); // back out of confirmation
+      await tester.pump();
+      // Still on Pad A -- if the cursor had fallen back to the device row (as
+      // it did before the fix), the next assertion below would find Pad B.
+      expect(find.textContaining('Pad A'), findsOneWidget);
+
+      key.currentState!.handleButton(0, true);
+      await tester.pump();
+      // The cursor must still be on the copy row, so pressing A reopens the
+      // confirmation rather than cycling to the next device.
+      expect(
+        find.textContaining('copies Android button keycodes'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Pad B'), findsNothing);
+    },
+  );
 
   testWidgets('shows and applies the supported core controller type selector', (
     tester,
@@ -302,7 +371,7 @@ void main() {
 
     // Back to the button list, and the host is told not to close the screen.
     expect(find.textContaining('Press the physical button'), findsNothing);
-    expect(find.text('Unassigned — ${deviceA.name}'), findsOneWidget);
+    expect(find.text('${deviceA.name} - (Unassigned)'), findsOneWidget);
   });
 
   testWidgets('Back at the top level defers to the host overlay', (
@@ -352,6 +421,12 @@ void main() {
     );
     await tester.pump();
 
+    final deviceHeading = find.text('Pad A - (Player 1, pinned)');
+    expect(deviceHeading, findsOneWidget);
+    final headingSpan = tester.widget<Text>(deviceHeading).textSpan! as TextSpan;
+    final headingSpans = headingSpan.children!;
+    expect(headingSpans.first.style?.fontStyle, isNot(FontStyle.italic));
+    expect(headingSpans.last.style?.fontStyle, FontStyle.italic);
     expect(find.text('Player assignment'), findsOneWidget);
     expect(find.text('Player 1 · pinned'), findsOneWidget);
 
@@ -457,7 +532,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Menu & navigation — onn TV Remote'), findsOneWidget);
+    expect(find.text('onn TV Remote - (Menu & navigation)'), findsOneWidget);
     expect(find.text('Player assignment'), findsNothing);
   });
 
@@ -567,12 +642,204 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Menu & navigation — USB Keyboard'), findsOneWidget);
+    expect(find.text('USB Keyboard - (Menu & navigation)'), findsOneWidget);
     await tester.tap(find.text('Player assignment'));
     await tester.pump();
     await tester.tap(find.text('Player 2'));
     await tester.pump();
 
     expect(applied?.profileIdByPlayer, {2: 'kbd'});
+  });
+
+  // Regression test: the d-pad must move the highlight inside the player
+  // assignment list. _row() highlighted on the main list's cursor, so entering
+  // this sub-list left the highlight frozen on whatever main row index matched
+  // -- 'Player assignment' is row 1, so 'Player 1' stayed lit no matter which
+  // choice the cursor was actually on.
+  String? highlightedRowLabel(WidgetTester tester) {
+    for (final element in find.byType(Container).evaluate()) {
+      final container = element.widget as Container;
+      final decoration = container.decoration;
+      if (decoration is BoxDecoration &&
+          decoration.color == const Color(0x333F8CFF)) {
+        final text =
+            find
+                    .descendant(
+                      of: find.byWidget(container),
+                      matching: find.byType(Text),
+                    )
+                    .evaluate()
+                    .first
+                    .widget
+                as Text;
+        return text.data;
+      }
+    }
+    return null;
+  }
+
+  testWidgets('the d-pad moves the highlight through the player choices', (
+    tester,
+  ) async {
+    final key = GlobalKey<NativeControllerMappingScreenState>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              NativeControllerMappingScreen(
+                key: key,
+                devices: const [
+                  NativeControllerDevice(
+                    id: 'a',
+                    name: 'Pad A',
+                    port: 0,
+                    pinned: true,
+                  ),
+                ],
+                mappings: const {},
+                assignments: const NativeControllerPlayerAssignments({1: 'a'}),
+                onAssignmentChanged: (_) async {},
+                onMappingChanged: (_, _) async {},
+                onClose: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.text('Player assignment'));
+    await tester.pump();
+    expect(find.text('Player 2'), findsOneWidget);
+    expect(highlightedRowLabel(tester), 'Player 1');
+
+    key.currentState!.handleButton(5, true); // d-pad down
+    await tester.pump();
+    expect(highlightedRowLabel(tester), 'Player 2');
+
+    key.currentState!.handleButton(5, true); // d-pad down
+    await tester.pump();
+    expect(highlightedRowLabel(tester), 'Player 3');
+
+    key.currentState!.handleButton(4, true); // d-pad up
+    await tester.pump();
+    expect(highlightedRowLabel(tester), 'Player 2');
+  });
+
+  testWidgets('entering and leaving player assignment reveals its cursor', (
+    tester,
+  ) async {
+    final key = GlobalKey<NativeControllerMappingScreenState>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 120,
+            child: Column(
+              children: [
+                NativeControllerMappingScreen(
+                  key: key,
+                  devices: const [
+                    NativeControllerDevice(
+                      id: 'a',
+                      name: 'Pad A',
+                      port: 0,
+                      pinned: true,
+                    ),
+                  ],
+                  mappings: const {},
+                  assignments: const NativeControllerPlayerAssignments({
+                    4: 'a',
+                  }),
+                  onAssignmentChanged: (_) async {},
+                  onMappingChanged: (_, _) async {},
+                  onClose: () {},
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    ScrollPosition position() =>
+        tester.state<ScrollableState>(find.byType(Scrollable).last).position;
+    expect(position().pixels, 0);
+
+    // Player assignment is row 1. Player 4 is the current choice, which is
+    // row 4 in its sub-list and initially outside this constrained viewport.
+    key.currentState!.handleButton(5, true);
+    key.currentState!.handleButton(0, true);
+    await tester.pumpAndSettle();
+
+    expect(position().pixels, greaterThan(0));
+
+    expect(key.currentState!.handleBack(), isTrue);
+    await tester.pumpAndSettle();
+    expect(position().pixels, lessThanOrEqualTo(58));
+  });
+
+  testWidgets('controller type selection reveals its cursor after list swaps', (
+    tester,
+  ) async {
+    final key = GlobalKey<NativeControllerMappingScreenState>();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 120,
+            child: Column(
+              children: [
+                NativeControllerMappingScreen(
+                  key: key,
+                  devices: const [
+                    NativeControllerDevice(id: 'a', name: 'Pad A', port: 0),
+                  ],
+                  mappings: const {
+                    'a': NativeControllerMapping(
+                      {},
+                      controllerTypesByCore: {'fbneo': 261},
+                    ),
+                  },
+                  coreId: 'fbneo',
+                  controllerTypesByPort: const {
+                    0: [
+                      CoreControllerType(port: 0, id: 5, label: 'Classic'),
+                      CoreControllerType(port: 0, id: 517, label: 'Modern'),
+                      CoreControllerType(
+                        port: 0,
+                        id: 261,
+                        label: '6-Button Panel',
+                      ),
+                    ],
+                  },
+                  onControllerTypeChanged: (_, _) async {},
+                  onMappingChanged: (_, _) async {},
+                  onClose: () {},
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    ScrollPosition position() =>
+        tester.state<ScrollableState>(find.byType(Scrollable).last).position;
+    expect(position().pixels, 0);
+
+    key.currentState!.handleButton(5, true); // Core controller type, row 1.
+    key.currentState!.handleButton(0, true);
+    await tester.pumpAndSettle();
+
+    expect(position().pixels, greaterThan(58));
+
+    expect(key.currentState!.handleBack(), isTrue);
+    await tester.pumpAndSettle();
+    expect(position().pixels, lessThanOrEqualTo(58));
   });
 }

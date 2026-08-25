@@ -893,7 +893,18 @@ class DeviceProfileBuilder {
         AudioFallbackCodec.flac => const <String>['flac', 'opus', 'aac', 'mp3'],
       };
 
-  static const Set<String> _avFoundationUndecodableAudio = {'dts', 'mp2'};
+  /// Codecs to keep out of an HLS offer AVFoundation will play.
+  ///
+  /// mp3 comes out of an MPEG-TS segment fine but not out of fMP4, where the
+  /// session dies with "Cannot Open" before the first frame. It has to leave
+  /// both offers rather than the fMP4 one alone, because the server unions the
+  /// audio codecs across every transcoding profile it matched, so mp3 left on
+  /// the TS entry lands back in the fMP4 session and gets copied anyway.
+  static const Set<String> _avFoundationUndecodableAudio = {
+    'dts',
+    'mp2',
+    'mp3',
+  };
 
   static List<String> _hlsAudioCodecsForFallback({
     required AudioFallbackCodec effectiveAudioFallbackCodec,

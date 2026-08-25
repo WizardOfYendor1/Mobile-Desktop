@@ -726,6 +726,32 @@ void main() {
       expect(videoProfiles.first['Container'], 'ts');
       expect(videoProfiles.first['VideoCodec'], 'hevc,h264');
     });
+
+    test('mp3 leaves the HLS offer entirely on AVFoundation', () {
+      final profile = DeviceProfileBuilder.build(
+        hevcRequiresFmp4Hls: true,
+        hlsAudioForAvFoundation: true,
+      );
+
+      // Both entries, not just fMP4, because the server unions audio codecs
+      // across the transcoding profiles it matched.
+      for (final entry in _hlsVideoTranscodingProfiles(profile)) {
+        expect(
+          (entry['AudioCodec'] as String).split(','),
+          isNot(contains('mp3')),
+          reason: 'the ${entry['Container']} offer still carries mp3',
+        );
+      }
+    });
+
+    test('engines other than AVFoundation keep mp3 in the HLS offer', () {
+      final profile = DeviceProfileBuilder.build(hevcRequiresFmp4Hls: true);
+
+      final fmp4 = _hlsVideoTranscodingProfiles(
+        profile,
+      ).firstWhere((entry) => entry['Container'] == 'mp4');
+      expect((fmp4['AudioCodec'] as String).split(','), contains('mp3'));
+    });
   });
 
   group('DeviceProfileBuilder subtitle delivery', () {

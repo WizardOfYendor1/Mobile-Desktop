@@ -41,8 +41,9 @@ class LocalFirstMediaStreamResolver extends MediaStreamResolver {
       final local = await _tryResolveLocal(mediaItem, mediaSourceId);
       if (local != null) return local;
       // With no local copy and no server, the network resolve below just
-      // burns through its timeouts before failing anyway. TV never reaches
-      // this: it has no downloads, and shouldUseOfflineCatalog is false there.
+      // burns through its timeouts before failing anyway. TV now has both
+      // downloads and the offline catalog, so the offline-failure throw applies
+      // there too.
       if (shouldUseOfflineCatalog()) {
         throw StateError(
           'No playable downloaded copy and the server is unreachable',

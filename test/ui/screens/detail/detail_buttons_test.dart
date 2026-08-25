@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jellyfin_preference/jellyfin_preference.dart';
 import 'package:moonfin/preference/user_preferences.dart';
 import 'package:moonfin/ui/screens/detail/detail_buttons.dart';
+import 'package:moonfin/util/download_utils.dart';
+import 'package:moonfin/util/platform_detection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Seeds the arrangement through the layout itself, so the test follows
@@ -27,6 +30,12 @@ List<String> _arrangedIds(UserPreferences prefs) => detailButtonLayout
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  tearDown(() {
+    PlatformDetection.setInterfaceLayout(InterfaceLayout.automatic);
+    PlatformDetection.setTvMode(false);
+    debugDefaultTargetPlatformOverride = null;
+  });
 
   group('DetailButton', () {
     test('every id is distinct, since the id is what gets stored', () {
@@ -76,6 +85,34 @@ void main() {
         detailButtonLayout.hidden(prefs),
         contains(DetailButton.seerrWatchlist.id),
       );
+    });
+
+    test('Android TV offers offline controls but not casting', () {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      PlatformDetection.setTvMode(true);
+
+      expect(DetailButton.download.isOffered, isTrue);
+      expect(DetailButton.deleteFiles.isOffered, isTrue);
+      expect(DetailButton.cast.isOffered, isFalse);
+    });
+  });
+
+  group('showsTvDownloadActions', () {
+    test('TV hides the download actions until the user opts in', () async {
+      PlatformDetection.setTvMode(true);
+      final prefs = await _prefs();
+
+      expect(showsTvDownloadActions(prefs), isFalse);
+
+      await prefs.set(UserPreferences.tvOfflineDownloads, true);
+      expect(showsTvDownloadActions(prefs), isTrue);
+    });
+
+    test('non-TV platforms offer downloads unconditionally', () async {
+      PlatformDetection.setTvMode(false);
+      final prefs = await _prefs();
+
+      expect(showsTvDownloadActions(prefs), isTrue);
     });
   });
 }

@@ -60,7 +60,8 @@ class _PlaybackCategoryScreen extends StatelessWidget {
                       const _AutomationQueueScreen(),
                     ),
                   ),
-                  if (!PlatformDetection.isTV && !PlatformDetection.isWeb)
+                  if (PlatformDetection.supportsOfflineDownloads &&
+                      !PlatformDetection.isWeb)
                     _TvSettingsListTile(
                       leading: const Icon(Icons.download),
                       title: Text(l10n.settingsOfflineDownloads),

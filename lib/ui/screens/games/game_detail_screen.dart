@@ -1209,7 +1209,6 @@ class _ActionRow extends StatelessWidget {
             focusNode: primaryFocusNode,
             autofocus: true,
             focusColor: accent,
-            showFocusRing: true,
             autoScroll: true,
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
             onPressed: onPlay,
@@ -1222,7 +1221,6 @@ class _ActionRow extends StatelessWidget {
           if (hasSave) ...[
             const SizedBox(width: 12),
             FocusableButton(
-              showFocusRing: true,
               autoScroll: true,
               padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
               onPressed: onRestart,
@@ -1243,7 +1241,6 @@ class _ActionRow extends StatelessWidget {
                 ),
               ),
               child: FocusableButton(
-                showFocusRing: true,
                 autoScroll: true,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 22,

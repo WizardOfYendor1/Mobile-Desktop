@@ -26,12 +26,15 @@ class AetherBackend implements PlayerBackend {
     );
     _prefs.addListener(_syncAllowUntrustedTls);
     _syncAllowUntrustedTls();
+    _prefs.addListener(_syncEngineLogForwarding);
+    _syncEngineLogForwarding();
   }
 
   static const _control = MethodChannel('moonfin/ios_aether_control');
   static const _events = EventChannel('moonfin/ios_aether_events');
 
   final UserPreferences _prefs;
+  bool? _engineLogForwarding;
 
   StreamSubscription<dynamic>? _eventSub;
 
@@ -110,6 +113,8 @@ class AetherBackend implements PlayerBackend {
       case 'completed':
         _completed = _toBool(map['completed']);
         _completedStream.add(_completed);
+      case 'engineLog':
+        _logEngineLine(map['line']);
       case 'playerError':
       case 'error':
         _logPlaybackError(map);
@@ -121,6 +126,22 @@ class AetherBackend implements PlayerBackend {
         _bufferingStream.add(false);
         _completedStream.add(false);
     }
+  }
+
+  /// Turns the engine's own logging on alongside diagnostic logging, so a
+  /// report carries what the reader, demuxer and muxer saw rather than only
+  /// the failure they ended on.
+  void _syncEngineLogForwarding() {
+    final enabled = _prefs.get(UserPreferences.diagnosticLoggingEnabled);
+    if (enabled == _engineLogForwarding) return;
+    _engineLogForwarding = enabled;
+    _invoke<void>('setEngineLogForwarding', {'enabled': enabled});
+  }
+
+  void _logEngineLine(dynamic line) {
+    if (line is! String || line.isEmpty) return;
+    if (!GetIt.instance.isRegistered<LogService>()) return;
+    GetIt.instance<LogService>().playback(line);
   }
 
   /// A native failure never reaches the server, so without this the report
@@ -502,6 +523,7 @@ class AetherBackend implements PlayerBackend {
   void dispose() {
     _disposed = true;
     _prefs.removeListener(_syncAllowUntrustedTls);
+    _prefs.removeListener(_syncEngineLogForwarding);
     _audioDelayDebounce?.cancel();
     _eventSub?.cancel();
     _positionStream.close();

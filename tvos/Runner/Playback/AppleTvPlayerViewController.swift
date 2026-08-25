@@ -1096,6 +1096,11 @@ final class AppleTvPlayerViewController: UIViewController {
         hasPrevious = (args["hasPrevious"] as? Bool) ?? false
         skipForwardMs = (args["skipForwardMs"] as? NSNumber)?.intValue ?? 30000
         skipBackMs = (args["skipBackMs"] as? NSNumber)?.intValue ?? 10000
+        // A fast forward or rewind key on a remote reaches the transport
+        // commands rather than the clickpad, so they move by the same setting.
+        player.nowPlaying.setSkipIntervals(
+            forward: Double(skipForwardMs) / 1000.0,
+            backward: Double(skipBackMs) / 1000.0)
         audioTracks = parseTracks(args["audioTracks"])
         subtitleTracks = parseTracks(args["subtitleTracks"])
         streamInfoSections = (args["streamInfoSections"] as? [[String: Any]]) ?? []
@@ -1622,14 +1627,10 @@ final class AppleTvPlayerViewController: UIViewController {
                 showOsd()
                 return
             case .leftArrow:
-                handleHorizontal(forward: false)
-                if focusedZone == .scrubber { beginScrubHold(forward: false) }
-                showOsd()
+                seekOrMoveFocus(forward: false)
                 return
             case .rightArrow:
-                handleHorizontal(forward: true)
-                if focusedZone == .scrubber { beginScrubHold(forward: true) }
-                showOsd()
+                seekOrMoveFocus(forward: true)
                 return
             default:
                 break
@@ -1690,6 +1691,23 @@ final class AppleTvPlayerViewController: UIViewController {
             guard controls.indices.contains(focusedControlIndex) else { return }
             activate(controls[focusedControlIndex])
         }
+    }
+
+    /// A sideways press with the OSD down seeks straight away instead of
+    /// moving a button highlight nobody can see, which is what made a skip
+    /// take three presses: one to raise the OSD, one to reach the button and
+    /// one to fire it. The zone follows the seek, so the OSD arrives on the
+    /// scrubber and the press after it keeps seeking.
+    ///
+    /// A live stream has nothing to seek, so it keeps the button behaviour.
+    private func seekOrMoveFocus(forward: Bool) {
+        if !isOsdOnScreen, !isLive {
+            focusedZone = .scrubber
+            updateFocusHighlight()
+        }
+        handleHorizontal(forward: forward)
+        if focusedZone == .scrubber { beginScrubHold(forward: forward) }
+        showOsd()
     }
 
     private func handleHorizontal(forward: Bool) {

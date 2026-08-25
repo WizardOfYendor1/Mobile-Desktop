@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -38,6 +39,11 @@ class DownloadProgress {
   final String? error;
   final DownloadQuality quality;
 
+  /// True while the download waits in the scheduler queue for a free
+  /// concurrency slot. The placeholder stays listed until the real transfer
+  /// progress replaces it, so UIs can show (and cancel) the waiting item.
+  final bool isQueued;
+
   /// Seconds the server expects its transcode to still need, read from the
   /// plugin while a transcoded download runs. Null when nothing answers.
   final int? etaSeconds;
@@ -50,6 +56,7 @@ class DownloadProgress {
     this.isComplete = false,
     this.error,
     this.quality = DownloadQuality.original,
+    this.isQueued = false,
     this.etaSeconds,
   });
 
@@ -87,6 +94,34 @@ class _MediaDownloadContext {
   });
 }
 
+/// Whether one media download should run on the native background engine.
+///
+/// Android TV keeps transcoded downloads on the in-process legacy engine:
+/// Jellyfin transcodes are chunked responses with no content length, which
+/// the native Android engine cannot move to its foreground worker and
+/// therefore cancels after its nine-minute WorkManager limit. Original
+/// quality downloads are ordinary finite responses, so TV takes the native
+/// engine for them like every other platform.
+///
+/// Destinations on removable storage also stay on the legacy engine: the
+/// native engine stages its temp file on internal storage and its completing
+/// move across volumes is a full copy, a long visible wait for a
+/// multi-gigabyte file.
+@visibleForTesting
+bool downloadUsesPluginEngine({
+  required bool pluginEngineSupported,
+  required bool serverNeedsLegacyTls,
+  required bool isAndroidTv,
+  required bool qualityTranscoded,
+  required bool destinationOnRemovableStorage,
+}) {
+  if (!pluginEngineSupported) return false;
+  if (serverNeedsLegacyTls) return false;
+  if (isAndroidTv && qualityTranscoded) return false;
+  if (destinationOnRemovableStorage) return false;
+  return true;
+}
+
 /// The native engine rejected the server's TLS certificate, so the download
 /// should be retried on the legacy engine, which honours the user's
 /// self-signed certificate setting.
@@ -118,6 +153,14 @@ class _NeverStartedException implements Exception {}
 
 enum _DownloadActivityPhase { start, progress, stop }
 
+class _QueuedDownload {
+  _QueuedDownload(this.item, this.quality);
+
+  final AggregatedItem item;
+  final DownloadQuality quality;
+  final Completer<void> completer = Completer<void>();
+}
+
 class DownloadService extends ChangeNotifier {
   final MediaServerClient _client;
   final DownloadNotificationService _notificationService;
@@ -145,6 +188,17 @@ class DownloadService extends ChangeNotifier {
   final Map<String, double> _serverTranscodeProgress = {};
   final Map<String, int> _transcodeEtaSeconds = {};
   bool _cancelAllRequested = false;
+
+  final Queue<_QueuedDownload> _pendingDownloads = Queue<_QueuedDownload>();
+  final Map<String, _QueuedDownload> _pendingDownloadByItemId = {};
+  var _runningDownloadCount = 0;
+  var _isDrainingDownloadQueue = false;
+
+  /// Estimated bytes of downloads that passed the storage check but have not
+  /// committed a file size yet, keyed by itemId. Counted by
+  /// [_checkStorageLimit] so concurrently admitted items cannot each pass
+  /// against the same committed-usage baseline.
+  final Map<String, int> _reservedStorageBytes = {};
 
   int _totalQueued = 0;
   int _completedCount = 0;
@@ -175,6 +229,8 @@ class DownloadService extends ChangeNotifier {
       statusHandler: _onTaskStatus,
       progressHandler: _onTaskProgress,
     );
+    _prefs.addListener(_onPreferencesChanged);
+    _configureNativeDownloadConcurrency();
   }
 
   bool isDownloading(String itemId) => _activeDownloads.containsKey(itemId);
@@ -193,16 +249,33 @@ class DownloadService extends ChangeNotifier {
           PlatformDetection.isAndroid ||
           PlatformDetection.isDesktop);
 
-  /// Whether media downloads for the active server run on the native
-  /// background_downloader engine.
-  bool get _usesPluginEngine =>
-      _pluginEngineSupported && !_serverNeedsLegacyTls;
+  /// Whether the native engine handles this media download, or the legacy
+  /// in-process engine does. A server whose certificate the native engine
+  /// refused (see [_serverNeedsLegacyTls]) always downloads through the
+  /// legacy engine, on every platform.
+  bool _pluginEngineFor(
+    DownloadQuality quality, {
+    required bool destinationOnRemovableStorage,
+  }) =>
+      downloadUsesPluginEngine(
+        pluginEngineSupported: _pluginEngineSupported,
+        serverNeedsLegacyTls: _serverNeedsLegacyTls,
+        isAndroidTv: PlatformDetection.isAndroid && PlatformDetection.isTV,
+        qualityTranscoded: quality.isTranscoded,
+        destinationOnRemovableStorage: destinationOnRemovableStorage,
+      );
 
-  /// On iOS and Android the plugin posts its own download notifications.
-  /// The desktop plugin engine and the legacy engine post none, so those
-  /// keep the flutter_local_notifications path.
-  bool get _usesPluginNotifications =>
-      _usesPluginEngine &&
+  /// On iOS and Android the plugin posts its own download notifications for
+  /// the downloads it runs. The desktop plugin engine and the legacy engine
+  /// post none, so those keep the flutter_local_notifications path.
+  bool _pluginNotificationsFor(
+    DownloadQuality quality, {
+    required bool destinationOnRemovableStorage,
+  }) =>
+      _pluginEngineFor(
+        quality,
+        destinationOnRemovableStorage: destinationOnRemovableStorage,
+      ) &&
       (PlatformDetection.isIOS || PlatformDetection.isAndroid);
 
   // Memoized because this is checked from every progress callback.
@@ -243,9 +316,84 @@ class DownloadService extends ChangeNotifier {
 
   UserPreferences get _prefs => GetIt.instance<UserPreferences>();
 
+  int get _maximumConcurrentDownloads =>
+      _prefs.effectiveDownloadConcurrentCount;
+
+  void _onPreferencesChanged() {
+    _drainDownloadQueue();
+    _configureNativeDownloadConcurrency();
+  }
+
+  void _configureNativeDownloadConcurrency() {
+    final coordinator = _coordinator;
+    if (coordinator == null) return;
+    unawaited(coordinator.configureMaximumConcurrentDownloads());
+  }
+
+  void _drainDownloadQueue() {
+    if (_isDrainingDownloadQueue || _cancelAllRequested) return;
+    _isDrainingDownloadQueue = true;
+    try {
+      while (_runningDownloadCount < _maximumConcurrentDownloads &&
+          _pendingDownloads.isNotEmpty) {
+        final queued = _pendingDownloads.removeFirst();
+        _pendingDownloadByItemId.remove(queued.item.id);
+        _runningDownloadCount++;
+        unawaited(_runQueuedDownload(queued));
+      }
+    } finally {
+      _isDrainingDownloadQueue = false;
+    }
+  }
+
+  Future<void> _runQueuedDownload(_QueuedDownload queued) async {
+    // Registered as soon as the item leaves the scheduler queue, not when
+    // the transfer starts, so cancelDownload works throughout the
+    // preparation window (metadata fetch, limit checks, path setup). A
+    // cancelled leftover token from a previous attempt is replaced.
+    _cancelTokens[queued.item.id] = CancelToken();
+    try {
+      await _downloadItemNow(queued.item, quality: queued.quality);
+      if (!queued.completer.isCompleted) queued.completer.complete();
+    } catch (error, stackTrace) {
+      // If the attempt escaped before creating its real progress entry, the
+      // queued placeholder would be orphaned: uncancellable and unretryable.
+      // Replace it with an error entry so the item stays actionable.
+      final progress = _activeDownloads[queued.item.id];
+      final repairedPlaceholder = progress != null && progress.isQueued;
+      if (repairedPlaceholder) {
+        _activeDownloads[queued.item.id] = DownloadProgress(
+          itemId: queued.item.id,
+          fileName: progress.fileName,
+          error: error.toString(),
+          quality: queued.quality,
+        );
+        _emitError('${queued.item.name}: ${error.toString()}');
+        notifyListeners();
+      }
+      if (!queued.completer.isCompleted) {
+        if (repairedPlaceholder) {
+          // The failure is already visible as an error entry, so
+          // fire-and-forget callers get no unhandled async error.
+          queued.completer.complete();
+        } else {
+          queued.completer.completeError(error, stackTrace);
+        }
+      }
+    } finally {
+      _reservedStorageBytes.remove(queued.item.id);
+      _runningDownloadCount--;
+      _drainDownloadQueue();
+    }
+  }
+
   bool _canClearCancelAllGate() {
+    // Queued placeholders are not transfers; cancelAll removes the ones still
+    // waiting and the rest are overwritten when their transfer starts.
     return _cancelTokens.isEmpty &&
-        _activeDownloads.values.every((d) => d.isComplete || d.error != null);
+        _activeDownloads.values.every(
+          (d) => d.isComplete || d.error != null || d.isQueued,
+        );
   }
 
   bool _shouldPersistProgress(String itemId, double progress) {
@@ -277,7 +425,14 @@ class DownloadService extends ChangeNotifier {
     final limitMb = _prefs.get(UserPreferences.downloadStorageLimitMb);
     if (limitMb <= 0) return true;
     final used = await _offlineRepo.getTotalStorageUsed();
-    return (used + estimatedBytes) <= limitMb * 1024 * 1024;
+    // Bytes admitted but not yet committed count against the limit, or
+    // several concurrently starting downloads could each pass the check
+    // against the same baseline and overshoot the cap together.
+    final reserved = _reservedStorageBytes.values.fold<int>(
+      0,
+      (sum, bytes) => sum + bytes,
+    );
+    return (used + reserved + estimatedBytes) <= limitMb * 1024 * 1024;
   }
 
   StoragePathService get _storagePath => GetIt.instance<StoragePathService>();
@@ -799,8 +954,9 @@ class DownloadService extends ChangeNotifier {
       if (ctx.completer.isCompleted || ctx.sawStart) return;
       // Another download holds the concurrency slot, so this one is queued
       // behind it rather than blocked.
-      if (_pluginContexts.values
-          .any((other) => other != ctx && other.sawStart)) {
+      if (_pluginContexts.values.any(
+        (other) => other != ctx && other.sawStart,
+      )) {
         _armStartWatchdog(ctx);
         return;
       }
@@ -1519,6 +1675,47 @@ class DownloadService extends ChangeNotifier {
   Future<void> downloadItem(
     AggregatedItem item, {
     DownloadQuality quality = DownloadQuality.original,
+  }) {
+    // Browser downloads are delegated to the platform and do not have a
+    // process-owned transfer to schedule.
+    if (PlatformDetection.isWeb) {
+      return _downloadItemNow(item, quality: quality);
+    }
+
+    if (_cancelAllRequested) {
+      if (_canClearCancelAllGate()) {
+        _cancelAllRequested = false;
+      } else {
+        return Future.value();
+      }
+    }
+
+    final pending = _pendingDownloadByItemId[item.id];
+    if (pending != null) return pending.completer.future;
+
+    final active = _activeDownloads[item.id];
+    if (active != null && active.error == null) return Future.value();
+
+    final queued = _QueuedDownload(item, quality);
+    _pendingDownloadByItemId[item.id] = queued;
+    _pendingDownloads.addLast(queued);
+    // List the queued item immediately so download lists can show (and
+    // cancel) it while it waits for a free concurrency slot. The real
+    // progress entry replaces this placeholder once the transfer starts.
+    _activeDownloads[item.id] = DownloadProgress(
+      itemId: item.id,
+      fileName: item.name,
+      quality: quality,
+      isQueued: true,
+    );
+    notifyListeners();
+    _drainDownloadQueue();
+    return queued.completer.future;
+  }
+
+  Future<void> _downloadItemNow(
+    AggregatedItem item, {
+    DownloadQuality quality = DownloadQuality.original,
   }) async {
     if (PlatformDetection.isWeb) {
       try {
@@ -1540,10 +1737,15 @@ class DownloadService extends ChangeNotifier {
     }
     // An entry with an error is a finished, failed download, so clear it and
     // let Retry start over. Anything else is genuinely in flight or complete
-    // and must not be restarted.
+    // and must not be restarted. A queued placeholder is neither: it is left
+    // in place and overwritten with real progress once the transfer starts.
     final existing = _activeDownloads[item.id];
-    if (existing != null && existing.error == null) return;
-    if (existing != null) _activeDownloads.remove(item.id);
+    if (existing != null && existing.error == null && !existing.isQueued) {
+      return;
+    }
+    if (existing != null && !existing.isQueued) {
+      _activeDownloads.remove(item.id);
+    }
     if (_cancelAllRequested) {
       if (_canClearCancelAllGate()) {
         _cancelAllRequested = false;
@@ -1552,7 +1754,26 @@ class DownloadService extends ChangeNotifier {
       }
     }
 
+    // Reuses the token registered when the item left the scheduler queue (see
+    // [_runQueuedDownload]) so cancellation also works before the transfer
+    // starts, then hands the same token to whichever engine runs.
+    final cancelToken = _cancelTokens[item.id] ??= CancelToken();
+
+    // Cancellation during preparation: no file or DB row exists yet, so
+    // dropping the queued placeholder is the entire cleanup.
+    bool preparationCancelled() {
+      if (!cancelToken.isCancelled) return false;
+      _activeDownloads.remove(item.id);
+      _cancelTokens.remove(item.id);
+      notifyListeners();
+      return true;
+    }
+
     String? savePath;
+    // False until the destination is known; the native engine stages its
+    // temp file on internal storage, so a removable destination stays on the
+    // direct-writing legacy engine (see [StoragePathService.isOnRemovableStorage]).
+    var destinationOnRemovableStorage = false;
     Timer? activityHeartbeat;
     String? activityPlaySessionId;
     String? activityMediaSourceId;
@@ -1571,9 +1792,11 @@ class DownloadService extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    if (preparationCancelled()) return;
 
     try {
       final fullItem = await _ensureFullItem(item);
+      if (preparationCancelled()) return;
       final estimatedSize = estimateDownloadSizeBytes(fullItem, quality);
       if (!await _checkStorageLimit(estimatedSize)) {
         _activeDownloads[item.id] = DownloadProgress(
@@ -1588,6 +1811,7 @@ class DownloadService extends ChangeNotifier {
         notifyListeners();
         return;
       }
+      _reservedStorageBytes[item.id] = estimatedSize;
       final downloadsDir = await _storagePath.getOfflineRoot();
       final subFolder = _buildSubFolder(fullItem);
       final fileName = _buildFileName(fullItem, quality);
@@ -1605,6 +1829,11 @@ class DownloadService extends ChangeNotifier {
         final stale = File(savePath);
         if (await stale.exists()) await stale.delete();
       }
+      if (preparationCancelled()) return;
+      destinationOnRemovableStorage = await _storagePath.isOnRemovableStorage(
+        savePath,
+      );
+      if (preparationCancelled()) return;
 
       await _offlineRepo.upsertItem(
         DownloadedItemsCompanion(
@@ -1625,8 +1854,6 @@ class DownloadService extends ChangeNotifier {
         ),
       );
 
-      final cancelToken = CancelToken();
-      _cancelTokens[item.id] = cancelToken;
       _downloadStartTimes[item.id] = DateTime.now();
 
       if (!_hasAuthToken()) {
@@ -1643,7 +1870,10 @@ class DownloadService extends ChangeNotifier {
         progress: initialProgress,
         quality: quality,
       );
-      if (!_usesPluginNotifications) {
+      if (!_pluginNotificationsFor(
+        quality,
+        destinationOnRemovableStorage: destinationOnRemovableStorage,
+      )) {
         await _notificationService.showProgress(
           itemName: item.name,
           progress: initialProgress,
@@ -1735,7 +1965,10 @@ class DownloadService extends ChangeNotifier {
             ),
           );
         }
-        if (!_usesPluginNotifications &&
+        if (!_pluginNotificationsFor(
+              quality,
+              destinationOnRemovableStorage: destinationOnRemovableStorage,
+            ) &&
             _shouldUpdateSystemNotification(item.id, progress)) {
           unawaited(
             _notificationService.showProgress(
@@ -1749,7 +1982,10 @@ class DownloadService extends ChangeNotifier {
         notifyListeners();
       }
 
-      var usePluginEngine = _usesPluginEngine;
+      var usePluginEngine = _pluginEngineFor(
+        quality,
+        destinationOnRemovableStorage: destinationOnRemovableStorage,
+      );
 
       Future<Response> engineDownload(String downloadUrl) async {
         if (usePluginEngine) {
@@ -1911,7 +2147,10 @@ class DownloadService extends ChangeNotifier {
           3,
           error: friendlyError,
         );
-        if (!_usesPluginNotifications) {
+        if (!_pluginNotificationsFor(
+          quality,
+          destinationOnRemovableStorage: destinationOnRemovableStorage,
+        )) {
           await _notificationService.showError(
             itemName: item.name,
             error: friendlyError,
@@ -1931,7 +2170,10 @@ class DownloadService extends ChangeNotifier {
         quality: quality,
       );
       await _offlineRepo.updateDownloadStatus(item.id, 3, error: friendlyError);
-      if (!_usesPluginNotifications) {
+      if (!_pluginNotificationsFor(
+        quality,
+        destinationOnRemovableStorage: destinationOnRemovableStorage,
+      )) {
         await _notificationService.showError(
           itemName: item.name,
           error: friendlyError,
@@ -1954,7 +2196,10 @@ class DownloadService extends ChangeNotifier {
         quality: quality,
       );
       await _offlineRepo.updateDownloadStatus(item.id, 3, error: friendlyError);
-      if (!_usesPluginNotifications) {
+      if (!_pluginNotificationsFor(
+        quality,
+        destinationOnRemovableStorage: destinationOnRemovableStorage,
+      )) {
         await _notificationService.showError(
           itemName: item.name,
           error: friendlyError,
@@ -2042,17 +2287,20 @@ class DownloadService extends ChangeNotifier {
     _completedCount = 0;
     notifyListeners();
 
+    final downloads = <Future<void>>[];
     for (final item in items) {
-      if (_cancelAllRequested) break;
-      try {
-        await downloadItem(item, quality: quality);
-      } catch (_) {}
+      // One failing item must not reject the whole batch; its failure is
+      // already recorded as an error entry on the service.
+      downloads.add(downloadItem(item, quality: quality).catchError((_) {}));
     }
-
-    _totalQueued = 0;
-    _completedCount = 0;
-    await _notificationService.dismiss();
-    notifyListeners();
+    try {
+      await Future.wait(downloads);
+    } finally {
+      _totalQueued = 0;
+      _completedCount = 0;
+      await _notificationService.dismiss();
+      notifyListeners();
+    }
   }
 
   Future<List<AggregatedItem>> _getAllEpisodesForSeries(String seriesId) async {
@@ -2492,13 +2740,13 @@ class DownloadService extends ChangeNotifier {
     final streams = item.mediaStreams.isNotEmpty
         ? item.mediaStreams
         : (rawMediaSources.isNotEmpty &&
-                rawMediaSources.first is Map &&
-                (rawMediaSources.first as Map)['MediaStreams'] is List
-            ? ((rawMediaSources.first as Map)['MediaStreams'] as List)
-                .whereType<Map>()
-                .map((m) => m.cast<String, dynamic>())
-                .toList()
-            : const <Map<String, dynamic>>[]);
+                  rawMediaSources.first is Map &&
+                  (rawMediaSources.first as Map)['MediaStreams'] is List
+              ? ((rawMediaSources.first as Map)['MediaStreams'] as List)
+                    .whereType<Map>()
+                    .map((m) => m.cast<String, dynamic>())
+                    .toList()
+              : const <Map<String, dynamic>>[]);
     if (streams.isEmpty) return;
 
     final authOptions = Options(headers: _buildAuthHeaders());
@@ -2531,11 +2779,34 @@ class DownloadService extends ChangeNotifier {
   }
 
   void cancelDownload(String itemId) {
+    final pending = _pendingDownloadByItemId.remove(itemId);
+    if (pending != null) {
+      _pendingDownloads.remove(pending);
+      final progress = _activeDownloads[itemId];
+      if (progress != null && progress.isQueued) {
+        _activeDownloads.remove(itemId);
+      }
+      if (!pending.completer.isCompleted) pending.completer.complete();
+      notifyListeners();
+      return;
+    }
     _cancelTokens[itemId]?.cancel();
   }
 
   void cancelAll() {
     _cancelAllRequested = true;
+    for (final pending in _pendingDownloads) {
+      if (!pending.completer.isCompleted) pending.completer.complete();
+      final progress = _activeDownloads[pending.item.id];
+      if (progress != null && progress.isQueued) {
+        _activeDownloads.remove(pending.item.id);
+      }
+    }
+    _pendingDownloads.clear();
+    _pendingDownloadByItemId.clear();
+    // Running items release their own reservation when they finish; the
+    // cleared queue has none.
+    _reservedStorageBytes.clear();
     for (final token in _cancelTokens.values) {
       token.cancel();
     }
@@ -2844,8 +3115,17 @@ class DownloadService extends ChangeNotifier {
         });
   }
 
+  /// Detaches app-lifetime listeners when this instance is replaced after a
+  /// server switch. Unlike [dispose], in-flight downloads are meant to keep
+  /// running, so nothing is cancelled and the HTTP client stays open.
+  void detachFromGlobalState() {
+    _prefs.removeListener(_onPreferencesChanged);
+    _coordinator?.detach(statusHandler: _onTaskStatus);
+  }
+
   @override
   void dispose() {
+    _prefs.removeListener(_onPreferencesChanged);
     _coordinator?.detach(statusHandler: _onTaskStatus);
     cancelAll();
     _downloadDio.close();

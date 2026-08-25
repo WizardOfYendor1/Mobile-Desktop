@@ -22,6 +22,12 @@ class PlatformDetection {
 
   static const bool isAppleTV = bool.fromEnvironment('MOONFIN_TVOS');
 
+  /// True for the dedicated Android TV flavor produced by the Android TV
+  /// build commands. Keep this separate from runtime TV detection: the flavor
+  /// is also a compile-time capability signal for features deliberately
+  /// enabled only in that package.
+  static const bool isForcedTv = bool.fromEnvironment('MOONFIN_FORCE_TV');
+
   static bool get isAndroid =>
       !kIsWeb && !isTizen && defaultTargetPlatform == TargetPlatform.android;
   static bool get isIOS =>
@@ -56,9 +62,7 @@ class PlatformDetection {
   static bool get isApple => isIOS || isMacOS;
 
   static bool get isTV {
-    if (isTizen ||
-        isAppleTV ||
-        const bool.fromEnvironment('MOONFIN_FORCE_TV')) {
+    if (isTizen || isAppleTV || isForcedTv) {
       return true;
     }
     return switch (_interfaceLayout) {
@@ -339,6 +343,10 @@ class PlatformDetection {
   static bool get useLeanbackUi => isTV;
   static bool get useDesktopUi => !_hasMobileFormFactor && !isTV;
   static bool get useMobileUi => _hasMobileFormFactor && !isTV;
+
+  /// Offline media is available on phones, tablets, desktops, and Android TV.
+  /// Other TV platforms do not currently provide the download backend.
+  static bool get supportsOfflineDownloads => !isTV || isAndroid || isForcedTv;
 
   static bool get useNativeVideoSurface => isAndroid && isTV;
 

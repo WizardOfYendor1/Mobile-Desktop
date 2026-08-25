@@ -20,6 +20,7 @@ import '../../../util/platform_detection.dart';
 import '../../navigation/destinations.dart';
 import '../../widgets/adaptive/adaptive_dialog.dart';
 import '../../widgets/adaptive/adaptive_slider.dart';
+import '../../widgets/focus/dpad_list_tile.dart';
 import '../../widgets/overlay_sheet.dart';
 import '../../widgets/settings/settings_panel.dart';
 import '../../widgets/sync_indicator.dart';
@@ -45,12 +46,22 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
   List<_StorageBreakdownItem>? _breakdown;
   List<DownloadedItem>? _itemsBySize;
   final Set<String> _selected = {};
+  final Set<String> _expandedSeries = {};
+  final FocusNode _initialContentFocusNode = FocusNode(
+    debugLabel: 'DownloadsPanelInitialContent',
+  );
   bool _selectMode = false;
 
   @override
   void initState() {
     super.initState();
     _loadBreakdown();
+  }
+
+  @override
+  void dispose() {
+    _initialContentFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _loadBreakdown() async {
@@ -143,8 +154,10 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      RequestInitialFocus(child: _buildContent(context));
+  Widget build(BuildContext context) => RequestInitialFocus(
+    targetNode: PlatformDetection.isTV ? _initialContentFocusNode : null,
+    child: _buildContent(context),
+  );
 
   void _closePanel() {
     final rootNavigator = Navigator.of(context, rootNavigator: true);
@@ -168,6 +181,14 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
     final prefs = ref.watch(userPreferencesProvider);
     final storageLimitMb = prefs.get(UserPreferences.downloadStorageLimitMb);
     final l10n = AppLocalizations.of(context);
+    final hasActiveDownloads =
+        PlatformDetection.isTV &&
+        GetIt.instance.isRegistered<DownloadService>() &&
+        GetIt.instance<DownloadService>().activeDownloads.values.any(
+          (progress) => !progress.isComplete && progress.error == null,
+        );
+    final hasDownloadedItems = _itemsBySize?.isNotEmpty ?? false;
+    final finishedLoading = _itemsBySize != null;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -188,12 +209,14 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
         title: Text(l10n.savedMedia),
         actions: [
           const SyncIndicator(),
-          if (_selectMode && _selected.isNotEmpty)
+          if (!PlatformDetection.isTV &&
+              _selectMode &&
+              _selected.isNotEmpty)
             IconButton(
               icon: Icon(Icons.delete, color: AppColorScheme.statusRequested),
               onPressed: _bulkDelete,
             ),
-          if (_itemsBySize != null && _itemsBySize!.isNotEmpty)
+          if (!PlatformDetection.isTV && hasDownloadedItems)
             IconButton(
               icon: Icon(_selectMode ? Icons.close : Icons.checklist),
               onPressed: () => setState(() {
@@ -218,14 +241,32 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
             loading: () => const SizedBox.shrink(),
             error: (_, _) => const SizedBox.shrink(),
           ),
-          const _ActiveDownloadsSection(),
+          _ActiveDownloadsSection(
+            initialFocusNode: PlatformDetection.isTV && hasActiveDownloads
+                ? _initialContentFocusNode
+                : null,
+          ),
           const SizedBox(height: 24),
           if (_breakdown != null) _buildBreakdownSection(),
           const SizedBox(height: 24),
-          if (_itemsBySize != null && _itemsBySize!.isNotEmpty)
-            _buildItemsSection(),
+          if (hasDownloadedItems)
+            _buildItemsSection(
+              initialFocusNode:
+                  PlatformDetection.isTV && !hasActiveDownloads
+                  ? _initialContentFocusNode
+                  : null,
+            ),
           const SizedBox(height: 24),
-          _buildStorageLimitSetting(storageLimitMb),
+          _buildStorageLimitSetting(
+            storageLimitMb,
+            focusNode:
+                PlatformDetection.isTV &&
+                    !hasActiveDownloads &&
+                    finishedLoading &&
+                    !hasDownloadedItems
+                ? _initialContentFocusNode
+                : null,
+          ),
           const SizedBox(height: 16),
           _buildDeleteAllButton(),
           const SizedBox(height: 32),
@@ -304,7 +345,7 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
     );
   }
 
-  Widget _buildItemsSection() {
+  Widget _buildItemsSection({FocusNode? initialFocusNode}) {
     final l10n = AppLocalizations.of(context);
     final groups = groupDownloads(_itemsBySize!);
     return Column(
@@ -318,12 +359,48 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
             fontWeight: FontWeight.w600,
           ),
         ),
+        if (PlatformDetection.isTV)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (_selectMode && _selected.isNotEmpty)
+                    OutlinedButton.icon(
+                      onPressed: _bulkDelete,
+                      icon: Icon(
+                        Icons.delete_outline,
+                        color: AppColorScheme.statusRequested,
+                      ),
+                      label: Text(l10n.deleteSelected),
+                    ),
+                  OutlinedButton.icon(
+                    onPressed: () => setState(() {
+                      _selectMode = !_selectMode;
+                      if (!_selectMode) _selected.clear();
+                    }),
+                    icon: Icon(_selectMode ? Icons.close : Icons.checklist),
+                    label: Text(_selectMode ? l10n.cancel : l10n.select),
+                  ),
+                ],
+              ),
+            ),
+          ),
         const SizedBox(height: 8),
-        ...groups.map(
-          (group) => group.isSeries
-              ? _buildSeriesGroup(group)
-              : _buildItemTile(group.first),
-        ),
+        for (var index = 0; index < groups.length; index++)
+          if (groups[index].isSeries)
+            _buildSeriesGroup(
+              groups[index],
+              focusNode: index == 0 ? initialFocusNode : null,
+            )
+          else
+            _buildItemTile(
+              groups[index].first,
+              focusNode: index == 0 ? initialFocusNode : null,
+            ),
       ],
     );
   }
@@ -331,10 +408,77 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
   /// A series collapses to one row saying how many episodes are actually on the
   /// device, which a flat list of episode names never answered, and opens to
   /// show which ones they are.
-  Widget _buildSeriesGroup(DownloadGroup group) {
+  Widget _buildSeriesGroup(DownloadGroup group, {FocusNode? focusNode}) {
     final l10n = AppLocalizations.of(context);
     final ids = group.itemIds;
     final selectedCount = ids.where(_selected.contains).length;
+    if (PlatformDetection.isTV) {
+      final expanded = _expandedSeries.contains(group.key);
+      void activate() => setState(() {
+        if (_selectMode) {
+          // A partly selected series fills up first, so select always means all.
+          if (selectedCount == ids.length) {
+            _selected.removeAll(ids);
+          } else {
+            _selected.addAll(ids);
+          }
+        } else if (expanded) {
+          _expandedSeries.remove(group.key);
+        } else {
+          _expandedSeries.add(group.key);
+        }
+      });
+
+      return Column(
+        children: [
+          DpadListTile(
+            focusNode: focusNode,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+            outerPadding: const EdgeInsets.symmetric(vertical: 4),
+            leading: _selectMode
+                ? ExcludeFocus(
+                    child: Checkbox(
+                      value: selectedCount == 0
+                          ? false
+                          : selectedCount == ids.length
+                          ? true
+                          : null,
+                      tristate: true,
+                      onChanged: (_) => activate(),
+                    ),
+                  )
+                // No explicit color on TV: the tile's icon palette already
+                // inverts when the highlight fills with a light color.
+                : const Icon(Icons.video_library_outlined),
+            title: Text(
+              group.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Text(l10n.episodeCount(group.items.length)),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(formatBytes(group.totalBytes)),
+                if (!_selectMode) ...[
+                  const SizedBox(width: 4),
+                  Icon(expanded ? Icons.expand_less : Icons.expand_more),
+                ],
+              ],
+            ),
+            onTap: activate,
+          ),
+          if (expanded)
+            Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: Column(
+                children: group.items.map(_buildItemTile).toList(),
+              ),
+            ),
+        ],
+      );
+    }
+
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
@@ -345,8 +489,6 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
                 value: selectedCount == ids.length,
                 tristate: true,
                 onChanged: (_) => setState(() {
-                  // A part selected series fills up first, so one tap always
-                  // means take all of it.
                   if (selectedCount == ids.length) {
                     _selected.removeAll(ids);
                   } else {
@@ -382,7 +524,7 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
     );
   }
 
-  Widget _buildItemTile(DownloadedItem item) {
+  Widget _buildItemTile(DownloadedItem item, {FocusNode? focusNode}) {
     final l10n = AppLocalizations.of(context);
     final isSelected = _selected.contains(item.itemId);
     // A book opens a reader rather than a player.
@@ -391,51 +533,86 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
     final subtitle = item.type == 'Episode' && numberLabel != null
         ? '$numberLabel • ${item.qualityPreset}'
         : '${item.type} • ${item.qualityPreset}';
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
+    return DpadListTile(
+      focusNode: focusNode,
+      contentPadding: PlatformDetection.isTV
+          ? const EdgeInsets.symmetric(horizontal: 16)
+          : EdgeInsets.zero,
+      outerPadding: PlatformDetection.isTV
+          ? const EdgeInsets.symmetric(vertical: 4)
+          : null,
       leading: _selectMode
-          ? Checkbox(
-              value: isSelected,
-              onChanged: (_) => setState(() {
-                isSelected
-                    ? _selected.remove(item.itemId)
-                    : _selected.add(item.itemId);
-              }),
-            )
-          : Icon(switch (item.type) {
-              'Audio' || 'AudioBook' => Icons.music_note_outlined,
-              'Book' => Icons.menu_book_outlined,
-              _ => Icons.movie_outlined,
-            }, color: AppColorScheme.onSurface.withValues(alpha: 0.38)),
+          ? PlatformDetection.isTV
+                ? ExcludeFocus(
+                    child: Checkbox(
+                      value: isSelected,
+                      onChanged: (_) => setState(() {
+                        isSelected
+                            ? _selected.remove(item.itemId)
+                            : _selected.add(item.itemId);
+                      }),
+                    ),
+                  )
+                : Checkbox(
+                    value: isSelected,
+                    onChanged: (_) => setState(() {
+                      isSelected
+                          ? _selected.remove(item.itemId)
+                          : _selected.add(item.itemId);
+                    }),
+                  )
+          : Icon(
+              switch (item.type) {
+                'Audio' || 'AudioBook' => Icons.music_note_outlined,
+                'Book' => Icons.menu_book_outlined,
+                _ => Icons.movie_outlined,
+              },
+              // On TV the tile's icon palette inverts on focus, so an
+              // explicit color would disappear on the light fill.
+              color: PlatformDetection.isTV
+                  ? null
+                  : AppColorScheme.onSurface.withValues(alpha: 0.38),
+            ),
       title: Text(
         item.name,
-        style: TextStyle(color: AppColorScheme.onSurface),
+        style: PlatformDetection.isTV
+            ? null
+            : TextStyle(color: AppColorScheme.onSurface),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
       subtitle: Text(
         subtitle,
-        style: TextStyle(
-          color: AppColorScheme.onSurface.withValues(alpha: 0.38),
-          fontSize: 12,
-        ),
+        style: PlatformDetection.isTV
+            ? null
+            : TextStyle(
+                color: AppColorScheme.onSurface.withValues(alpha: 0.38),
+                fontSize: 12,
+              ),
       ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             formatBytes(item.fileSizeBytes),
-            style: TextStyle(
-              color: AppColorScheme.onSurface.withValues(alpha: 0.54),
-            ),
+            style: PlatformDetection.isTV
+                ? null
+                : TextStyle(
+                    color: AppColorScheme.onSurface.withValues(alpha: 0.54),
+                  ),
           ),
           // While selecting, a tap belongs to the selection.
           if (!_selectMode && !isBook)
-            IconButton(
-              icon: const Icon(Icons.play_arrow),
-              tooltip: l10n.play,
-              onPressed: () => _playItem(item),
-            ),
+            PlatformDetection.isTV
+                ? const Padding(
+                    padding: EdgeInsets.only(left: 8),
+                    child: Icon(Icons.play_arrow),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.play_arrow),
+                    tooltip: l10n.play,
+                    onPressed: () => _playItem(item),
+                  ),
         ],
       ),
       onTap: _selectMode
@@ -450,8 +627,31 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
     );
   }
 
-  Widget _buildStorageLimitSetting(int currentLimitMb) {
+  Widget _buildStorageLimitSetting(
+    int currentLimitMb, {
+    FocusNode? focusNode,
+  }) {
     final l10n = AppLocalizations.of(context);
+    if (PlatformDetection.isTV) {
+      return DpadListTile(
+        focusNode: focusNode,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        outerPadding: const EdgeInsets.symmetric(vertical: 4),
+        title: Text(l10n.storageLimit),
+        subtitle: Text(
+          currentLimitMb == 0
+              ? l10n.noLimit
+              : l10n.gbValue((currentLimitMb / 1024).toStringAsFixed(1)),
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => DownloadSettingsScreen.showStorageLimitPicker(
+          context,
+          ref.read(userPreferencesProvider),
+          currentLimitMb,
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -484,7 +684,10 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
           onChanged: (value) {
             ref
                 .read(userPreferencesProvider)
-                .set(UserPreferences.downloadStorageLimitMb, value.round());
+                .set(
+                  UserPreferences.downloadStorageLimitMb,
+                  value.round(),
+                );
           },
         ),
       ],
@@ -583,7 +786,19 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
 
 /// Live list of in-flight downloads with per-item cancel and cancel-all.
 class _ActiveDownloadsSection extends StatelessWidget {
-  const _ActiveDownloadsSection();
+  const _ActiveDownloadsSection({this.initialFocusNode});
+
+  final FocusNode? initialFocusNode;
+
+  // Status texts must follow the tile's focus-inverted palette on TV: an
+  // explicit onSurface color would vanish on the focused tile's light fill.
+  // On other platforms the muted explicit color stays.
+  TextStyle? get _statusTextStyle => PlatformDetection.isTV
+      ? null
+      : TextStyle(
+          color: AppColorScheme.onSurface.withValues(alpha: 0.7),
+          fontSize: 12,
+        );
 
   @override
   Widget build(BuildContext context) {
@@ -599,6 +814,12 @@ class _ActiveDownloadsSection extends StatelessWidget {
         final active = service.activeDownloads.values
             .where((p) => !p.isComplete && p.error == null)
             .toList();
+        // Keep transferring items above queued ones so the list reads as
+        // "running first, waiting behind".
+        active.sort((a, b) {
+          if (a.isQueued == b.isQueued) return 0;
+          return a.isQueued ? 1 : -1;
+        });
         if (active.isEmpty) return const SizedBox.shrink();
 
         return Column(
@@ -628,12 +849,20 @@ class _ActiveDownloadsSection extends StatelessWidget {
                 ),
               ],
             ),
-            ...active.map(
-              (p) => ListTile(
-                contentPadding: EdgeInsets.zero,
+            for (var index = 0; index < active.length; index++)
+              DpadListTile(
+                focusNode: index == 0 ? initialFocusNode : null,
+                contentPadding: PlatformDetection.isTV
+                    ? const EdgeInsets.symmetric(horizontal: 16)
+                    : EdgeInsets.zero,
+                outerPadding: PlatformDetection.isTV
+                    ? const EdgeInsets.symmetric(vertical: 4)
+                    : null,
                 title: Text(
-                  p.fileName,
-                  style: TextStyle(color: AppColorScheme.onSurface),
+                  active[index].fileName,
+                  style: PlatformDetection.isTV
+                      ? null
+                      : TextStyle(color: AppColorScheme.onSurface),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -643,56 +872,58 @@ class _ActiveDownloadsSection extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (p.isTranscoded)
+                      if (active[index].isTranscoded &&
+                          !active[index].isQueued)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4),
                           child: Text(
-                            p.etaSeconds != null
-                                ? l10n.timeRemaining(formatEta(p.etaSeconds!))
+                            active[index].etaSeconds != null
+                                ? l10n.timeRemaining(
+                                    formatEta(active[index].etaSeconds!),
+                                  )
                                 : l10n.transcodingTimeRemainingUnavailable,
-                            style: TextStyle(
-                              color: AppColorScheme.onSurface.withValues(
-                                alpha: 0.7,
-                              ),
-                              fontSize: 12,
-                            ),
+                            style: _statusTextStyle,
                           ),
                         ),
-                      ClipRRect(
-                        borderRadius: AppRadius.circular(2),
-                        child: LinearProgressIndicator(
-                          value: p.isFinalizing || p.progress < 0
-                              ? null
-                              : p.progress,
-                          backgroundColor: AppColorScheme.onSurface.withValues(
-                            alpha: 0.12,
-                          ),
-                          color: AppColorScheme.accent,
-                          minHeight: 4,
-                        ),
+                      _TileTrackedProgress(
+                        value: active[index].isQueued
+                            ? 0
+                            : active[index].isFinalizing ||
+                                  active[index].progress < 0
+                            ? null
+                            : active[index].progress,
                       ),
-                      if (p.isFinalizing)
+                      if (active[index].isFinalizing)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
                             l10n.finalizingDownload,
-                            style: TextStyle(
-                              color: AppColorScheme.onSurface.withValues(
-                                alpha: 0.7,
-                              ),
-                              fontSize: 12,
-                            ),
+                            style: _statusTextStyle,
+                          ),
+                        ),
+                      if (active[index].isQueued)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            l10n.queuedDownload,
+                            style: _statusTextStyle,
                           ),
                         ),
                     ],
                   ),
                 ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => service.cancelDownload(p.itemId),
-                ),
+                trailing: PlatformDetection.isTV
+                    ? const Icon(Icons.close)
+                    : IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => service.cancelDownload(
+                          active[index].itemId,
+                        ),
+                      ),
+                onTap: PlatformDetection.isTV
+                    ? () => service.cancelDownload(active[index].itemId)
+                    : null,
               ),
-            ),
           ],
         );
       },
@@ -753,4 +984,30 @@ class _StorageBreakdownItem {
   final int bytes;
   final Color color;
   const _StorageBreakdownItem(this.label, this.bytes, this.color);
+}
+
+/// Download progress bar for use inside a tile subtitle. The unfilled track
+/// follows the tile's effective text color, which the TV focus highlight
+/// inverts to the dark palette while the tile is focused, so the track stays
+/// visible on the light focus fill. Off TV the track keeps the surface token.
+class _TileTrackedProgress extends StatelessWidget {
+  const _TileTrackedProgress({this.value});
+
+  final double? value;
+
+  @override
+  Widget build(BuildContext context) {
+    final base = PlatformDetection.isTV
+        ? DefaultTextStyle.of(context).style.color ?? AppColorScheme.onSurface
+        : AppColorScheme.onSurface;
+    return ClipRRect(
+      borderRadius: AppRadius.circular(2),
+      child: LinearProgressIndicator(
+        value: value,
+        backgroundColor: base.withValues(alpha: 0.12),
+        color: AppColorScheme.accent,
+        minHeight: 4,
+      ),
+    );
+  }
 }

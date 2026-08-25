@@ -241,13 +241,6 @@ int lh_get_input_descriptor(lh_host *host, int index,
 // retro_set_controller_port_device, or the host can no longer run a job.
 int lh_set_controller_type(lh_host *host, int port, unsigned device);
 
-// Bitmask of ports on which the core has queried RETRO_DEVICE_ANALOG since
-// the current content was loaded. Bit N = port N. Reset to 0 by lh_load and
-// by every internal restart (lh_restart/lh_restart_async), because the
-// design treats this as per-game state, not per-core: the same core can
-// query analog on one piece of content and not on another. Thread-safe.
-unsigned lh_analog_queried_ports(lh_host *host);
-
 // Bitmask of ports the current game describes ANALOG controls for, from
 // RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS. Bit N = port N.
 //

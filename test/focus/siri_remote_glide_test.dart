@@ -46,11 +46,19 @@ void main() {
     expect(pressed.length, 4, reason: 'a drag must not keep moving');
   });
 
-  testWidgets('vertical drag steps up', (tester) async {
+  testWidgets('dragging toward positive y steps down', (tester) async {
     touch(TvRemoteTouchPhase.started, 0, -0.2);
     touch(TvRemoteTouchPhase.move, 0, 0.2);
-    expect(pressed, [LogicalKeyboardKey.arrowUp]);
+    expect(pressed, [LogicalKeyboardKey.arrowDown]);
     touch(TvRemoteTouchPhase.ended, 0, 0.2);
+    await tester.pump(const Duration(seconds: 3));
+  });
+
+  testWidgets('dragging toward negative y steps up', (tester) async {
+    touch(TvRemoteTouchPhase.started, 0, 0.2);
+    touch(TvRemoteTouchPhase.move, 0, -0.2);
+    expect(pressed, [LogicalKeyboardKey.arrowUp]);
+    touch(TvRemoteTouchPhase.ended, 0, -0.2);
     await tester.pump(const Duration(seconds: 3));
   });
 

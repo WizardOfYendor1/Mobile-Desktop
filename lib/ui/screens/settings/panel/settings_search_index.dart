@@ -626,6 +626,12 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
       keywords: ['codec', 'bitrate info'],
     ),
     details.leaf(
+      'pref_detail_trailers_external',
+      l10n.openTrailersExternally,
+      subtitle: l10n.openTrailersExternallySubtitle,
+      keywords: ['youtube', 'trailer', 'external app'],
+    ),
+    details.leaf(
       'pref_hide_details_media_description',
       l10n.hideDetailsMediaDescription,
       subtitle: l10n.hideDetailsMediaDescriptionSubtitle,
@@ -1327,11 +1333,17 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
       subtitle: l10n.settingsCinemaModeSubtitle,
       keywords: ['trailers before movie'],
     ),
-    automation.leaf(
-      'media_segment_actions',
-      l10n.settingsSkipIntrosAndOutros,
-      keywords: ['skip intro', 'skip credits', 'segments'],
-    ),
+    for (final type in configurableMediaSegmentTypes)
+      automation.leaf(
+        'media_segment_actions_${type.name}',
+        l10n.settingsMediaSegmentTypeAction(type.displayName),
+        keywords: [
+          'skip',
+          'segments',
+          type.name,
+          if (type == MediaSegmentType.outro) 'credits',
+        ],
+      ),
     automation.leaf(
       'pref_media_segment_countdown',
       l10n.settingsMediaSegmentCountdown,
@@ -1364,7 +1376,8 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
       keywords: ['are you still watching'],
     ),
 
-    if (!PlatformDetection.isTV && !PlatformDetection.isWeb) ...[
+    if (PlatformDetection.supportsOfflineDownloads &&
+        !PlatformDetection.isWeb) ...[
       downloads.screen(keywords: ['offline', 'storage']),
       downloads.leaf(
         'download_default_quality',

@@ -58,12 +58,16 @@ class ItemMutationRepository {
     bool? recursive,
     bool? replaceAllMetadata,
     bool? replaceAllImages,
+    MetadataRefreshMode metadataRefreshMode = MetadataRefreshMode.defaultRefresh,
+    MetadataRefreshMode imageRefreshMode = MetadataRefreshMode.defaultRefresh,
   }) async {
     await _client.adminItemsApi.refreshItem(
       itemId,
       recursive: recursive,
       replaceAllMetadata: replaceAllMetadata,
       replaceAllImages: replaceAllImages,
+      metadataRefreshMode: metadataRefreshMode,
+      imageRefreshMode: imageRefreshMode,
     );
   }
 }

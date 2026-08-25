@@ -1,5 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:moonfin/util/native_controller_player_assignments.dart';
+import 'package:server_core/server_core.dart';
+
+class _MockGamesApi extends Mock implements GamesApi {}
 
 void main() {
   group('NativeControllerPlayerAssignments', () {
@@ -91,6 +95,56 @@ void main() {
 
       expect(assignments.playerFor('a'), 3);
       expect(assignments.playerFor('missing'), isNull);
+    });
+  });
+
+  group('loadControllerPlayerAssignmentsChecked', () {
+    test('an unreachable server is not reported as an absent save', () async {
+      final api = _MockGamesApi();
+      when(
+        () => api.getSave(any(), kind: any(named: 'kind')),
+      ).thenThrow(Exception('offline'));
+
+      final result = await loadControllerPlayerAssignmentsChecked(api);
+
+      expect(result.reachable, isFalse);
+      expect(result.assignments, NativeControllerPlayerAssignments.empty);
+    });
+
+    test('an absent save is reachable and empty', () async {
+      final api = _MockGamesApi();
+      when(
+        () => api.getSave(any(), kind: any(named: 'kind')),
+      ).thenAnswer((_) async => null);
+
+      final result = await loadControllerPlayerAssignmentsChecked(api);
+
+      expect(result.reachable, isTrue);
+      expect(result.assignments, NativeControllerPlayerAssignments.empty);
+    });
+
+    test('an invalid saved byte sequence is not safe to overwrite', () async {
+      final api = _MockGamesApi();
+      when(
+        () => api.getSave(any(), kind: any(named: 'kind')),
+      ).thenAnswer((_) async => <int>[0xff]);
+
+      final result = await loadControllerPlayerAssignmentsChecked(api);
+
+      expect(result.reachable, isFalse);
+      expect(result.assignments, NativeControllerPlayerAssignments.empty);
+    });
+
+    test('a malformed saved document is not safe to overwrite', () async {
+      final api = _MockGamesApi();
+      when(
+        () => api.getSave(any(), kind: any(named: 'kind')),
+      ).thenAnswer((_) async => <int>[123, 34, 112, 108, 97, 121, 101, 114]);
+
+      final result = await loadControllerPlayerAssignmentsChecked(api);
+
+      expect(result.reachable, isFalse);
+      expect(result.assignments, NativeControllerPlayerAssignments.empty);
     });
   });
 }

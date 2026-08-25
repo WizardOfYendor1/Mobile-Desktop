@@ -132,8 +132,28 @@ final class AetherVideoChannel: NSObject, FlutterStreamHandler {
         case "setSubtitleRendererMode":
             // The host overlay is the only subtitle renderer on this path.
             break
+        case "setEngineLogForwarding":
+            setEngineLogForwarding((args["enabled"] as? Bool) == true)
         default:
             break
+        }
+    }
+
+    /// Engine lines otherwise only reach the device console, which a remote
+    /// user cannot capture, so a report says nothing about what the reader and
+    /// demuxer saw before the failure.
+    ///
+    /// The sink only accepts calls from the platform thread and the engine logs
+    /// from whichever thread did the work, so every line hops before it is sent.
+    private func setEngineLogForwarding(_ enabled: Bool) {
+        guard enabled else {
+            EngineLog.handler = nil
+            return
+        }
+        EngineLog.handler = { [weak self] line in
+            DispatchQueue.main.async {
+                self?.send(["event": "engineLog", "line": line])
+            }
         }
     }
 

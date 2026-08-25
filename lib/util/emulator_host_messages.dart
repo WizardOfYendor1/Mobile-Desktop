@@ -15,4 +15,23 @@ abstract class EmulatorHostMessages {
     required String allowedOrigin,
     required void Function(Object? message) onMessage,
   }) => impl.subscribe(allowedOrigin: allowedOrigin, onMessage: onMessage);
+
+  /// Whether player functions can be invoked directly, bypassing
+  /// InAppWebViewController. True only on web.
+  static bool get supportsDirectCalls => impl.supportsDirectCalls;
+
+  /// Invokes `window.<function>(...args)` on the player page. Returns the
+  /// dartified result, or null if the page or function is unavailable.
+  static Object? callPlayer({
+    required String playerUrl,
+    required String function,
+    List<Object?> args = const [],
+  }) => impl.callPlayer(playerUrl: playerUrl, function: function, args: args);
+
+  /// Reads `window.<name>` from the player page, for the version gates that
+  /// guard a call rather than being one. Null off the web or if unavailable.
+  static Object? readPlayer({
+    required String playerUrl,
+    required String name,
+  }) => impl.readPlayer(playerUrl: playerUrl, name: name);
 }

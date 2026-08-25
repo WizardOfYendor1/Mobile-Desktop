@@ -33,6 +33,7 @@ import '../../../data/services/plugin_sync_service.dart';
 import '../../navigation/route_lifecycle_observer.dart';
 import '../../navigation/home_refresh_bus.dart';
 import '../../navigation/app_router.dart';
+import '../../navigation/playback_launcher.dart';
 import 'detail_buttons.dart';
 import 'modern/modern_detail_content.dart';
 import '../../../data/repositories/seerr_repository.dart';
@@ -75,6 +76,7 @@ import '../../widgets/remote_play_to_session_dialog.dart';
 import '../../widgets/fullscreen_backdrop_switcher.dart';
 import '../../widgets/seerr_icons.dart';
 import '../../widgets/focus/context_menu_sheet.dart';
+import '../../widgets/focus/dpad_list_tile.dart';
 import '../../widgets/focus/focusable_button.dart';
 import '../../widgets/focus/request_initial_focus.dart';
 import '../../widgets/overlay_sheet.dart';
@@ -555,29 +557,34 @@ class _ItemDetailScreenState extends State<ItemDetailScreen>
     String? mediaSourceId,
   ) async {
     final manager = GetIt.instance<PlaybackManager>();
-    final forceTranscode = await _shouldForceTranscodeForDolbyVisionQueue(
+    await launchPlayerWhilePreparing(
       context,
-      [item],
-      mediaSourceId: mediaSourceId,
+      manager: manager,
+      destination: Destinations.videoPlayer,
+      startPlayback: (launchSession) async {
+        final forceTranscode =
+            await shouldForceTranscodeForDolbyVisionQueue(
+              context,
+              [item],
+              mediaSourceId: mediaSourceId,
+            );
+        if (!context.mounted) return false;
+        return _runWithDolbyVisionStartupFallbackPrompt(
+          context,
+          manager,
+          () => runPlaybackStart(
+            launchSession,
+            () => manager.playItems(
+              [item],
+              startPosition: startPosition,
+              mediaSourceId: mediaSourceId,
+              enableDirectPlay: !forceTranscode,
+              enableDirectStream: !forceTranscode,
+            ),
+          ),
+        );
+      },
     );
-    if (!context.mounted) return;
-    final started = await _runWithDolbyVisionStartupFallbackPrompt(
-      context,
-      manager,
-      () => manager.playItems(
-        [item],
-        startPosition: startPosition,
-        mediaSourceId: mediaSourceId,
-        enableDirectPlay: !forceTranscode,
-        enableDirectStream: !forceTranscode,
-      ),
-    );
-    if (!started || !context.mounted) return;
-
-    final destination = manager.playbackDeferredToExternalPlayer
-        ? Destinations.externalPlayer
-        : Destinations.videoPlayer;
-    unawaited(context.push(destination));
   }
 
   Widget _buildBody(BuildContext context) {
@@ -2555,29 +2562,34 @@ class _DetailContentState extends State<_DetailContent> {
     String? mediaSourceId,
   ) async {
     final manager = GetIt.instance<PlaybackManager>();
-    final forceTranscode = await _shouldForceTranscodeForDolbyVisionQueue(
+    await launchPlayerWhilePreparing(
       context,
-      [item],
-      mediaSourceId: mediaSourceId,
+      manager: manager,
+      destination: Destinations.videoPlayer,
+      startPlayback: (launchSession) async {
+        final forceTranscode =
+            await shouldForceTranscodeForDolbyVisionQueue(
+              context,
+              [item],
+              mediaSourceId: mediaSourceId,
+            );
+        if (!context.mounted) return false;
+        return _runWithDolbyVisionStartupFallbackPrompt(
+          context,
+          manager,
+          () => runPlaybackStart(
+            launchSession,
+            () => manager.playItems(
+              [item],
+              startPosition: startPosition,
+              mediaSourceId: mediaSourceId,
+              enableDirectPlay: !forceTranscode,
+              enableDirectStream: !forceTranscode,
+            ),
+          ),
+        );
+      },
     );
-    if (!context.mounted) return;
-    final started = await _runWithDolbyVisionStartupFallbackPrompt(
-      context,
-      manager,
-      () => manager.playItems(
-        [item],
-        startPosition: startPosition,
-        mediaSourceId: mediaSourceId,
-        enableDirectPlay: !forceTranscode,
-        enableDirectStream: !forceTranscode,
-      ),
-    );
-    if (!started || !context.mounted) return;
-
-    final destination = manager.playbackDeferredToExternalPlayer
-        ? Destinations.externalPlayer
-        : Destinations.videoPlayer;
-    unawaited(context.push(destination));
   }
 
   List<Widget> _buildChapterAndFeatureSections(
@@ -3298,7 +3310,7 @@ class _DetailContentState extends State<_DetailContent> {
         isPlaylist && viewModel.canManagePlaylistTracks;
     final canDeleteItem = item.canDelete;
     final canDownloadAll =
-        _canUserDownload() &&
+        userCanDownload() &&
         (item.type == 'MusicAlbum' ||
             item.type == 'AudioBook' ||
             (item.type == 'Playlist' &&
@@ -3386,11 +3398,23 @@ class _DetailContentState extends State<_DetailContent> {
             }
             final manager = GetIt.instance<PlaybackManager>();
             unawaited(() async {
-              await manager.playItems(viewModel.tracks, startIndex: index);
-              if (!context.mounted) return;
               final isAudio = viewModel.tracks.every(_isAudioItem);
-              context.push(
-                isAudio ? Destinations.audioPlayer : Destinations.videoPlayer,
+              await launchPlayerWhilePreparing(
+                context,
+                manager: manager,
+                destination: isAudio
+                    ? Destinations.audioPlayer
+                    : Destinations.videoPlayer,
+                startPlayback: (launchSession) async {
+                  await runPlaybackStart(
+                    launchSession,
+                    () => manager.playItems(
+                      viewModel.tracks,
+                      startIndex: index,
+                    ),
+                  );
+                  return true;
+                },
               );
             }());
           },
@@ -6312,9 +6336,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
         .toList();
 
     final canShowDownloadActions =
-        _isDownloadable(item.type) &&
-        _canUserDownload() &&
-        !PlatformDetection.isTV;
+        _isDownloadable(item.type) && userCanDownload();
 
     final String playButtonLabel;
     if (isPhoto) {
@@ -6426,16 +6448,6 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
                   forceStartOver: true,
                 )
               : null,
-        ),
-      // Playback is local-first, so this plays the downloaded copy. The
-      // button mostly signals that one exists.
-      if (_availableOffline)
-        DetailButton.playOffline: _DetailActionButton(
-          label: isBook ? l10n.readOffline : l10n.playOffline,
-          icon: isBook ? Icons.menu_book : Icons.offline_pin,
-          onPressed: () => _play(context, item),
-          isActive: true,
-          activeColor: const Color(0xFF4CAF50),
         ),
       if (isPlayableVideo &&
           audioStreams.length > 1 &&
@@ -6825,6 +6837,8 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
       }
     }
 
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+
     final Widget rowContent;
     if (!needsOverflow) {
       final normalizedButtons = allButtons.asMap().entries.map((entry) {
@@ -6844,35 +6858,35 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
                       widget.upTarget != null
                   ? _focusUpTarget
                   : null),
-          onArrowLeft: index == 0
-              ? _focusSidebar
-              : () {
-                  if (!_focusAdjacent(
-                    (i) => _primaryNodeAt(i, allButtons.length),
-                    index - 1,
-                    -1,
-                    allButtons.length,
-                  )) {
-                    _focusSidebar();
-                  }
-                },
+          onArrowLeft: () {
+            final step = isRtl ? 1 : -1;
+            if (!_focusAdjacent(
+              (i) => _primaryNodeAt(i, allButtons.length),
+              index + step,
+              step,
+              allButtons.length,
+            )) {
+              _focusSidebar();
+            }
+          },
           onArrowDown: widget.downTarget != null ? _focusDownTarget : null,
-          onArrowRight: index == allButtons.length - 1
-              ? (widget.onArrowRightAtEnd ?? () {})
-              : () {
-                  if (!_focusAdjacent(
-                    (i) => _primaryNodeAt(i, allButtons.length),
-                    index + 1,
-                    1,
-                    allButtons.length,
-                  )) {
-                    (widget.onArrowRightAtEnd ?? () {})();
-                  }
-                },
+          onArrowRight: () {
+            final step = isRtl ? -1 : 1;
+            if (!_focusAdjacent(
+              (i) => _primaryNodeAt(i, allButtons.length),
+              index + step,
+              step,
+              allButtons.length,
+            )) {
+              (widget.onArrowRightAtEnd ?? () {})();
+            }
+          },
         );
       }).toList();
       rowContent = Align(
-        alignment: widget.modernStyle ? Alignment.centerLeft : Alignment.center,
+        alignment: widget.modernStyle
+            ? AlignmentDirectional.centerStart
+            : Alignment.center,
         child: Wrap(
           spacing: buttonSpacing,
           runSpacing: buttonRunSpacing,
@@ -6905,25 +6919,25 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
                       widget.upTarget != null
                   ? _focusUpTarget
                   : null),
-          onArrowLeft: index == 0
-              ? _focusSidebar
-              : () {
-                  if (!_focusAdjacent(
-                    _primaryNodePlain,
-                    index - 1,
-                    -1,
-                    primaryButtons.length,
-                  )) {
-                    _focusSidebar();
-                  }
-                },
+          onArrowLeft: () {
+            final step = isRtl ? 1 : -1;
+            if (!_focusAdjacent(
+              _primaryNodePlain,
+              index + step,
+              step,
+              primaryButtons.length,
+            )) {
+              _focusSidebar();
+            }
+          },
           onArrowRight: () {
             // Skip any unmounted slot (e.g. hidden delete-download) and fall
             // through to the More button so it is always reachable.
+            final step = isRtl ? -1 : 1;
             if (!_focusAdjacent(
               _primaryNodePlain,
-              index + 1,
-              1,
+              index + step,
+              step,
               primaryButtons.length,
             )) {
               (widget.actionRowRightFocusNode ?? _overflowMoreFocusNode)
@@ -6967,23 +6981,23 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
             }
           },
           onArrowDown: widget.downTarget != null ? _focusDownTarget : null,
-          onArrowLeft: index == 0
-              ? _focusSidebar
-              : () {
-                  if (!_focusAdjacent(
-                    _extraFocusNode,
-                    index - 1,
-                    -1,
-                    extraButtons.length,
-                  )) {
-                    _focusSidebar();
-                  }
-                },
-          onArrowRight: () {
+          onArrowLeft: () {
+            final step = isRtl ? 1 : -1;
             if (!_focusAdjacent(
               _extraFocusNode,
-              index + 1,
-              1,
+              index + step,
+              step,
+              extraButtons.length,
+            )) {
+              _focusSidebar();
+            }
+          },
+          onArrowRight: () {
+            final step = isRtl ? -1 : 1;
+            if (!_focusAdjacent(
+              _extraFocusNode,
+              index + step,
+              step,
               extraButtons.length,
             )) {
               (widget.onArrowRightAtEnd ?? () {})();
@@ -7013,8 +7027,8 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
           // (e.g. hidden delete-download) so More can always return to the row.
           _focusAdjacent(
             _primaryNodePlain,
-            primaryButtons.length - 1,
-            -1,
+            isRtl ? 0 : primaryButtons.length - 1,
+            isRtl ? 1 : -1,
             primaryButtons.length,
           );
         },
@@ -7048,7 +7062,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
 
           if (_expanded) {
             rowContent = Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -7069,7 +7083,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
             );
           } else {
             rowContent = Align(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: primaryRow,
             );
           }
@@ -7077,7 +7091,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
           // Primary row keeps the More/Less button pinned at its end; the extra
           // buttons reveal in a second wrap below, so More/Less never moves.
           rowContent = Align(
-            alignment: Alignment.centerLeft,
+            alignment: AlignmentDirectional.centerStart,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -7123,7 +7137,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
             : WrapAlignment.center;
         rowContent = Align(
           alignment: widget.modernStyle
-              ? Alignment.centerLeft
+              ? AlignmentDirectional.centerStart
               : Alignment.center,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -7561,7 +7575,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
     List<AggregatedItem> queue, {
     String? mediaSourceId,
   }) async {
-    return _shouldForceTranscodeForDolbyVisionQueue(
+    return shouldForceTranscodeForDolbyVisionQueue(
       context,
       queue,
       mediaSourceId: mediaSourceId ?? widget.selectedMediaSourceId,
@@ -7870,6 +7884,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
   /// preroll plays first they're held back instead of landing on the preroll.
   Future<void> _playQueueWithPrerolls(
     PlaybackManager manager, {
+    PlaybackLaunchSession? launchSession,
     required List<AggregatedItem> queue,
     required List<AggregatedItem> prerolls,
     required AggregatedItem target,
@@ -7883,7 +7898,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
     bool subtitleSelectionExplicit = false,
   }) async {
     final applyNow = prerolls.isEmpty;
-    final playItemsFuture = manager.playItems(
+    Future<void> playItems() => manager.playItems(
       applyNow
           ? queue
           : <AggregatedItem>[
@@ -7901,6 +7916,9 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
       enableDirectPlay: directAllowed,
       enableDirectStream: directAllowed,
     );
+    final playItemsFuture = launchSession == null
+        ? playItems()
+        : launchSession.runIfActive(playItems);
     // playItems wipes any pending overrides as its first act, so the held back
     // picks have to land after the call and before the await.
     if (!applyNow &&
@@ -8125,62 +8143,19 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
   Future<bool> _pushPlayerRouteWhileStartingPlayback(
     BuildContext context, {
     required String destination,
-    required Future<bool> startupFuture,
+    required PlaybackStarter startPlayback,
     bool reloadOnReturn = true,
   }) async {
     if (!context.mounted) return false;
     final manager = GetIt.instance<PlaybackManager>();
-    final pushVideoEarly =
-        destination == Destinations.videoPlayer && PlatformDetection.isIOS;
+    final started = await launchPlayerWhilePreparing(
+      context,
+      manager: manager,
+      destination: destination,
+      startPlayback: startPlayback,
+    );
+    if (!started || !context.mounted) return false;
 
-    void popTopPlayerRoute() {
-      final route = ModalRoute.of(context);
-      if (route != null && !route.isCurrent) {
-        Navigator.of(context).pop();
-      }
-    }
-
-    Future<Object?>? routeFuture;
-    if (destination != Destinations.videoPlayer || pushVideoEarly) {
-      routeFuture = context.push(destination);
-    }
-
-    bool started;
-    try {
-      started = await startupFuture;
-    } catch (_) {
-      if (routeFuture != null && context.mounted) {
-        popTopPlayerRoute();
-      }
-      rethrow;
-    }
-
-    if (!started) {
-      if (routeFuture != null && context.mounted) {
-        popTopPlayerRoute();
-      }
-      return false;
-    }
-
-    if (!context.mounted) return false;
-
-    if (pushVideoEarly &&
-        routeFuture != null &&
-        manager.playbackDeferredToExternalPlayer) {
-      popTopPlayerRoute();
-      routeFuture = null;
-    }
-
-    if (routeFuture == null) {
-      var resolvedDestination = destination;
-      if (manager.playbackDeferredToExternalPlayer) {
-        resolvedDestination = Destinations.externalPlayer;
-      }
-      if (!context.mounted) return false;
-      routeFuture = context.push(resolvedDestination);
-    }
-
-    await routeFuture;
     _syncAudioSelectionFromActivePlayback();
     _syncSubtitleSelectionFromActivePlayback();
 
@@ -8351,7 +8326,8 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
         item.type == 'AlbumArtist' ||
         mediaType == 'Audio';
 
-    final startupFuture = _runWithDolbyVisionStartupFallbackPrompt(
+    PlaybackLaunchSession? launchSession;
+    Future<bool> preparePlayback() => _runWithDolbyVisionStartupFallbackPrompt(
       context,
       manager,
       () async {
@@ -8435,17 +8411,18 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
                 ? (selectedEpisode.playbackPosition ?? Duration.zero)
                 : Duration.zero;
 
-            if (!context.mounted) return;
+            ensureLaunchStillWanted(launchSession);
             final prerolls = await _prerollsForStart(
               selectedEpisode,
               startPosition,
               useExternalPlayer: useExternalPlayer,
             );
-            if (!context.mounted) return;
-            final dvForceTranscode = await _shouldForceTranscodeForDolbyVision(
-              context,
-              [selectedEpisode],
-            );
+            ensureLaunchStillWanted(launchSession);
+            final dvForceTranscode =
+                context.mounted &&
+                await _shouldForceTranscodeForDolbyVision(context, [
+                  selectedEpisode,
+                ]);
             final directAllowed = !dvForceTranscode && !forceTranscode;
 
             final epMediaStreams = _mediaStreamsForCurrentSelection(selectedEpisode);
@@ -8460,6 +8437,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
 
             await _playQueueWithPrerolls(
               manager,
+              launchSession: launchSession,
               queue: seriesQueue,
               prerolls: prerolls,
               target: selectedEpisode,
@@ -8474,7 +8452,9 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
             final episodes = viewModel.episodes
                 .where(isEligibleNextEpisodeCandidate)
                 .toList();
-            if (episodes.isEmpty) return;
+            if (episodes.isEmpty) {
+              throw PlaybackStartupRecoveryAbortedException();
+            }
             final startIndex = resume
                 ? episodes.indexWhere(
                     (e) => (e.playedPercentage ?? 0) > 0 && !e.isPlayed,
@@ -8484,7 +8464,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
             var selectedEpisode = episodes[idx];
             selectedEpisode = await _ensureHydrated(selectedEpisode);
             episodes[idx] = selectedEpisode;
-            if (!context.mounted) return;
+            ensureLaunchStillWanted(launchSession);
 
             final seasonQueue = await _truncateQueueIfImmediateNextUnplayable(
               episodes,
@@ -8493,17 +8473,18 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
             final startPosition = resume
                 ? (selectedEpisode.playbackPosition ?? Duration.zero)
                 : Duration.zero;
-            if (!context.mounted) return;
+            ensureLaunchStillWanted(launchSession);
             final prerolls = await _prerollsForStart(
               selectedEpisode,
               startPosition,
               useExternalPlayer: useExternalPlayer,
             );
-            if (!context.mounted) return;
-            final dvForceTranscode = await _shouldForceTranscodeForDolbyVision(
-              context,
-              [selectedEpisode],
-            );
+            ensureLaunchStillWanted(launchSession);
+            final dvForceTranscode =
+                context.mounted &&
+                await _shouldForceTranscodeForDolbyVision(context, [
+                  selectedEpisode,
+                ]);
             final directAllowed = !dvForceTranscode && !forceTranscode;
 
             final epMediaStreams = _mediaStreamsForCurrentSelection(selectedEpisode);
@@ -8518,6 +8499,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
 
             await _playQueueWithPrerolls(
               manager,
+              launchSession: launchSession,
               queue: seasonQueue,
               prerolls: prerolls,
               target: selectedEpisode,
@@ -8551,7 +8533,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
                 } catch (_) {}
               }
             }
-            if (!context.mounted) return;
+            ensureLaunchStillWanted(launchSession);
 
             if (episodes.length > 1) {
               final playableEpisodes = episodes
@@ -8566,14 +8548,14 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
               var selectedEpisode = playableEpisodes[idx];
               selectedEpisode = await _ensureHydrated(selectedEpisode);
               playableEpisodes[idx] = selectedEpisode;
-              if (!context.mounted) return;
+              ensureLaunchStillWanted(launchSession);
 
               final episodeQueue =
                   await _truncateQueueIfImmediateNextUnplayable(
                     playableEpisodes,
                     startIndex: idx,
                   );
-              if (!context.mounted) return;
+              ensureLaunchStillWanted(launchSession);
 
               // Fallback to the master item's position context if it's the target episode
               final startPosition = resume
@@ -8588,15 +8570,17 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
                 startPosition,
                 useExternalPlayer: useExternalPlayer,
               );
-              if (!context.mounted) return;
+              ensureLaunchStillWanted(launchSession);
 
               final dvForceTranscode =
+                  context.mounted &&
                   await _shouldForceTranscodeForDolbyVision(context, [
                     selectedEpisode,
                   ], mediaSourceId: widget.selectedMediaSourceId);
               final directAllowed = !dvForceTranscode && !forceTranscode;
               await _playQueueWithPrerolls(
                 manager,
+                launchSession: launchSession,
                 queue: episodeQueue,
                 prerolls: prerolls,
                 target: selectedEpisode,
@@ -8636,16 +8620,17 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
               playableQueue,
             );
 
-            if (!context.mounted) return;
+            ensureLaunchStillWanted(launchSession);
             var targetItem = playableQueue[startIndex];
             targetItem = await _ensureHydrated(targetItem);
             playableQueue[startIndex] = targetItem;
-            if (!context.mounted) return;
+            ensureLaunchStillWanted(launchSession);
 
-            final dvForceTranscode = await _shouldForceTranscodeForDolbyVision(
-              context,
-              [targetItem],
-            );
+            final dvForceTranscode =
+                context.mounted &&
+                await _shouldForceTranscodeForDolbyVision(context, [
+                  targetItem,
+                ]);
             final directAllowed = !dvForceTranscode && !forceTranscode;
 
             final epMediaStreams = _mediaStreamsForCurrentSelection(targetItem);
@@ -8658,16 +8643,19 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
               item: targetItem,
             );
 
-            await manager.playItems(
-              playableQueue,
-              startIndex: startIndex,
-              startPosition: startPosition,
-              audioStreamIndex: epAudioStreamIndex,
-              subtitleStreamIndex: epSubtitleStreamIndex,
-              audioSelectionExplicit: false,
-              subtitleSelectionExplicit: false,
-              enableDirectPlay: directAllowed,
-              enableDirectStream: directAllowed,
+            await runPlaybackStart(
+              launchSession,
+              () => manager.playItems(
+                playableQueue,
+                startIndex: startIndex,
+                startPosition: startPosition,
+                audioStreamIndex: epAudioStreamIndex,
+                subtitleStreamIndex: epSubtitleStreamIndex,
+                audioSelectionExplicit: false,
+                subtitleSelectionExplicit: false,
+                enableDirectPlay: directAllowed,
+                enableDirectStream: directAllowed,
+              ),
             );
             break;
 
@@ -8691,7 +8679,10 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
               }
               throw PlaybackStartupRecoveryAbortedException();
             }
-            await manager.playItems(tracks);
+            await runPlaybackStart(
+              launchSession,
+              () => manager.playItems(tracks),
+            );
             break;
 
           case 'MusicAlbum':
@@ -8730,9 +8721,12 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
             }
             // Music remembers which track was playing but starts it from the
             // beginning, matching standard music player behavior.
-            await manager.playItems(
-              tracks,
-              startIndex: albumStartIndex,
+            await runPlaybackStart(
+              launchSession,
+              () => manager.playItems(
+                tracks,
+                startIndex: albumStartIndex,
+              ),
             );
             break;
 
@@ -8753,7 +8747,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
               }
               throw PlaybackStartupRecoveryAbortedException();
             }
-            if (!context.mounted) return;
+            ensureLaunchStillWanted(launchSession);
 
             // Start at the first unwatched item, or resume the one left partway
             // through, instead of always restarting from the top.
@@ -8761,17 +8755,19 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
 
             // Playlists can contain video, so honor the Dolby Vision
             // force-transcode check before allowing direct play/stream.
-            final dvForceTranscode = await _shouldForceTranscodeForDolbyVision(
-              context,
-              tracks,
-            );
+            final dvForceTranscode =
+                context.mounted &&
+                await _shouldForceTranscodeForDolbyVision(context, tracks);
             final directAllowed = !dvForceTranscode && !forceTranscode;
-            await manager.playItems(
-              tracks,
-              startIndex: startIndex,
-              startPosition: startPosition,
-              enableDirectPlay: directAllowed,
-              enableDirectStream: directAllowed,
+            await runPlaybackStart(
+              launchSession,
+              () => manager.playItems(
+                tracks,
+                startIndex: startIndex,
+                startPosition: startPosition,
+                enableDirectPlay: directAllowed,
+                enableDirectStream: directAllowed,
+              ),
             );
             break;
 
@@ -8818,10 +8814,13 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
                   }
                 }
               }
-              await manager.playItems(
-                children,
-                startIndex: startIndex,
-                startPosition: startPos,
+              await runPlaybackStart(
+                launchSession,
+                () => manager.playItems(
+                  children,
+                  startIndex: startIndex,
+                  startPosition: startPos,
+                ),
               );
               break;
             }
@@ -8849,10 +8848,13 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
                         item.playbackPosition ??
                         Duration.zero)
                     : Duration.zero;
-                await manager.playItems(
-                  siblings,
-                  startIndex: startIndex,
-                  startPosition: startPos,
+                await runPlaybackStart(
+                  launchSession,
+                  () => manager.playItems(
+                    siblings,
+                    startIndex: startIndex,
+                    startPosition: startPos,
+                  ),
                 );
                 break;
               }
@@ -8870,16 +8872,18 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
               startPosition,
               useExternalPlayer: useExternalPlayer,
             );
-            if (!context.mounted) return;
+            ensureLaunchStillWanted(launchSession);
             final selectedMediaSourceId = widget.selectedMediaSourceId;
             final dvForceTranscode =
                 !isAudio &&
+                context.mounted &&
                 await _shouldForceTranscodeForDolbyVision(context, [
                   item,
                 ], mediaSourceId: selectedMediaSourceId);
             final directAllowed = !dvForceTranscode && !forceTranscode;
             await _playQueueWithPrerolls(
               manager,
+              launchSession: launchSession,
               queue: <AggregatedItem>[item],
               prerolls: prerolls,
               target: item,
@@ -8901,7 +8905,10 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
       destination: isAudio
           ? Destinations.audioPlayer
           : Destinations.videoPlayer,
-      startupFuture: startupFuture,
+      startPlayback: (session) {
+        launchSession = session;
+        return preparePlayback();
+      },
     );
   }
 
@@ -8910,45 +8917,85 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
     AggregatedItem item,
   ) async {
     final manager = GetIt.instance<PlaybackManager>();
-    final queue = await _shuffleQueueForItem(item);
-    final playableQueue = queue
-        .where((e) => isEligibleNextEpisodeCandidate(e) || e.id == item.id)
-        .toList();
-    if (playableQueue.isEmpty) return;
-    if (!context.mounted) return;
+    Future<
+      ({List<AggregatedItem> queue, bool isAudio, bool forceTranscode})?
+    >
+    prepareQueue(PlaybackLaunchSession? session) async {
+      // With a player route already up, the session is the lifecycle: the
+      // rotation the player forces on a phone unmounts this context while
+      // the start is still wanted. Without one the context is all there is.
+      bool launchGone() =>
+          session == null ? !context.mounted : !session.isActive;
+      final queue = await _shuffleQueueForItem(item);
+      final playableQueue = queue
+          .where((e) => isEligibleNextEpisodeCandidate(e) || e.id == item.id)
+          .toList();
+      if (playableQueue.isEmpty || launchGone()) return null;
 
-    final shuffled = List<AggregatedItem>.from(playableQueue)..shuffle();
-    if (shuffled.isNotEmpty) {
+      final shuffled = List<AggregatedItem>.from(playableQueue)..shuffle();
       shuffled[0] = await _ensureHydrated(shuffled.first);
+      if (launchGone()) return null;
+      final isAudio = shuffled.every((queuedItem) {
+        final mediaType = queuedItem.rawData['MediaType'] as String?;
+        return queuedItem.type == 'Audio' || mediaType == 'Audio';
+      });
+      final forceTranscode =
+          !isAudio &&
+          context.mounted &&
+          await _shouldForceTranscodeForDolbyVision(context, [shuffled.first]);
+      if (launchGone()) return null;
+      return (
+        queue: shuffled,
+        isAudio: isAudio,
+        forceTranscode: forceTranscode,
+      );
     }
-    if (!context.mounted) return;
-    final isAudio = shuffled.every((queuedItem) {
-      final mediaType = queuedItem.rawData['MediaType'] as String?;
-      return queuedItem.type == 'Audio' || mediaType == 'Audio';
-    });
 
-    final forceTranscode =
-        !isAudio &&
-        await _shouldForceTranscodeForDolbyVision(context, [shuffled.first]);
+    Future<bool> startPlayback(
+      PlaybackLaunchSession? launchSession,
+      ({List<AggregatedItem> queue, bool isAudio, bool forceTranscode})
+      prepared,
+    ) =>
+        _runWithDolbyVisionStartupFallbackPrompt(
+          context,
+          manager,
+          () => runPlaybackStart(
+            launchSession,
+            () => manager.playItems(
+              prepared.queue,
+              enableDirectPlay: !prepared.forceTranscode,
+              enableDirectStream: !prepared.forceTranscode,
+            ),
+          ),
+        );
 
-    if (!context.mounted) return;
+    final canOpenVideoBeforeQueueWork = switch (item.type) {
+      'Series' || 'Season' || 'BoxSet' => true,
+      _ => false,
+    };
+    if (canOpenVideoBeforeQueueWork) {
+      await _pushPlayerRouteWhileStartingPlayback(
+        context,
+        destination: Destinations.videoPlayer,
+        startPlayback: (launchSession) async {
+          final prepared = await prepareQueue(launchSession);
+          if (prepared == null) return false;
+          return startPlayback(launchSession, prepared);
+        },
+      );
+      return;
+    }
 
-    final startupFuture = _runWithDolbyVisionStartupFallbackPrompt(
-      context,
-      manager,
-      () => manager.playItems(
-        shuffled,
-        enableDirectPlay: !forceTranscode,
-        enableDirectStream: !forceTranscode,
-      ),
-    );
+    final prepared = await prepareQueue(null);
+    if (prepared == null || !context.mounted) return;
 
     await _pushPlayerRouteWhileStartingPlayback(
       context,
-      destination: isAudio
+      destination: prepared.isAudio
           ? Destinations.audioPlayer
           : Destinations.videoPlayer,
-      startupFuture: startupFuture,
+      startPlayback: (launchSession) =>
+          startPlayback(launchSession, prepared),
     );
   }
 
@@ -9118,24 +9165,29 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
     if (!context.mounted) return;
 
     if (localTrailer != null) {
-      final forceTranscode = await _shouldForceTranscodeForDolbyVisionQueue(
-        context,
-        [localTrailer],
-      );
-      if (!context.mounted) return;
-      final startupFuture = _runWithDolbyVisionStartupFallbackPrompt(
-        context,
-        manager,
-        () => manager.playItems(
-          [localTrailer],
-          enableDirectPlay: !forceTranscode,
-          enableDirectStream: !forceTranscode,
-        ),
-      );
       await _pushPlayerRouteWhileStartingPlayback(
         context,
         destination: Destinations.videoPlayer,
-        startupFuture: startupFuture,
+        startPlayback: (launchSession) async {
+          final forceTranscode =
+              await shouldForceTranscodeForDolbyVisionQueue(
+                context,
+                [localTrailer!],
+              );
+          if (!context.mounted) return false;
+          return _runWithDolbyVisionStartupFallbackPrompt(
+            context,
+            manager,
+            () => runPlaybackStart(
+              launchSession,
+              () => manager.playItems(
+                [localTrailer!],
+                enableDirectPlay: !forceTranscode,
+                enableDirectStream: !forceTranscode,
+              ),
+            ),
+          );
+        },
       );
       return;
     }
@@ -9155,6 +9207,11 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
       return;
     }
 
+    if (opensTrailersExternally() &&
+        await launchTrailerExternally(trailerUrl)) {
+      return;
+    }
+    if (!context.mounted) return;
     await context.push(Destinations.trailer(url: trailerUrl));
   }
 
@@ -9840,12 +9897,31 @@ Future<_DolbyVisionPlayDecision?> _showDolbyVisionFallbackDecisionDialog(
   );
 }
 
-Future<bool> _shouldForceTranscodeForDolbyVisionQueue(
+Future<bool> _anyItemHasCompletedDownload(Iterable<AggregatedItem> items) async {
+  final repo = GetIt.instance<OfflineRepository>();
+  for (final item in items) {
+    final row = await repo.getItem(item.id);
+    if (row != null && row.downloadStatus == 2 && row.localFilePath != null) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Whether Android TV playback of [queue] must stream a Dolby Vision
+/// transcode instead of direct playing the original. Public and annotated for
+/// the gate regression tests; every production caller lives in this file.
+@visibleForTesting
+Future<bool> shouldForceTranscodeForDolbyVisionQueue(
   BuildContext context,
   List<AggregatedItem> queue, {
   String? mediaSourceId,
 }) async {
   if (!(PlatformDetection.isAndroid && PlatformDetection.isTV)) {
+    return false;
+  }
+
+  if (await _anyItemHasCompletedDownload(queue)) {
     return false;
   }
 
@@ -9882,6 +9958,7 @@ Future<bool> _shouldForceTranscodeForDolbyVisionQueue(
     return !PlatformDetection.supportsHdr10;
   }
 
+  if (!context.mounted) return false;
   final decision = await _showDolbyVisionFallbackDecisionDialog(context);
   if (decision == null) {
     return false;
@@ -10054,6 +10131,15 @@ String? channelLayoutFromStreams(List<Map<String, dynamic>> streams) {
   return null;
 }
 
+bool _showsEpisodeOverview(AggregatedItem episode, UserPreferences prefs) =>
+    episode.overview != null &&
+    !hidesMediaDescription(
+      itemType: episode.type,
+      hideMediaDescription: prefs.get(
+        UserPreferences.hideDetailsMediaDescription,
+      ),
+    );
+
 bool _isReadableBookItem(AggregatedItem item) {
   final mediaType = item.rawData['MediaType'] as String?;
   return item.type == 'Book' && mediaType != 'Audio';
@@ -10083,11 +10169,6 @@ bool _isDownloadable(String? type) {
       type == 'MusicVideo' ||
       type == 'Video' ||
       type == 'MusicAlbum';
-}
-
-bool _canUserDownload() {
-  final user = GetIt.instance<UserRepository>().currentUser;
-  return !PlatformDetection.isTV && (user?.canDownload ?? false);
 }
 
 class _DownloadButton extends StatefulWidget {
@@ -10306,6 +10387,8 @@ class _DownloadButtonState extends State<_DownloadButton> {
           // so show an ellipsis rather than a misleading "0.0 MB".
           final label = progress.isFinalizing
               ? AppLocalizations.of(context).finalizingDownload
+              : progress.isQueued
+              ? AppLocalizations.of(context).queuedDownload
               : progress.progress >= 0
               ? '${(progress.progress * 100).toInt()}%'
               : progress.bytesReceived > 0
@@ -10416,6 +10499,77 @@ class _DownloadButtonState extends State<_DownloadButton> {
     final multiEstimateSubtitles = isMulti
         ? _multiTranscodedEstimateSubtitles(estimationItems, availableQualities)
         : const <DownloadQuality, String>{};
+
+    if (PlatformDetection.isTV) {
+      showFocusRestoringModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: const Color(0xFF1E1E1E),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        builder: (sheetContext) => SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.9,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: Text(
+                    isMulti
+                        ? AppLocalizations.of(sheetContext).downloadAllQuality
+                        : AppLocalizations.of(sheetContext).downloadQuality,
+                    style: Theme.of(sheetContext).textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.only(bottom: 8),
+                    children: availableQualities.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final quality = entry.value;
+                      return DpadListTile(
+                        autofocus: index == 0,
+                        leading: AdaptiveIcon(
+                          quality.isTranscoded
+                              ? Icons.compress
+                              : Icons.file_copy_outlined,
+                        ),
+                        title: Text(quality.label),
+                        subtitle: Text(
+                          _qualitySubtitle(
+                            item,
+                            quality,
+                            supportsTranscoding: supportsTranscoding,
+                            isMulti: isMulti,
+                            multiEstimateSubtitle:
+                                multiEstimateSubtitles[quality],
+                          ),
+                        ),
+                        onTap: () {
+                          Navigator.pop(sheetContext);
+                          _startDownload(context, service, quality);
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      return;
+    }
+
     showFocusRestoringModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF1E1E1E),
@@ -13387,7 +13541,7 @@ class DetailNextUpCardState extends State<DetailNextUpCard>
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (episode.overview != null) ...[
+                            if (_showsEpisodeOverview(episode, prefs)) ...[
                               const SizedBox(height: 4),
                               Text(
                                 episode.overview!,
@@ -13658,7 +13812,7 @@ class DetailEpisodeCardState extends State<DetailEpisodeCard>
                                       ),
                                 ),
                               ],
-                              if (episode.overview != null) ...[
+                              if (_showsEpisodeOverview(episode, prefs)) ...[
                                 const SizedBox(height: 4),
                                 Text(
                                   episode.overview!,
@@ -14812,14 +14966,23 @@ class _AlbumActions extends StatelessWidget {
     final isAudioQueue = queue.every(_isAudioItem);
     unawaited(() async {
       try {
-        await manager.playItems(queue);
+        await launchPlayerWhilePreparing(
+          context,
+          manager: manager,
+          destination: isAudioQueue
+              ? Destinations.audioPlayer
+              : Destinations.videoPlayer,
+          startPlayback: (launchSession) async {
+            await runPlaybackStart(
+              launchSession,
+              () => manager.playItems(queue),
+            );
+            return true;
+          },
+        );
       } catch (_) {
         return;
       }
-      if (!context.mounted) return;
-      context.push(
-        isAudioQueue ? Destinations.audioPlayer : Destinations.videoPlayer,
-      );
     }());
   }
 
@@ -15341,6 +15504,11 @@ class _TrackTileState extends State<TrackTile> with FocusStateMixin {
             return artistText.isNotEmpty ? artistText : null;
           }();
 
+    final subtitleLine = [
+      if (subtitle != null && subtitle.isNotEmpty) subtitle,
+      ?runtimeText,
+    ].join(' • ');
+
     Widget? thumbnailWidget;
     if (widget.isPlaylist && widget.imageApi != null) {
       final imgId = widget.track.primaryImageItemId ?? widget.track.id;
@@ -15526,9 +15694,9 @@ class _TrackTileState extends State<TrackTile> with FocusStateMixin {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (subtitle != null)
+                      if (subtitleLine.isNotEmpty)
                         Text(
-                          subtitle,
+                          subtitleLine,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: showFocusBorder
                                 ? Colors.white.withValues(alpha: 0.82)
@@ -15540,29 +15708,6 @@ class _TrackTileState extends State<TrackTile> with FocusStateMixin {
                     ],
                   ),
                 ),
-                () {
-                  final releaseYear =
-                      widget.track.productionYear ??
-                      (widget.track.premiereDate != null
-                          ? widget.track.premiereDate!.year
-                          : null);
-                  final parts = [
-                    if (releaseYear != null) '$releaseYear',
-                    if (runtimeText != null) runtimeText,
-                  ];
-                  if (parts.isEmpty) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(
-                      parts.join('  •  '),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: showFocusBorder
-                            ? Colors.white.withValues(alpha: 0.82)
-                            : Colors.white.withValues(alpha: 0.5),
-                      ),
-                    ),
-                  );
-                }(),
                 if (PlatformDetection.isTV) ...[
                   if (widget.reorderable) ...[
                     IconButton(
@@ -15619,15 +15764,6 @@ class _TrackTileState extends State<TrackTile> with FocusStateMixin {
                         ),
                       ),
                     ),
-                  IconButton(
-                    onPressed: widget.onTap,
-                    icon: AdaptiveIcon(
-                      Icons.play_arrow,
-                      color: showFocusBorder ? Colors.white : Colors.white54,
-                      size: 22,
-                    ),
-                    splashRadius: 20,
-                  ),
                   IconButton(
                     onPressed: () => _showTrackActions(context),
                     icon: AdaptiveIcon(

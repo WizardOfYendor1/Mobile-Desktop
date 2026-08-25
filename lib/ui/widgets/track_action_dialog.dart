@@ -6,7 +6,7 @@ import '../../data/models/aggregated_item.dart';
 import '../../data/repositories/offline_repository.dart';
 import '../../data/services/download_service.dart';
 import '../../l10n/app_localizations.dart';
-import '../../util/platform_detection.dart';
+import '../../util/download_utils.dart';
 import 'focusable_dialog_row.dart';
 import 'overlay_sheet.dart';
 
@@ -87,7 +87,7 @@ class TrackActionDialog extends StatelessWidget {
                 offlineItem?.downloadStatus == 2 && offlineItem?.localFilePath != null;
             final isDownloading = downloadService.isDownloading(track.id);
             final supportsOffline =
-              !PlatformDetection.isTV && _supportsOfflineActions(track);
+                userCanDownload() && _supportsOfflineActions(track);
 
             return Dialog(
               backgroundColor: Colors.transparent,

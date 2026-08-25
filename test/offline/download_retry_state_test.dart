@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:drift/drift.dart' hide isNotNull;
@@ -70,6 +71,54 @@ class _FakeStoragePathService extends StoragePathService {
   }
 }
 
+/// Parks every upsert so a download that passed the storage check stays
+/// admitted (and reserving) for as long as the test wants.
+class _GatedOfflineRepository extends _FakeOfflineRepository {
+  _GatedOfflineRepository(super.db);
+
+  final Completer<void> upsertGate = Completer<void>();
+  int upsertCalls = 0;
+
+  @override
+  Future<void> upsertItem(DownloadedItemsCompanion item) async {
+    upsertCalls++;
+    await upsertGate.future;
+  }
+}
+
+/// Answers getItem from a fixed table and parks one item's fetch until the
+/// test releases it, so its storage check runs while another download is
+/// already admitted and reserving bytes.
+class _StorageTestApi implements ItemsApi {
+  _StorageTestApi(this._dataById, {required this.parkItemId});
+
+  final Map<String, Map<String, dynamic>> _dataById;
+  final String parkItemId;
+  final Completer<void> releaseParked = Completer<void>();
+
+  @override
+  Future<Map<String, dynamic>> getItem(
+    String itemId, {
+    String? mediaSourceId,
+    String? fields,
+  }) async {
+    if (itemId == parkItemId) await releaseParked.future;
+    return _dataById[itemId]!;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+Map<String, dynamic> _sizedItemData(String id, int sizeBytes) => {
+  'Id': id,
+  'Type': 'Movie',
+  'Name': 'Movie $id',
+  'MediaSources': [
+    {'Id': 'source-$id', 'Container': 'mkv', 'Size': sizeBytes},
+  ],
+};
+
 class _FakeItemsApi implements ItemsApi {
   final Map<String, dynamic> itemData;
   _FakeItemsApi(this.itemData);
@@ -85,10 +134,34 @@ class _FakeItemsApi implements ItemsApi {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class _BlockingItemsApi implements ItemsApi {
+  final List<Completer<Map<String, dynamic>>> _pending = [];
+  int calls = 0;
+
+  @override
+  Future<Map<String, dynamic>> getItem(
+    String itemId, {
+    String? mediaSourceId,
+    String? fields,
+  }) {
+    calls++;
+    final completer = Completer<Map<String, dynamic>>();
+    _pending.add(completer);
+    return completer.future;
+  }
+
+  void releaseNext() {
+    _pending.removeAt(0).completeError(StateError('Test download released'));
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 class _FakeClient implements MediaServerClient {
   _FakeClient(this._itemsApi);
 
-  final _FakeItemsApi _itemsApi;
+  final ItemsApi _itemsApi;
 
   @override
   ItemsApi get itemsApi => _itemsApi;
@@ -96,8 +169,6 @@ class _FakeClient implements MediaServerClient {
   @override
   String? get accessToken => 'test-token';
 
-  // An unroutable local port: every download attempt fails immediately with a
-  // connection error (no HTTP status), which exercises the plain error path.
   @override
   String get baseUrl => 'http://127.0.0.1:1';
 
@@ -108,6 +179,7 @@ class _FakeClient implements MediaServerClient {
 void main() {
   late OfflineDatabase db;
   late Directory tempDir;
+  late UserPreferences prefs;
   late DownloadService service;
 
   const itemId = 'movie-1';
@@ -124,7 +196,7 @@ void main() {
     SharedPreferences.setMockInitialValues(const {});
     final store = PreferenceStore();
     await store.init();
-    final prefs = UserPreferences(store);
+    prefs = UserPreferences(store);
 
     tempDir = await Directory.systemTemp.createTemp('moonfin_retry_test');
     db = OfflineDatabase(DatabaseConnection(NativeDatabase.memory()));
@@ -144,6 +216,7 @@ void main() {
   });
 
   tearDown(() async {
+    service.dispose();
     await GetIt.instance.reset();
     await db.close();
     try {
@@ -190,4 +263,180 @@ void main() {
 
     await sub.cancel();
   });
+
+  test('limits queued downloads to the configured concurrency', () async {
+    await prefs.set(UserPreferences.downloadConcurrentCount, 2);
+    final itemsApi = _BlockingItemsApi();
+    service.dispose();
+    service = DownloadService(
+      _FakeClient(itemsApi),
+      DownloadNotificationService(),
+    );
+    final items = List.generate(
+      3,
+      (index) => AggregatedItem(
+        id: 'movie-$index',
+        serverId: 'http://127.0.0.1:1',
+        rawData: {...itemData, 'MediaSources': const []},
+      ),
+    );
+
+    final downloads = items.map(service.downloadItem).toList();
+    await _waitForCalls(itemsApi, 2);
+    expect(itemsApi.calls, 2);
+
+    // Every enqueued item is listed while the first two hold the slots; the
+    // waiting third one carries a queued placeholder.
+    expect(service.activeDownloads.length, 3);
+    expect(service.isDownloading('movie-2'), isTrue);
+    expect(service.activeDownloads['movie-2']?.isQueued, isTrue);
+
+    itemsApi.releaseNext();
+    await _waitForCalls(itemsApi, 3);
+    expect(itemsApi.calls, 3);
+
+    itemsApi.releaseNext();
+    itemsApi.releaseNext();
+    await Future.wait(downloads);
+
+    expect(
+      service.activeDownloads.values.every((p) => p.error != null),
+      isTrue,
+    );
+  });
+
+  test('queued downloads are listed and cancellable while waiting', () async {
+    await prefs.set(UserPreferences.downloadConcurrentCount, 1);
+    final itemsApi = _BlockingItemsApi();
+    service.dispose();
+    service = DownloadService(
+      _FakeClient(itemsApi),
+      DownloadNotificationService(),
+    );
+    final items = List.generate(
+      2,
+      (index) => AggregatedItem(
+        id: 'movie-$index',
+        serverId: 'http://127.0.0.1:1',
+        rawData: {...itemData, 'MediaSources': const []},
+      ),
+    );
+
+    final downloads = items.map(service.downloadItem).toList();
+    await _waitForCalls(itemsApi, 1);
+
+    // The second item waits for a slot but is visible as queued.
+    expect(service.isDownloading('movie-1'), isTrue);
+    expect(service.activeDownloads['movie-1']?.isQueued, isTrue);
+
+    // Cancelling the waiting item removes its placeholder and completes its
+    // download future without touching the running one.
+    service.cancelDownload('movie-1');
+    expect(service.activeDownloads.containsKey('movie-1'), isFalse);
+    expect(service.isDownloading('movie-0'), isTrue);
+
+    itemsApi.releaseNext();
+    await Future.wait(downloads);
+    expect(service.activeDownloads['movie-0']?.error, isNotNull);
+  });
+
+  test('concurrently admitted downloads share the storage cap', () async {
+    await prefs.set(UserPreferences.downloadConcurrentCount, 2);
+    // 1 MiB: each 600 KB item fits alone, two admitted together do not.
+    await prefs.set(UserPreferences.downloadStorageLimitMb, 1);
+    final repo = _GatedOfflineRepository(db);
+    GetIt.instance.unregister<OfflineRepository>();
+    GetIt.instance.registerSingleton<OfflineRepository>(repo);
+    final itemsApi = _StorageTestApi({
+      'storage-a': _sizedItemData('storage-a', 600000),
+      'storage-b': _sizedItemData('storage-b', 600000),
+    }, parkItemId: 'storage-b');
+    service.dispose();
+    service = DownloadService(
+      _FakeClient(itemsApi),
+      DownloadNotificationService(),
+    );
+
+    final futureA = service.downloadItem(
+      AggregatedItem(
+        id: 'storage-a',
+        serverId: 'http://127.0.0.1:1',
+        rawData: _sizedItemData('storage-a', 600000),
+      ),
+    );
+    final futureB = service.downloadItem(
+      AggregatedItem(
+        id: 'storage-b',
+        serverId: 'http://127.0.0.1:1',
+        rawData: _sizedItemData('storage-b', 600000),
+      ),
+    );
+
+    // Item A is admitted and reserves its bytes; item B's metadata fetch is
+    // parked until then so its storage check must see A's reservation.
+    await _waitFor(() => repo.upsertCalls == 1);
+    itemsApi.releaseParked.complete();
+
+    await _waitFor(
+      () => service.activeDownloads['storage-b']?.error != null,
+    );
+    expect(
+      service.activeDownloads['storage-b']?.error,
+      contains('Storage limit'),
+      reason: 'the second admission must fail against the reserved bytes',
+    );
+    expect(
+      service.activeDownloads['storage-a']?.isQueued,
+      isTrue,
+      reason: 'the admitted item is still preparing',
+    );
+    await futureB;
+
+    repo.upsertGate.complete();
+    await futureA;
+    expect(
+      service.activeDownloads.values.every((p) => p.error != null),
+      isTrue,
+    );
+  });
+
+  test('a batch with an escaping failure resets its state', () async {
+    await prefs.set(UserPreferences.downloadWifiOnly, true);
+    final items = List.generate(
+      2,
+      (index) => AggregatedItem(
+        id: 'movie-$index',
+        serverId: 'http://127.0.0.1:1',
+        rawData: itemData,
+      ),
+    );
+
+    // wifiOnly routes the policy check through Connectivity(), which has no
+    // platform implementation in tests and throws before any progress entry
+    // is created — the escape the placeholder repair guards against.
+    await service.downloadItems(items);
+
+    expect(service.isBatchDownloading, isFalse);
+    for (final item in items) {
+      final progress = service.activeDownloads[item.id];
+      expect(progress?.error, isNotNull);
+      expect(progress?.isQueued, isFalse);
+    }
+  });
+}
+
+Future<void> _waitForCalls(_BlockingItemsApi api, int expected) async {
+  for (var attempt = 0; attempt < 100; attempt++) {
+    if (api.calls >= expected) return;
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
+  fail('Expected $expected item requests, got ${api.calls}.');
+}
+
+Future<void> _waitFor(bool Function() condition) async {
+  for (var attempt = 0; attempt < 100; attempt++) {
+    if (condition()) return;
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+  }
+  fail('Condition was not met in time.');
 }

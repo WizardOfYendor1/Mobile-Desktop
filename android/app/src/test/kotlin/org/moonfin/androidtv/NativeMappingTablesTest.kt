@@ -76,4 +76,32 @@ class NativeMappingTablesTest {
         assertEquals(NativeMappingTables.NONE, NativeMappingTables.indexFor(table, NativeMappingTables.TABLE_SIZE))
         assertEquals(NativeMappingTables.NONE, NativeMappingTables.indexFor(table, -1))
     }
+
+    @Test
+    fun `an unbound trigger keeps the default L2 and R2 bits`() {
+        val table = NativeMappingTables.custom(null)
+        assertEquals(NativeMappingTables.RETRO_L2, table[KeyEvent.KEYCODE_BUTTON_L2])
+        assertEquals(NativeMappingTables.RETRO_R2, table[KeyEvent.KEYCODE_BUTTON_R2])
+    }
+
+    @Test
+    fun `a rebound trigger resolves to the chosen button`() {
+        val table = NativeMappingTables.custom(
+            mapOf(KeyEvent.KEYCODE_BUTTON_L2 to NativeMappingTables.RETRO_A),
+        )
+        assertEquals(NativeMappingTables.RETRO_A, NativeMappingTables.indexFor(table, KeyEvent.KEYCODE_BUTTON_L2))
+        assertEquals(NativeMappingTables.RETRO_R2, NativeMappingTables.indexFor(table, KeyEvent.KEYCODE_BUTTON_R2))
+    }
+
+    @Test
+    fun `trigger bindings saved under the old synthetic codes still load`() {
+        val table = NativeMappingTables.custom(
+            mapOf(
+                NativeMappingTables.SYNTHETIC_KEYCODE_L2 to NativeMappingTables.RETRO_A,
+                NativeMappingTables.SYNTHETIC_KEYCODE_R2 to NativeMappingTables.RETRO_B,
+            ),
+        )
+        assertEquals(NativeMappingTables.RETRO_A, table[KeyEvent.KEYCODE_BUTTON_L2])
+        assertEquals(NativeMappingTables.RETRO_B, table[KeyEvent.KEYCODE_BUTTON_R2])
+    }
 }

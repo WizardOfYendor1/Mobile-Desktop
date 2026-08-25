@@ -11,6 +11,7 @@ import '../../data/services/audiobook_bookmarks_service.dart';
 import '../../data/services/audiobook_notes_service.dart';
 import '../../data/services/audiobook_resume_service.dart';
 import '../../data/services/connectivity_service.dart';
+import '../../data/services/log_service.dart';
 import '../../data/services/media_server_client_factory.dart';
 import '../../data/services/offline_playback_tracker.dart';
 import '../../playback/local_aware_player_service.dart';
@@ -322,6 +323,29 @@ void registerPlaybackModule() {
   _getIt.registerSingleton<PlayerBackend>(initialBackend);
 
   final manager = PlaybackManager();
+  // A launch that hangs goes quiet in the network log, since the stall sits
+  // between requests. The bringup phases bracket every stage of a start, so
+  // the last phase in a report names the stage that never finished.
+  var lastBringupPhase = PlaybackBringupPhase.idle;
+  manager.bringupStateStream.listen((state) {
+    if (state.phase == lastBringupPhase) return;
+    lastBringupPhase = state.phase;
+    if (state.phase == PlaybackBringupPhase.idle) return;
+    final log = _getIt<LogService>();
+    final detail = [
+      ?state.backend,
+      if (state.itemId != null) 'item ${state.itemId}',
+      ?state.playMethod,
+      if (state.error != null) 'error ${state.error}',
+    ].join(', ');
+    log.log(
+      LogCategory.playback,
+      'Bringup: ${state.phase.name}${detail.isEmpty ? '' : ' ($detail)'}',
+      level: state.phase == PlaybackBringupPhase.failed
+          ? LogLevel.warning
+          : LogLevel.debug,
+    );
+  });
   manager.autoBitrateProvider = AutoBitrateService(
     _getIt<MediaServerClientFactory>(),
   ).measuredBpsForActiveServer;
@@ -425,6 +449,11 @@ void registerPlaybackModule() {
   });
   manager.setTranscodeSelector((resolution) {
     if (!(PlatformDetection.isAndroid && PlatformDetection.isTV)) {
+      return false;
+    }
+
+    // A local resolution is never swapped for a server stream.
+    if (resolution.isLocalMedia) {
       return false;
     }
 

@@ -93,4 +93,56 @@ void main() {
 
     expect(await service.getRemovableDownloadDirs(), isEmpty);
   });
+
+  group('isOnRemovableStorage', () {
+    test('a path under a volume past the built-in one is removable', () async {
+      PathProviderPlatform.instance = _FakePathProvider([
+        builtIn.path,
+        card.path,
+      ]);
+
+      expect(
+        await service.isOnRemovableStorage('${card.path}/Moonfin/TV/ep.mkv'),
+        isTrue,
+      );
+    });
+
+    test('the built-in volume is not removable', () async {
+      PathProviderPlatform.instance = _FakePathProvider([
+        builtIn.path,
+        card.path,
+      ]);
+
+      expect(
+        await service.isOnRemovableStorage('${builtIn.path}/Moonfin/ep.mkv'),
+        isFalse,
+      );
+    });
+
+    test('a sibling path sharing the volume prefix is not removable',
+        () async {
+      PathProviderPlatform.instance = _FakePathProvider([
+        builtIn.path,
+        card.path,
+      ]);
+
+      expect(
+        await service.isOnRemovableStorage('${card.path}-2/Moonfin/ep.mkv'),
+        isFalse,
+      );
+    });
+
+    test('off Android nothing is removable', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.linux;
+      PathProviderPlatform.instance = _FakePathProvider([
+        builtIn.path,
+        card.path,
+      ]);
+
+      expect(
+        await service.isOnRemovableStorage('${card.path}/Moonfin/ep.mkv'),
+        isFalse,
+      );
+    });
+  });
 }

@@ -1,9 +1,11 @@
 import 'dart:async';
 
 import 'package:dio/dio.dart';
+import 'package:get_it/get_it.dart';
 import 'package:server_core/server_core.dart';
 
 import '../data/offline/connectivity_aware_media_server_client.dart';
+import '../data/services/log_service.dart';
 import '../data/services/media_server_client_factory.dart';
 
 /// Measures what the link to the active server can carry, so an Auto bitrate
@@ -53,6 +55,10 @@ class AutoBitrateService {
   }
 
   Future<int?> _measure(MediaServerClient client) async {
+    // The probe runs on its own client, so without these lines it is
+    // invisible in the network log and a start waiting on it looks hung.
+    final log = GetIt.instance<LogService>();
+    log.log(LogCategory.playback, 'Auto bitrate: measuring');
     final base = client.baseUrl.endsWith('/')
         ? client.baseUrl.substring(0, client.baseUrl.length - 1)
         : client.baseUrl;
@@ -82,8 +88,10 @@ class AutoBitrateService {
 
       final bps = (bytes * 8 / seconds * _safetyFactor).round();
       _cache[client.baseUrl] = (bps: bps, measuredAt: DateTime.now());
+      log.log(LogCategory.playback, 'Auto bitrate: measured ${bps}bps');
       return bps;
-    } catch (_) {
+    } catch (e) {
+      log.log(LogCategory.playback, 'Auto bitrate: measurement failed ($e)');
       return null;
     } finally {
       dio.close();

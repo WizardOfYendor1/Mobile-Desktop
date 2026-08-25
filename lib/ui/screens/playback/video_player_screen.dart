@@ -19,6 +19,7 @@ import 'package:window_manager/window_manager.dart';
 import '../../../playback/subtitle_style.dart';
 import '../../../util/fullscreen_helper.dart';
 import '../../../util/scroll_sensitivity_binding.dart';
+import '../../widgets/player_volume_control.dart';
 import '../../widgets/playback/playback_time_row.dart';
 import '../../widgets/playback/seek_icons.dart';
 import '../../widgets/playback/trickplay_tile_image.dart';
@@ -70,6 +71,7 @@ import '../../../syncplay/syncplay_manager.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../playback/media3_player_backend.dart';
 import '../../../playback/tizen_player_backend.dart';
+import 'playback_takeover.dart';
 import 'osd_buttons.dart';
 import 'package:video_player/video_player.dart';
 
@@ -771,6 +773,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   @override
   void initState() {
     super.initState();
+    if (PlatformDetection.isTV || PlatformDetection.isMobile) {
+      // The decoder wants every megabyte a constrained box has, and a stale
+      // IME binding swallows d-pad presses mid-playback. Desktop keeps its
+      // artwork cache, it has the memory to spare and hops in and out of
+      // playback far more often.
+      releaseImageMemoryForPlayback();
+      detachTextInputForPlayback();
+    }
     _screensaverController.setPlaybackActive(true);
     _screensaverPlayingSub = _state.playingStream.listen(
       _screensaverController.setPlaybackActive,
@@ -1032,7 +1042,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     if (_wasAlwaysOnTopOnEntry == false && _isAlwaysOnTop) {
       unawaited(_setAlwaysOnTop(false));
     }
-    if (!_isStopping) _manager.stop(userInitiated: false);
+    // The launch coordinator briefly owns this route while Android decides
+    // whether to hand the queue to an external player. Keep that prepared
+    // queue intact when the internal host is being replaced.
+    if (!_isStopping && !_manager.playbackDeferredToExternalPlayer) {
+      _manager.stop(userInitiated: false);
+    }
     unawaited(_restoreSystemUiForExit());
     super.dispose();
   }
@@ -1992,7 +2007,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     }
 
     await backend.setUiMetadata(
-      hasPrevious: _queue.hasPrevious,
+      hasPrevious: true,
       hasNext: _queue.hasNext,
       chapters: chapters,
       skipBackMs: _prefs.get(UserPreferences.skipBackLength),
@@ -3788,15 +3803,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   }
 
   bool _isBringupInProgress(PlaybackBringupPhase phase) {
-    return phase == PlaybackBringupPhase.stoppingPrevious ||
-        phase == PlaybackBringupPhase.resolving ||
-        phase == PlaybackBringupPhase.opening ||
-        phase == PlaybackBringupPhase.waitingForReady ||
-        phase == PlaybackBringupPhase.seekingResume;
+    return phase.isInProgress;
   }
 
   String _bringupLabel() {
     switch (_bringupState.phase) {
+      case PlaybackBringupPhase.preparing:
+        return _streamLoadingLabel;
       case PlaybackBringupPhase.stoppingPrevious:
         return 'Stopping previous playback...';
       case PlaybackBringupPhase.resolving:
@@ -4678,7 +4691,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         MediaQuery.of(context).orientation == Orientation.landscape;
     final buttonExtent = isLandscape ? 56.0 : 48.0;
     final buttonIconSize = isLandscape ? 28.0 : 24.0;
-    final hasPrevious = _queue.hasPrevious;
     final hasNext = _queue.hasNext;
 
     return FocusTraversalGroup(
@@ -4689,15 +4701,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
-            if (_queue.hasPrevious)
-              _controlButton(
-                Icons.skip_previous_rounded,
-                onPressed: _manager.previous,
-                size: buttonIconSize,
-                extent: buttonExtent,
-                focusNode: _tvTransportFirstFocus,
-                tooltip: l10n.playerTooltipPrevious,
-              ),
+            _controlButton(
+              Icons.skip_previous_rounded,
+              onPressed: _manager.previous,
+              size: buttonIconSize,
+              extent: buttonExtent,
+              focusNode: _tvTransportFirstFocus,
+              tooltip: l10n.playerTooltipPrevious,
+            ),
             const SizedBox(width: 4),
             _controlButton(
               seekBackIcon(_prefs.get(UserPreferences.skipBackLength)),
@@ -4705,7 +4716,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                   _seekRelative(-_prefs.get(UserPreferences.skipBackLength)),
               size: buttonIconSize,
               extent: buttonExtent,
-              focusNode: hasPrevious ? null : _tvTransportFirstFocus,
               tooltip: _tooltipMessage(
                 l10n.playerTooltipSeekBack,
                 shortcut: 'Left',
@@ -5851,14 +5861,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (_queue.hasPrevious)
-                      _controlButton(
-                        Icons.skip_previous_rounded,
-                        onPressed: _manager.previous,
-                        size: 40,
-                        extent: 72,
-                        tooltip: l10n.playerTooltipPrevious,
-                      ),
+                    _controlButton(
+                      Icons.skip_previous_rounded,
+                      onPressed: _manager.previous,
+                      size: 40,
+                      extent: 72,
+                      tooltip: l10n.playerTooltipPrevious,
+                    ),
                     _controlButton(
                       seekBackIcon(_prefs.get(UserPreferences.skipBackLength)),
                       onPressed: () =>
@@ -5954,12 +5963,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     );
   }
 
-  IconData _volumeIcon(double fraction) => fraction <= 0
-      ? Icons.volume_off_rounded
-      : fraction < 0.5
-      ? Icons.volume_down_rounded
-      : Icons.volume_up_rounded;
-
   double get _osdVolume =>
       _useSystemVolume ? _systemVolume : _playerVolume / 100.0;
 
@@ -6015,7 +6018,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
               }
             },
             icon: AdaptiveIcon(
-              _volumeIcon(_osdVolume),
+              volumeIconFor(_osdVolume),
               color: Colors.white,
               size: iconSize,
             ),
@@ -6050,7 +6053,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
                     _toggleMute();
                   },
                   icon: AdaptiveIcon(
-                    _volumeIcon(_osdVolume),
+                    volumeIconFor(_osdVolume),
                     color: Colors.white,
                     size: 20,
                   ),

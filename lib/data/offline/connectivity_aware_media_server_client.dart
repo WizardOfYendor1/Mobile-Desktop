@@ -13,12 +13,9 @@ import 'offline_stub_apis.dart';
 import 'offline_user_views_api.dart';
 
 /// Whether browse and read calls should come from the downloads catalog.
-///
-/// TV can't download, so it keeps the online client and its cached home rows
-/// instead of an empty offline catalog.
 bool shouldUseOfflineCatalog() {
   final getIt = GetIt.instance;
-  return !PlatformDetection.isTV &&
+  return PlatformDetection.supportsOfflineDownloads &&
       getIt.isRegistered<ConnectivityService>() &&
       !getIt<ConnectivityService>().canReachServer;
 }

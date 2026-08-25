@@ -347,6 +347,7 @@ class UserPreferences extends ChangeNotifier {
     'pref_detail_screen_style',
     'pref_detail_expanded_tabs',
     'pref_detail_show_technical_details',
+    'pref_detail_trailers_external',
     'pref_hide_details_media_description',
     'pref_detail_use_series_thumbnails',
     'pref_hide_home_media_description',
@@ -1253,6 +1254,15 @@ class UserPreferences extends ChangeNotifier {
     defaultValue: false,
   );
 
+  /// When on, the details screen hands remote trailers to the system, the
+  /// YouTube app on TV or the browser elsewhere, instead of the in-app
+  /// player. Local trailers are server files only this app can stream, so
+  /// they always play in-app. Stored per server like [detailScreenStyle].
+  static final detailTrailersExternal = Preference(
+    key: 'pref_detail_trailers_external',
+    defaultValue: false,
+  );
+
   /// When on, media description paragraph on the details page is hidden.
   static final hideDetailsMediaDescription = Preference(
     key: 'pref_hide_details_media_description',
@@ -1730,7 +1740,7 @@ class UserPreferences extends ChangeNotifier {
 
   static final playbackEnginePreference = EnumPreference(
     key: 'playback_engine_preference',
-    defaultValue: PlatformDetection.isAndroid && PlatformDetection.isTV
+    defaultValue: PlatformDetection.isAndroid
         ? PlaybackEnginePreference.media3
         : PlaybackEnginePreference.mpv,
     values: PlaybackEnginePreference.values,
@@ -2683,6 +2693,16 @@ class UserPreferences extends ChangeNotifier {
     defaultValue: false,
   );
 
+  // Android TV only: the detail page keeps its download, delete, and
+  // download-all actions hidden until the user opts in from
+  // Settings -> Playback -> Offline Downloads. Other platforms offer
+  // downloads unconditionally, and nothing about existing downloads or the
+  // management screens is gated by this.
+  static final tvOfflineDownloads = Preference(
+    key: 'tv_offline_downloads',
+    defaultValue: false,
+  );
+
   // JSON-encoded list of server base URLs whose TLS certificate the native
   // download engine rejected (typically self-signed). Downloads for these
   // servers run on the legacy in-process engine, which accepts any cert.
@@ -2700,6 +2720,12 @@ class UserPreferences extends ChangeNotifier {
     key: 'download_concurrent_count',
     defaultValue: 2,
   );
+
+  /// The user's download concurrency, clamped to the supported range. The
+  /// app-level scheduler and the native engine's holding queue must both use
+  /// this single resolver so their limits can never drift apart.
+  int get effectiveDownloadConcurrentCount =>
+      get(downloadConcurrentCount).clamp(1, 8).toInt();
 
   static final reportDownloadsAsActivity = Preference(
     key: 'download_report_as_activity',

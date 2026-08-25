@@ -1,9 +1,33 @@
 import 'package:background_downloader/background_downloader.dart' as bgd;
+import 'package:get_it/get_it.dart';
 import 'package:path/path.dart' as p;
 
+import '../auth/repositories/user_repository.dart';
 import '../data/models/aggregated_item.dart';
 import '../data/models/download_quality.dart';
+import '../preference/user_preferences.dart';
 import 'platform_detection.dart';
+
+/// Whether download actions may be offered on this device at all.
+///
+/// Android TV keeps them hidden until the user enables offline downloads in
+/// Settings -> Playback -> Offline Downloads. Every other platform that
+/// supports downloads offers them unconditionally. Existing downloads and the
+/// management screens are never affected by this gate.
+bool showsTvDownloadActions(UserPreferences prefs) =>
+    !PlatformDetection.isTV || prefs.get(UserPreferences.tvOfflineDownloads);
+
+/// Whether the signed in user may start a download here.
+///
+/// Every entry point that offers a download has to ask this, because the
+/// server can forbid downloading outright and a screen that skips the check
+/// hands out a button the rest of the app would refuse.
+bool userCanDownload() {
+  final user = GetIt.instance<UserRepository>().currentUser;
+  return PlatformDetection.supportsOfflineDownloads &&
+      showsTvDownloadActions(GetIt.instance<UserPreferences>()) &&
+      (user?.canDownload ?? false);
+}
 
 /// The base directory, directory and filename a download task needs to write
 /// [savePath].

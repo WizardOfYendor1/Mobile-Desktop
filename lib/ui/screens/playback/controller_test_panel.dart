@@ -53,9 +53,7 @@ class ControllerTestPanel extends StatelessWidget {
   }
 
   /// The most recently pressed button, per the design's "Last button" panel.
-  /// Channel order reflects recency (the folder updates a button's entry in
-  /// place, latest last), so the last pressed match in the list is the one to
-  /// show.
+  /// The folder reinserts on update, so the last pressed match is the latest.
   ButtonChannel? get _lastPressed {
     ButtonChannel? found;
     for (final channel in _channels) {

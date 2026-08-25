@@ -98,6 +98,7 @@ class AuthRepository {
     final policyJson = userJson?['Policy'] as Map<String, dynamic>?;
     final policy = policyJson == null ? null : UserPolicy.fromJson(policyJson);
     final isAdmin = policy?.isAdministrator ?? false;
+    final canDownload = policy?.enableContentDownloading ?? false;
     final canManageSubtitles = policy?.canFetchRemoteSubtitles ?? false;
     final canManageCollections = policy?.enableCollectionManagement ?? false;
 
@@ -118,6 +119,7 @@ class AuthRepository {
       lastUsed: DateTime.now(),
       imageTag: imageTag,
       isAdministrator: isAdmin,
+      canDownload: canDownload,
       canManageSubtitles: canManageSubtitles,
       canManageCollections: canManageCollections,
     );

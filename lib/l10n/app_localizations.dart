@@ -2218,6 +2218,12 @@ abstract class AppLocalizations {
   /// **'Finalizing…'**
   String get finalizingDownload;
 
+  /// Status label for a download waiting in the queue for a free download slot
+  ///
+  /// In en, this message translates to:
+  /// **'Queued'**
+  String get queuedDownload;
+
   /// Action button label to download all items
   ///
   /// In en, this message translates to:
@@ -5691,6 +5697,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'WiFi-Only Downloads'**
   String get wifiOnlyDownloads;
+
+  /// TV-only toggle in the Offline Downloads settings: offer download actions on item pages
+  ///
+  /// In en, this message translates to:
+  /// **'Enable offline downloads'**
+  String get tvOfflineDownloads;
+
+  /// Subtitle for the TV-only offline downloads toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Show download actions on item pages'**
+  String get tvOfflineDownloadsSubtitle;
 
   /// No description provided for @reportDownloadsActivity.
   ///
@@ -12328,6 +12346,12 @@ abstract class AppLocalizations {
   /// **'Critic rating'**
   String get adminMetadataFieldCriticRating;
 
+  /// No description provided for @adminMetadataFieldCustomRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom rating'**
+  String get adminMetadataFieldCustomRating;
+
   /// No description provided for @adminMetadataFieldTagline.
   ///
   /// In en, this message translates to:
@@ -12339,6 +12363,366 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Overview'**
   String get adminMetadataFieldOverview;
+
+  /// No description provided for @adminMetadataFieldDisplayOrder.
+  ///
+  /// In en, this message translates to:
+  /// **'Display order'**
+  String get adminMetadataFieldDisplayOrder;
+
+  /// No description provided for @adminMetadataDisplayOrderAired.
+  ///
+  /// In en, this message translates to:
+  /// **'Aired'**
+  String get adminMetadataDisplayOrderAired;
+
+  /// No description provided for @adminMetadataDisplayOrderOriginalAirDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Original air date'**
+  String get adminMetadataDisplayOrderOriginalAirDate;
+
+  /// No description provided for @adminMetadataDisplayOrderAbsolute.
+  ///
+  /// In en, this message translates to:
+  /// **'Absolute'**
+  String get adminMetadataDisplayOrderAbsolute;
+
+  /// No description provided for @adminMetadataDisplayOrderDvd.
+  ///
+  /// In en, this message translates to:
+  /// **'DVD'**
+  String get adminMetadataDisplayOrderDvd;
+
+  /// No description provided for @adminMetadataDisplayOrderDigital.
+  ///
+  /// In en, this message translates to:
+  /// **'Digital'**
+  String get adminMetadataDisplayOrderDigital;
+
+  /// No description provided for @adminMetadataDisplayOrderStoryArc.
+  ///
+  /// In en, this message translates to:
+  /// **'Story arc'**
+  String get adminMetadataDisplayOrderStoryArc;
+
+  /// No description provided for @adminMetadataDisplayOrderProduction.
+  ///
+  /// In en, this message translates to:
+  /// **'Production'**
+  String get adminMetadataDisplayOrderProduction;
+
+  /// No description provided for @adminMetadataDisplayOrderTv.
+  ///
+  /// In en, this message translates to:
+  /// **'TV'**
+  String get adminMetadataDisplayOrderTv;
+
+  /// No description provided for @adminMetadataDisplayOrderAlternate.
+  ///
+  /// In en, this message translates to:
+  /// **'Alternate'**
+  String get adminMetadataDisplayOrderAlternate;
+
+  /// No description provided for @adminMetadataDisplayOrderRegional.
+  ///
+  /// In en, this message translates to:
+  /// **'Regional'**
+  String get adminMetadataDisplayOrderRegional;
+
+  /// No description provided for @adminMetadataDisplayOrderAlternateDvd.
+  ///
+  /// In en, this message translates to:
+  /// **'Alternate DVD'**
+  String get adminMetadataDisplayOrderAlternateDvd;
+
+  /// No description provided for @adminMetadataDisplayOrderDateModified.
+  ///
+  /// In en, this message translates to:
+  /// **'Date modified'**
+  String get adminMetadataDisplayOrderDateModified;
+
+  /// No description provided for @adminMetadataDisplayOrderSortName.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort name'**
+  String get adminMetadataDisplayOrderSortName;
+
+  /// No description provided for @adminMetadataDisplayOrderReleaseDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Release date'**
+  String get adminMetadataDisplayOrderReleaseDate;
+
+  /// No description provided for @adminMetadataSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Metadata Settings'**
+  String get adminMetadataSettings;
+
+  /// No description provided for @adminMetadataDownloadLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred download language'**
+  String get adminMetadataDownloadLanguage;
+
+  /// No description provided for @adminMetadataCountryRegion.
+  ///
+  /// In en, this message translates to:
+  /// **'Country/Region'**
+  String get adminMetadataCountryRegion;
+
+  /// No description provided for @adminMetadataInheritHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave this on Default to inherit the setting from a parent item, or from the server default.'**
+  String get adminMetadataInheritHelp;
+
+  /// No description provided for @adminMetadataField3DFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'3D format'**
+  String get adminMetadataField3DFormat;
+
+  /// No description provided for @adminMetadataPersonKindUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get adminMetadataPersonKindUnknown;
+
+  /// No description provided for @adminMetadataPersonKindActor.
+  ///
+  /// In en, this message translates to:
+  /// **'Actor'**
+  String get adminMetadataPersonKindActor;
+
+  /// No description provided for @adminMetadataPersonKindDirector.
+  ///
+  /// In en, this message translates to:
+  /// **'Director'**
+  String get adminMetadataPersonKindDirector;
+
+  /// No description provided for @adminMetadataPersonKindComposer.
+  ///
+  /// In en, this message translates to:
+  /// **'Composer'**
+  String get adminMetadataPersonKindComposer;
+
+  /// No description provided for @adminMetadataPersonKindWriter.
+  ///
+  /// In en, this message translates to:
+  /// **'Writer'**
+  String get adminMetadataPersonKindWriter;
+
+  /// No description provided for @adminMetadataPersonKindGuestStar.
+  ///
+  /// In en, this message translates to:
+  /// **'Guest star'**
+  String get adminMetadataPersonKindGuestStar;
+
+  /// No description provided for @adminMetadataPersonKindProducer.
+  ///
+  /// In en, this message translates to:
+  /// **'Producer'**
+  String get adminMetadataPersonKindProducer;
+
+  /// No description provided for @adminMetadataPersonKindConductor.
+  ///
+  /// In en, this message translates to:
+  /// **'Conductor'**
+  String get adminMetadataPersonKindConductor;
+
+  /// No description provided for @adminMetadataPersonKindLyricist.
+  ///
+  /// In en, this message translates to:
+  /// **'Lyricist'**
+  String get adminMetadataPersonKindLyricist;
+
+  /// No description provided for @adminMetadataPersonKindArranger.
+  ///
+  /// In en, this message translates to:
+  /// **'Arranger'**
+  String get adminMetadataPersonKindArranger;
+
+  /// No description provided for @adminMetadataPersonKindEngineer.
+  ///
+  /// In en, this message translates to:
+  /// **'Engineer'**
+  String get adminMetadataPersonKindEngineer;
+
+  /// No description provided for @adminMetadataPersonKindMixer.
+  ///
+  /// In en, this message translates to:
+  /// **'Mixer'**
+  String get adminMetadataPersonKindMixer;
+
+  /// No description provided for @adminMetadataPersonKindRemixer.
+  ///
+  /// In en, this message translates to:
+  /// **'Remixer'**
+  String get adminMetadataPersonKindRemixer;
+
+  /// No description provided for @adminMetadataPersonKindCreator.
+  ///
+  /// In en, this message translates to:
+  /// **'Creator'**
+  String get adminMetadataPersonKindCreator;
+
+  /// No description provided for @adminMetadataPersonKindArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Artist'**
+  String get adminMetadataPersonKindArtist;
+
+  /// No description provided for @adminMetadataPersonKindAlbumArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Album artist'**
+  String get adminMetadataPersonKindAlbumArtist;
+
+  /// No description provided for @adminMetadataPersonKindAuthor.
+  ///
+  /// In en, this message translates to:
+  /// **'Author'**
+  String get adminMetadataPersonKindAuthor;
+
+  /// No description provided for @adminMetadataPersonKindIllustrator.
+  ///
+  /// In en, this message translates to:
+  /// **'Illustrator'**
+  String get adminMetadataPersonKindIllustrator;
+
+  /// No description provided for @adminMetadataPersonKindPenciller.
+  ///
+  /// In en, this message translates to:
+  /// **'Penciller'**
+  String get adminMetadataPersonKindPenciller;
+
+  /// No description provided for @adminMetadataPersonKindInker.
+  ///
+  /// In en, this message translates to:
+  /// **'Inker'**
+  String get adminMetadataPersonKindInker;
+
+  /// No description provided for @adminMetadataPersonKindColorist.
+  ///
+  /// In en, this message translates to:
+  /// **'Colorist'**
+  String get adminMetadataPersonKindColorist;
+
+  /// No description provided for @adminMetadataPersonKindLetterer.
+  ///
+  /// In en, this message translates to:
+  /// **'Letterer'**
+  String get adminMetadataPersonKindLetterer;
+
+  /// No description provided for @adminMetadataPersonKindCoverArtist.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover artist'**
+  String get adminMetadataPersonKindCoverArtist;
+
+  /// No description provided for @adminMetadataPersonKindEditor.
+  ///
+  /// In en, this message translates to:
+  /// **'Editor'**
+  String get adminMetadataPersonKindEditor;
+
+  /// No description provided for @adminMetadataPersonKindTranslator.
+  ///
+  /// In en, this message translates to:
+  /// **'Translator'**
+  String get adminMetadataPersonKindTranslator;
+
+  /// No description provided for @adminMetadataPersonKindNarrator.
+  ///
+  /// In en, this message translates to:
+  /// **'Narrator'**
+  String get adminMetadataPersonKindNarrator;
+
+  /// No description provided for @adminMetadataAirDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Air days'**
+  String get adminMetadataAirDays;
+
+  /// No description provided for @adminMetadataLockItem.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock this item to prevent future metadata changes'**
+  String get adminMetadataLockItem;
+
+  /// No description provided for @adminMetadataEnabledFields.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled Fields'**
+  String get adminMetadataEnabledFields;
+
+  /// No description provided for @adminMetadataEnabledFieldsHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncheck a field to lock it and prevent its data from being changed.'**
+  String get adminMetadataEnabledFieldsHelp;
+
+  /// No description provided for @adminMetadataLockFieldName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get adminMetadataLockFieldName;
+
+  /// No description provided for @adminMetadataLockFieldOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get adminMetadataLockFieldOverview;
+
+  /// No description provided for @adminMetadataLockFieldGenres.
+  ///
+  /// In en, this message translates to:
+  /// **'Genres'**
+  String get adminMetadataLockFieldGenres;
+
+  /// No description provided for @adminMetadataLockFieldOfficialRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Parental rating'**
+  String get adminMetadataLockFieldOfficialRating;
+
+  /// No description provided for @adminMetadataLockFieldCast.
+  ///
+  /// In en, this message translates to:
+  /// **'People'**
+  String get adminMetadataLockFieldCast;
+
+  /// No description provided for @adminMetadataLockFieldProductionLocations.
+  ///
+  /// In en, this message translates to:
+  /// **'Production locations'**
+  String get adminMetadataLockFieldProductionLocations;
+
+  /// No description provided for @adminMetadataLockFieldBirthLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Birth location'**
+  String get adminMetadataLockFieldBirthLocation;
+
+  /// No description provided for @adminMetadataLockFieldRuntime.
+  ///
+  /// In en, this message translates to:
+  /// **'Runtime'**
+  String get adminMetadataLockFieldRuntime;
+
+  /// No description provided for @adminMetadataLockFieldStudios.
+  ///
+  /// In en, this message translates to:
+  /// **'Studios'**
+  String get adminMetadataLockFieldStudios;
+
+  /// No description provided for @adminMetadataLockFieldTags.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get adminMetadataLockFieldTags;
 
   /// No description provided for @adminMetadataGenres.
   ///
@@ -12544,6 +12928,12 @@ abstract class AppLocalizations {
   /// **'Restart'**
   String get adminPluginsRestart;
 
+  /// Label for the installed-plugin filter showing changes that require a server restart
+  ///
+  /// In en, this message translates to:
+  /// **'Restart required'**
+  String get adminPluginsRestartRequired;
+
   /// No description provided for @adminPluginsNoSearchResults.
   ///
   /// In en, this message translates to:
@@ -12555,6 +12945,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No plugins installed'**
   String get adminPluginsNoneInstalled;
+
+  /// Empty state for the active installed-plugin filter
+  ///
+  /// In en, this message translates to:
+  /// **'No active plugins'**
+  String get adminPluginsNoneActive;
+
+  /// Empty state for the installed-plugin filter showing changes that require a server restart
+  ///
+  /// In en, this message translates to:
+  /// **'No plugins require a server restart'**
+  String get adminPluginsNoneRequireRestart;
 
   /// No description provided for @adminPluginsUpdateAvailable.
   ///
@@ -15676,6 +16078,12 @@ abstract class AppLocalizations {
   /// **'Skip Intros and Outros?'**
   String get settingsSkipIntrosAndOutros;
 
+  /// Setting label for what to do with one type of media segment
+  ///
+  /// In en, this message translates to:
+  /// **'{segment} Segments'**
+  String settingsMediaSegmentTypeAction(String segment);
+
   /// Setting label for media segment countdown customizations
   ///
   /// In en, this message translates to:
@@ -15766,23 +16174,11 @@ abstract class AppLocalizations {
   /// **'Media3 (recommended)'**
   String get settingsPlaybackEngineMedia3Recommended;
 
-  /// No description provided for @settingsPlaybackEngineMedia3Legacy.
-  ///
-  /// In en, this message translates to:
-  /// **'Media3 (legacy)'**
-  String get settingsPlaybackEngineMedia3Legacy;
-
   /// No description provided for @settingsPlaybackEngineMpvLegacy.
   ///
   /// In en, this message translates to:
   /// **'mpv (legacy)'**
   String get settingsPlaybackEngineMpvLegacy;
-
-  /// No description provided for @settingsPlaybackEngineMpvRecommended.
-  ///
-  /// In en, this message translates to:
-  /// **'mpv (recommended)'**
-  String get settingsPlaybackEngineMpvRecommended;
 
   /// No description provided for @settingsDolbyVisionFallback.
   ///
@@ -19149,6 +19545,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Media Details and Spoilers'**
   String get mediaDetailsAndSpoilers;
+
+  /// Details screen setting that hands trailers to the system
+  ///
+  /// In en, this message translates to:
+  /// **'Open Trailers in External App'**
+  String get openTrailersExternally;
+
+  /// Subtitle for the external trailers setting
+  ///
+  /// In en, this message translates to:
+  /// **'Trailers open in the YouTube app or browser instead of the built-in player'**
+  String get openTrailersExternallySubtitle;
 
   /// Setting title to hide media description on details screen
   ///

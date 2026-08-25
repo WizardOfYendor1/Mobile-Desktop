@@ -142,6 +142,7 @@ class NativeControllerMappingScreenState
   int _selected = 0;
   int _deviceIndex = 0;
   bool _confirmingCopy = false;
+  int _copySelected = 0;
   bool _choosingControllerType = false;
   int _controllerTypeSelected = 0;
   bool _choosingPlayer = false;
@@ -157,6 +158,7 @@ class NativeControllerMappingScreenState
   Timer? _testExitTimer;
   final Stopwatch _testExitElapsed = Stopwatch();
   double _testExitProgress = 0;
+
   /// Long enough that it cannot be hit by accident while testing the B button,
   /// which is the whole point of the gesture. The panel shows a countdown ring
   /// so the wait is visible rather than a guess.
@@ -298,10 +300,12 @@ class NativeControllerMappingScreenState
     }
     if (_choosingPlayer) {
       setState(() => _choosingPlayer = false);
+      _revealRow(_selected);
       return true;
     }
     if (_choosingControllerType) {
       setState(() => _choosingControllerType = false);
+      _revealRow(_selected);
       return true;
     }
     if (_confirmingCopy) {
@@ -362,12 +366,12 @@ class NativeControllerMappingScreenState
         case 4:
         case 5:
           setState(() {
-            _selected = _selected == _copyConfirmRow
+            _copySelected = _copySelected == _copyConfirmRow
                 ? _copyCancelRow
                 : _copyConfirmRow;
           });
         case 0:
-          if (_selected == _copyConfirmRow) {
+          if (_copySelected == _copyConfirmRow) {
             _confirmCopy();
           } else {
             setState(() => _confirmingCopy = false);
@@ -418,15 +422,37 @@ class NativeControllerMappingScreenState
   void _move(int delta) {
     final next = ((_selected + delta) % _rowCount + _rowCount) % _rowCount;
     setState(() => _selected = next);
-    if (!_scroll.hasClients) return;
-    final target = (next * _rowExtent)
-        .clamp(0.0, _scroll.position.maxScrollExtent)
-        .toDouble();
-    _scroll.animateTo(
-      target,
-      duration: const Duration(milliseconds: 150),
-      curve: Curves.easeOut,
-    );
+    _revealRow(next);
+  }
+
+  /// Brings a cursor row into view after the current list has attached.
+  ///
+  /// Every list shares [_scroll], so a sub-list can inherit an offset that made
+  /// sense for the main list (and vice versa). Scheduling this after [setState]
+  /// makes the calculation against the list now on screen, rather than the one
+  /// it replaced.
+  void _revealRow(int index) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      final position = _scroll.position;
+      final rowStart = index * _rowExtent;
+      final rowEnd = rowStart + _rowExtent;
+      final viewportEnd = position.pixels + position.viewportDimension;
+      final target = rowStart < position.pixels
+          ? rowStart
+          : rowEnd > viewportEnd
+          ? rowEnd - position.viewportDimension
+          : position.pixels;
+      final clampedTarget = target
+          .clamp(0.0, position.maxScrollExtent)
+          .toDouble();
+      if ((clampedTarget - position.pixels).abs() < 0.5) return;
+      _scroll.animateTo(
+        clampedTarget,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   void _changeDevice(int delta) {
@@ -599,7 +625,7 @@ class NativeControllerMappingScreenState
     if (widget.onCopyMapping == null || !_canCopy) return;
     setState(() {
       _confirmingCopy = true;
-      _selected = _copyConfirmRow;
+      _copySelected = _copyConfirmRow;
     });
   }
 
@@ -635,13 +661,14 @@ class NativeControllerMappingScreenState
     _playerSelected = _playerChoices.indexOf(current);
     if (_playerSelected < 0) _playerSelected = 0;
     setState(() => _choosingPlayer = true);
+    _revealRow(_playerSelected);
   }
 
   void _movePlayer(int delta) {
     final count = _playerChoices.length;
-    setState(() {
-      _playerSelected = ((_playerSelected + delta) % count + count) % count;
-    });
+    final next = ((_playerSelected + delta) % count + count) % count;
+    setState(() => _playerSelected = next);
+    _revealRow(next);
   }
 
   void _applyPlayer() {
@@ -653,6 +680,7 @@ class NativeControllerMappingScreenState
       _playerChoices[_playerSelected],
     );
     setState(() => _choosingPlayer = false);
+    _revealRow(_selected);
     unawaited(callback(assignments));
   }
 
@@ -679,15 +707,15 @@ class NativeControllerMappingScreenState
     );
     if (_controllerTypeSelected < 0) _controllerTypeSelected = 0;
     setState(() => _choosingControllerType = true);
+    _revealRow(_controllerTypeSelected);
   }
 
   void _moveControllerType(int delta) {
     final count = _controllerTypeChoices.length;
     if (count == 0) return;
-    setState(() {
-      _controllerTypeSelected =
-          ((_controllerTypeSelected + delta) % count + count) % count;
-    });
+    final next = ((_controllerTypeSelected + delta) % count + count) % count;
+    setState(() => _controllerTypeSelected = next);
+    _revealRow(next);
   }
 
   static const _snapLabels = {
@@ -725,6 +753,7 @@ class NativeControllerMappingScreenState
       _mapping = _mapping.withControllerType(widget.coreId, deviceType);
       _choosingControllerType = false;
     });
+    _revealRow(_selected);
     unawaited(callback(device.id, deviceType));
   }
 
@@ -1013,9 +1042,23 @@ class NativeControllerMappingScreenState
         itemCount: _rowCount,
         itemBuilder: (context, index) {
           if (index == 0) {
+            final device = _device!;
+            final assignment = device.playerLabel.replaceFirst(
+              ' · pinned',
+              ', pinned',
+            );
             return _row(
-              '${_device!.playerLabel} — ${_device!.name}',
+              '${device.name} - ($assignment)',
               index,
+              labelSpan: TextSpan(
+                children: [
+                  TextSpan(text: '${device.name} - '),
+                  TextSpan(
+                    text: '($assignment)',
+                    style: const TextStyle(fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ),
               trailing: Icons.swap_horiz,
               onTap: () {
                 setState(() => _selected = index);
@@ -1118,17 +1161,26 @@ class NativeControllerMappingScreenState
     );
   }
 
+  /// Each sub-list keeps its own cursor so backing out never moves this one.
+  int get _cursor {
+    if (_choosingPlayer) return _playerSelected;
+    if (_choosingControllerType) return _controllerTypeSelected;
+    if (_confirmingCopy) return _copySelected;
+    return _selected;
+  }
+
   Widget _row(
     String label,
     int index, {
     String? subtitle,
     IconData? trailing,
+    TextSpan? labelSpan,
     // Set when the label is text the core supplied rather than one of this
     // app's own names, so a game's vocabulary reads as a quotation.
     bool italicLabel = false,
     required VoidCallback onTap,
   }) {
-    final selected = index == _selected;
+    final selected = index == _cursor;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1148,18 +1200,29 @@ class NativeControllerMappingScreenState
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontStyle: italicLabel
-                          ? FontStyle.italic
-                          : FontStyle.normal,
+                  if (labelSpan == null)
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontStyle: italicLabel
+                            ? FontStyle.italic
+                            : FontStyle.normal,
+                      ),
+                    )
+                  else
+                    Text.rich(
+                      labelSpan,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                      ),
                     ),
-                  ),
                   if (subtitle != null)
                     Text(
                       subtitle,

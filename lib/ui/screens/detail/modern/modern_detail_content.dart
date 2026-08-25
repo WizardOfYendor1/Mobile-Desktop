@@ -25,6 +25,7 @@ import '../../../../util/platform_detection.dart';
 import '../../../../util/focus/dpad_keys.dart';
 import '../../../../util/focus/focus_scroll.dart';
 import '../../../navigation/destinations.dart';
+import '../../../navigation/playback_launcher.dart';
 import '../../../widgets/logo_view.dart';
 import '../../../widgets/marquee_text.dart';
 import '../../../widgets/media_card.dart';
@@ -71,6 +72,62 @@ import '../../../widgets/seerr/seerr_status_pill.dart';
 double _desktopUiScale({UserPreferences? prefs}) {
   final effectivePrefs = prefs ?? GetIt.instance<UserPreferences>();
   return effectivePrefs.get(UserPreferences.desktopUiScale).scaleFactor;
+}
+
+final _studioNamePunctuation = RegExp(r'[^a-z0-9]');
+
+/// Library and TMDB studio names rarely agree on punctuation or spacing, so
+/// they are compared without either.
+String normalizeStudioName(String name) =>
+    name.toLowerCase().replaceAll(_studioNamePunctuation, '');
+
+typedef StudioLogoIndex = ({
+  Map<String, String> byName,
+  Map<String, String> byNormalizedName,
+});
+
+/// Indexes [companies] under both their exact and normalized names. Two of
+/// them can share a normalized key, Apple TV and Apple TV+ for one, so the
+/// exact names are kept apart and consulted first.
+StudioLogoIndex studioLogoIndex(Iterable<StudioCompany> companies) {
+  final byName = <String, String>{};
+  final byNormalizedName = <String, String>{};
+  for (final company in companies) {
+    final logo = company.imageUrl;
+    if (logo == null) continue;
+    byName[company.name.trim().toLowerCase()] = logo;
+    final normalized = normalizeStudioName(company.name);
+    if (normalized.isNotEmpty) {
+      byNormalizedName[normalized] = logo;
+    }
+  }
+  return (byName: byName, byNormalizedName: byNormalizedName);
+}
+
+/// The logo to show for [studioName], if one of [index] is close enough.
+///
+/// Exact names win, then normalized ones. Anything left has to share a start,
+/// because matching anywhere in the name handed Netflix the logo of a company
+/// called X. The longest key wins so the closest name does, rather than
+/// whichever the server listed first.
+String? studioLogoUrlFor(String studioName, StudioLogoIndex index) {
+  final normalized = normalizeStudioName(studioName);
+  final exact =
+      index.byName[studioName.trim().toLowerCase()] ??
+      index.byNormalizedName[normalized];
+  if (exact != null || normalized.isEmpty) return exact;
+
+  String? best;
+  var bestKeyLength = 0;
+  for (final entry in index.byNormalizedName.entries) {
+    final shareStart =
+        entry.key.startsWith(normalized) || normalized.startsWith(entry.key);
+    if (shareStart && entry.key.length > bestKeyLength) {
+      bestKeyLength = entry.key.length;
+      best = entry.value;
+    }
+  }
+  return best;
 }
 
 /// "Modern" detail-screen style: one responsive screen that chooses a landscape
@@ -2083,21 +2140,12 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
   Widget _studiosTab(BuildContext context, AggregatedItem item) {
     // Only the library's own studios can be filtered, so build the cards from
     // those and reuse a TMDB logo whenever a studio name matches one.
-    final tmdbLogoByName = <String, String>{};
-    for (final company in _tmdbStudios) {
-      final logo = company.imageUrl;
-      if (logo != null) {
-        tmdbLogoByName[company.name.trim().toLowerCase()] = logo;
-      }
-    }
+    final logos = studioLogoIndex(_tmdbStudios);
     final studios = <({String name, String? logoUrl})>[];
     for (final s in item.studios) {
       final name = s['Name']?.toString() ?? '';
       if (name.isEmpty) continue;
-      studios.add((
-        name: name,
-        logoUrl: tmdbLogoByName[name.trim().toLowerCase()],
-      ));
+      studios.add((name: name, logoUrl: studioLogoUrlFor(name, logos)));
     }
     if (studios.isEmpty) {
       return const SizedBox.shrink();
@@ -3334,18 +3382,40 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
 
   Future<void> _playTrack(BuildContext context, int index) async {
     final manager = GetIt.instance<PlaybackManager>();
-    await manager.playItems(_vm.tracks, startIndex: index);
-    if (!context.mounted) return;
     final isAudio = _vm.tracks.every(_isAudioItem);
-    context.push(isAudio ? Destinations.audioPlayer : Destinations.videoPlayer);
+    await launchPlayerWhilePreparing(
+      context,
+      manager: manager,
+      destination: isAudio
+          ? Destinations.audioPlayer
+          : Destinations.videoPlayer,
+      startPlayback: (launchSession) async {
+        await runPlaybackStart(
+          launchSession,
+          () => manager.playItems(_vm.tracks, startIndex: index),
+        );
+        return true;
+      },
+    );
   }
 
   Future<void> _playPlaylistTrack(BuildContext context, int index) async {
     final manager = GetIt.instance<PlaybackManager>();
-    await manager.playItems(_vm.playlistItems, startIndex: index);
-    if (!context.mounted) return;
     final isAudio = _vm.playlistItems.every(_isAudioItem);
-    context.push(isAudio ? Destinations.audioPlayer : Destinations.videoPlayer);
+    await launchPlayerWhilePreparing(
+      context,
+      manager: manager,
+      destination: isAudio
+          ? Destinations.audioPlayer
+          : Destinations.videoPlayer,
+      startPlayback: (launchSession) async {
+        await runPlaybackStart(
+          launchSession,
+          () => manager.playItems(_vm.playlistItems, startIndex: index),
+        );
+        return true;
+      },
+    );
   }
 
   String _getCollectionSortLabel(CollectionSortOption option, AppLocalizations l10n) {
@@ -4329,10 +4399,16 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
         ? '$customLabel - ${episode.name}'
         : '${l10n.nextUp} - $title';
     final progress = (episode.playedPercentage ?? 0) / 100.0;
+    final hideOverview = hidesMediaDescription(
+      itemType: episode.type,
+      hideMediaDescription: widget.prefs.get(
+        UserPreferences.hideDetailsMediaDescription,
+      ),
+    );
     return UpNextCard(
       label: combinedLabel,
       title: '',
-      description: episode.overview?.trim(),
+      description: hideOverview ? null : episode.overview?.trim(),
       imageUrl: _imageUrl(episode),
       progress: progress,
       remainingLabel: _remainingLabel(episode, l10n),
@@ -4351,35 +4427,46 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
       onNavigateDown: _focusSelectedTab,
       onTap: () async {
         final manager = GetIt.instance<PlaybackManager>();
-        final hasProgress = (episode!.playbackPosition?.inMilliseconds ?? 0) > 0 ||
-                            (episode.playedPercentage ?? 0) > 0;
+        final targetEpisode = episode!;
+        final hasProgress =
+            (targetEpisode.playbackPosition?.inMilliseconds ?? 0) > 0 ||
+            (targetEpisode.playedPercentage ?? 0) > 0;
         // On a season, follow the list as displayed so playback carries on
         // through the season instead of stopping after this one item.
-        var queue = <AggregatedItem>[episode];
+        var queue = <AggregatedItem>[targetEpisode];
         var startIndex = 0;
         if (item.type == 'Season') {
           final playable = _vm.episodes
-              .where((e) => e.id == episode!.id || isEligibleNextEpisodeCandidate(e))
+              .where(
+                (e) =>
+                    e.id == targetEpisode.id ||
+                    isEligibleNextEpisodeCandidate(e),
+              )
               .toList();
-          final at = playable.indexWhere((e) => e.id == episode!.id);
+          final at = playable.indexWhere((e) => e.id == targetEpisode.id);
           if (at >= 0) {
             queue = playable;
             startIndex = at;
           }
         }
-        await manager.playItems(
-          queue,
-          startIndex: startIndex,
-          startPosition: hasProgress
-              ? (episode.playbackPosition ?? Duration.zero)
-              : Duration.zero,
+        await launchPlayerWhilePreparing(
+          context,
+          manager: manager,
+          destination: Destinations.videoPlayer,
+          startPlayback: (launchSession) async {
+            await runPlaybackStart(
+              launchSession,
+              () => manager.playItems(
+                queue,
+                startIndex: startIndex,
+                startPosition: hasProgress
+                    ? (targetEpisode.playbackPosition ?? Duration.zero)
+                    : Duration.zero,
+              ),
+            );
+            return true;
+          },
         );
-        if (context.mounted) {
-          final destination = manager.playbackDeferredToExternalPlayer
-              ? Destinations.externalPlayer
-              : Destinations.videoPlayer;
-          unawaited(context.push(destination));
-        }
       },
     );
   }

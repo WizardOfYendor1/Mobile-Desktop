@@ -1114,11 +1114,17 @@ class TvFocusHighlight extends StatefulWidget {
   final bool enabled;
   final FocusNode? focusNode;
 
+  /// Replaces the default tile outer margin (see [_settingsTileOuterPadding]).
+  /// Panels that want edge-to-edge tile highlights pass a tighter EdgeInsets;
+  /// null keeps the shared settings margins.
+  final EdgeInsetsGeometry? outerPadding;
+
   const TvFocusHighlight({
     super.key,
     required this.builder,
     this.enabled = true,
     this.focusNode,
+    this.outerPadding,
   });
 
   @override
@@ -1163,7 +1169,7 @@ class _TvFocusHighlightState extends State<TvFocusHighlight> {
       descendantsAreFocusable: widget.enabled,
       onFocusChange: _onFocusChange,
       child: Padding(
-        padding: _settingsTileOuterPadding(context),
+        padding: widget.outerPadding ?? _settingsTileOuterPadding(context),
         child: Opacity(
           opacity: widget.enabled ? 1.0 : 0.45,
           child: AnimatedContainer(

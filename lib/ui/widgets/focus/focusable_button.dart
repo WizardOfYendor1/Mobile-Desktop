@@ -18,7 +18,6 @@ class FocusableButton extends StatelessWidget {
   final VoidCallback? onNavigateRight;
   final VoidCallback? onBack;
   final String? semanticLabel;
-  final bool showFocusRing;
   final bool autoScroll;
 
   const FocusableButton({
@@ -37,7 +36,6 @@ class FocusableButton extends StatelessWidget {
     this.onNavigateRight,
     this.onBack,
     this.semanticLabel,
-    this.showFocusRing = false,
     this.autoScroll = false,
   });
 
@@ -51,7 +49,6 @@ class FocusableButton extends StatelessWidget {
       focusColor: focusColor,
       disableScale: true,
       useBackgroundFocus: true,
-      alwaysShowFocusBorder: showFocusRing,
       autoScroll: autoScroll,
       descendantsAreFocusable: false,
       onFocusChange: onFocusChange,

@@ -40,6 +40,12 @@ final class NowPlayingController {
     private var queueHasNext = false
     private var queueHasPrevious = false
 
+    /// Seconds a transport command moves by. A physical fast forward or rewind
+    /// key lands on the seek commands rather than the skip ones, so both read
+    /// the same setting and a remote agrees with the on screen buttons.
+    private var skipForwardInterval: TimeInterval = 10
+    private var skipBackwardInterval: TimeInterval = 10
+
     // MPNowPlayingSession is an iOS and tvOS API. Only tvOS drives Now Playing
     // natively, so on macOS this class stays inert and the default centers
     // stand in for the session.
@@ -124,15 +130,40 @@ final class NowPlayingController {
         }
         addTarget(center.skipForwardCommand) { [weak self] event in
             MainActor.assumeIsolated {
-                let interval = (event as? MPSkipIntervalCommandEvent)?.interval ?? 10
-                self?.onSkip?(interval)
+                guard let self else { return .commandFailed }
+                let interval = (event as? MPSkipIntervalCommandEvent)?.interval
+                self.onSkip?(interval ?? self.skipForwardInterval)
                 return .success
             }
         }
         addTarget(center.skipBackwardCommand) { [weak self] event in
             MainActor.assumeIsolated {
-                let interval = (event as? MPSkipIntervalCommandEvent)?.interval ?? 10
-                self?.onSkip?(-interval)
+                guard let self else { return .commandFailed }
+                let interval = (event as? MPSkipIntervalCommandEvent)?.interval
+                self.onSkip?(-(interval ?? self.skipBackwardInterval))
+                return .success
+            }
+        }
+        addTarget(center.seekForwardCommand) { [weak self] event in
+            MainActor.assumeIsolated {
+                guard let self else { return .commandFailed }
+                // A transport key sends begin on the press and end on the
+                // release. One jump per press is what the setting describes,
+                // so the release is acknowledged and moves nothing.
+                if (event as? MPSeekCommandEvent)?.type == .endSeeking {
+                    return .success
+                }
+                self.onSkip?(self.skipForwardInterval)
+                return .success
+            }
+        }
+        addTarget(center.seekBackwardCommand) { [weak self] event in
+            MainActor.assumeIsolated {
+                guard let self else { return .commandFailed }
+                if (event as? MPSeekCommandEvent)?.type == .endSeeking {
+                    return .success
+                }
+                self.onSkip?(-self.skipBackwardInterval)
                 return .success
             }
         }
@@ -149,16 +180,42 @@ final class NowPlayingController {
             }
         }
 
-        center.skipForwardCommand.preferredIntervals = [NSNumber(value: 10)]
-        center.skipBackwardCommand.preferredIntervals = [NSNumber(value: 10)]
+        applySkipIntervals()
         center.playCommand.isEnabled = true
         center.pauseCommand.isEnabled = true
         center.togglePlayPauseCommand.isEnabled = true
         center.changePlaybackPositionCommand.isEnabled = true
         center.skipForwardCommand.isEnabled = true
         center.skipBackwardCommand.isEnabled = true
+        center.seekForwardCommand.isEnabled = true
+        center.seekBackwardCommand.isEnabled = true
         center.nextTrackCommand.isEnabled = queueHasNext
         center.previousTrackCommand.isEnabled = queueHasPrevious
+    }
+
+    /// Follows the user's skip lengths. Safe before the commands register,
+    /// since registration applies whatever is set at the time, and cheap to
+    /// call repeatedly, since an unchanged pair is dropped here.
+    func setSkipIntervals(forward: TimeInterval, backward: TimeInterval) {
+        let forward = max(1, forward)
+        let backward = max(1, backward)
+        if forward == skipForwardInterval, backward == skipBackwardInterval {
+            return
+        }
+        skipForwardInterval = forward
+        skipBackwardInterval = backward
+        guard commandsRegistered else { return }
+        applySkipIntervals()
+    }
+
+    private func applySkipIntervals() {
+        let center = commandCenter
+        center.skipForwardCommand.preferredIntervals = [
+            NSNumber(value: skipForwardInterval)
+        ]
+        center.skipBackwardCommand.preferredIntervals = [
+            NSNumber(value: skipBackwardInterval)
+        ]
     }
 
     func setQueueCapabilities(hasNext: Bool, hasPrevious: Bool) {

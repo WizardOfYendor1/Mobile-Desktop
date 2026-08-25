@@ -1193,17 +1193,20 @@ packages:
   media_kit_libs_windows_video:
     dependency: "direct main"
     description:
-      path: "packages/media_kit_libs_windows_video"
-      relative: true
-    source: path
-    version: "1.0.11"
+      path: "libs/windows/media_kit_libs_windows_video"
+      ref: "43368ec394dcce7795707358b751a748c1fdc610"
+      resolved-ref: "43368ec394dcce7795707358b751a748c1fdc610"
+      url: "https://github.com/RadicalMuffinMan/media-kit.git"
+    source: git
+    version: "1.0.12"
   media_kit_video:
     dependency: "direct main"
     description:
-      name: media_kit_video
-      sha256: afaa509e7b7e0bf247557a3a740cde903a52c34ace9810f94500e127bd7b043d
-      url: "https://pub.dev"
-    source: hosted
+      path: media_kit_video
+      ref: "43368ec394dcce7795707358b751a748c1fdc610"
+      resolved-ref: "43368ec394dcce7795707358b751a748c1fdc610"
+      url: "https://github.com/RadicalMuffinMan/media-kit.git"
+    source: git
     version: "2.0.1"
   meta:
     dependency: transitive

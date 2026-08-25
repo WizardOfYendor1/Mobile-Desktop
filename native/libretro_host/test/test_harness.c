@@ -341,65 +341,10 @@ static void test_analog_via_core(const char *core_path, const char *rom_path,
 }
 
 // ---------------------------------------------------------------------------
-// lh_analog_queried_ports: the per-port "has this core ever asked for
-// RETRO_DEVICE_ANALOG on this port since content was loaded" signal that
-// drives the platform's digital/analog rule. Reuses stub_analog_check=on
-// (see probe_analog in stub_core.c), which queries RETRO_DEVICE_ANALOG on
-// port 0 for real through input_state_cb - the same dispatch path
-// test_analog_via_core exercises - rather than poking the bit directly,
-// since the whole point is to prove the host sets it from that real query.
-// ---------------------------------------------------------------------------
-
-static void test_analog_queried_ports(const char *core_path,
-                                      const char *rom_path,
-                                      const char *work_dir) {
-  printf("analog-queried-ports tracking:\n");
-  lh_host *host = lh_create(LH_FORMAT_RGBA8888, make_callbacks());
-  CHECK(lh_analog_queried_ports(host) == 0,
-        "a freshly created host reports no queried ports");
-
-  const char *keys[] = {"stub_analog_check"};
-  const char *vals[] = {"on"};
-  lh_av_info av;
-  int rc = lh_load(host, core_path, rom_path, work_dir, work_dir,
-                   "analogqueriedports", keys, vals, 1, &av);
-  CHECK(rc == 0, "core loads with the analog check variable set");
-  if (rc != 0) {
-    lh_destroy(host);
-    return;
-  }
-  CHECK(lh_analog_queried_ports(host) == 0,
-        "loading content clears any previously-set bits before the core has "
-        "run a single frame");
-
-  lh_start(host);
-  msleep(200);  // let probe_analog's port-0 RETRO_DEVICE_ANALOG query land
-  CHECK((lh_analog_queried_ports(host) & 1u) != 0,
-        "port 0's bit is set after the core queries RETRO_DEVICE_ANALOG on it");
-  CHECK((lh_analog_queried_ports(host) & ~1u) == 0,
-        "no other port's bit is set - the stub only queries port 0");
-
-  // Reloading content is a new game, and the design treats this signal as
-  // per-game: stop the running core and load again on the same host, this
-  // time without the analog probe, and confirm lh_load itself cleared the
-  // mask rather than the bit surviving from the previous load.
-  lh_stop(host);
-  const char *off_vals[] = {"off"};
-  rc = lh_load(host, core_path, rom_path, work_dir, work_dir,
-              "analogqueriedportsreload", keys, off_vals, 1, &av);
-  CHECK(rc == 0, "core reloads for the reload-clears-the-mask case");
-  CHECK(lh_analog_queried_ports(host) == 0,
-        "reloading content clears a port bit set by the previous load");
-
-  lh_stop(host);
-  lh_destroy(host);
-}
-
-// ---------------------------------------------------------------------------
 // lh_analog_descriptor_ports: the per-port "does the CURRENT GAME describe
 // RETRO_DEVICE_ANALOG controls on this port" signal, from the descriptors
-// SET_INPUT_DESCRIPTORS publishes. This replaces lh_analog_queried_ports as
-// the platform's digital/analog gate: that older signal answers "did the
+// SET_INPUT_DESCRIPTORS publishes. This replaced an older "did the core query
+// analog" gate, since that signal answers "did the
 // core call input_state_cb with RETRO_DEVICE_ANALOG", which FBNeo does for
 // every game including purely 4-way ones (BurgerTime), and which Stella does
 // for an absolute paddle game (Breakout) - accurate about what it measures,
@@ -1360,8 +1305,6 @@ int main(int argc, char **argv) {
     CHECK(lh_test_read_trigger(stale, 0, 0) == 0 &&
               lh_test_read_trigger(stale, 0, 1) == 0,
           "the new game starts with triggers released");
-    CHECK(lh_analog_queried_ports(stale) == 0,
-          "the analog-queried mask clears with it");
     lh_destroy(stale);
   }
 
@@ -1391,7 +1334,6 @@ int main(int argc, char **argv) {
   test_input_latch();
   test_analog_passthrough();
   test_analog_via_core(core_path, rom_path, work_dir);
-  test_analog_queried_ports(core_path, rom_path, work_dir);
   test_analog_descriptor_ports(core_path, rom_path, work_dir);
   test_vfs_zip(core_path, work_dir);
   test_vfs_dir_reports_subdir(core_path, rom_path, work_dir);

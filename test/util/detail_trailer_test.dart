@@ -1,6 +1,11 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
+import 'package:jellyfin_preference/jellyfin_preference.dart';
 import 'package:moonfin/data/models/aggregated_item.dart';
+import 'package:moonfin/preference/user_preferences.dart';
 import 'package:moonfin/util/detail_trailer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 AggregatedItem _item({
   String type = 'Movie',
@@ -112,6 +117,64 @@ void main() {
       expect(
         isTrailerFeature(_item(type: 'Video', extraType: 'Interview')),
         isFalse,
+      );
+    });
+  });
+
+  group('external trailers', () {
+    TestWidgetsFlutterBinding.ensureInitialized();
+
+    late UserPreferences prefs;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      final store = PreferenceStore();
+      await store.init();
+      prefs = UserPreferences(store);
+      GetIt.instance.registerSingleton<UserPreferences>(prefs);
+    });
+
+    tearDown(() => GetIt.instance.reset());
+
+    test('trailers stay in-app unless the user opts out', () {
+      expect(opensTrailersExternally(), isFalse);
+    });
+
+    test('the toggle hands trailers to the system', () async {
+      await prefs.set(UserPreferences.detailTrailersExternal, true);
+      expect(opensTrailersExternally(), isTrue);
+    });
+
+    test(
+      'a launch nothing can handle reports false instead of throwing',
+      () async {
+        // No url_launcher platform exists in a test, so the call fails the way
+        // it does on a device with no handler, and the caller falls back
+        // in-app.
+        expect(
+          await launchTrailerExternally('https://youtube.com/watch?v=x'),
+          isFalse,
+        );
+      },
+    );
+
+    test('a launch the system accepts reports true', () async {
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMethodCallHandler(
+        const MethodChannel('plugins.flutter.io/url_launcher'),
+        (call) async => true,
+      );
+      addTearDown(
+        () => messenger.setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/url_launcher'),
+          null,
+        ),
+      );
+
+      expect(
+        await launchTrailerExternally('https://youtube.com/watch?v=x'),
+        isTrue,
       );
     });
   });

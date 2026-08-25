@@ -146,6 +146,25 @@ void main() {
       expect(buttons.single.pressed, false);
     });
 
+    test('re-pressing a button moves it to the end, latest last', () {
+      final folder = ControllerDiagnosticsFolder('pad:0');
+      folder.fold(_buttonEvent('0', GamepadButton.a, 1.0)); // A pressed
+      folder.fold(_buttonEvent('0', GamepadButton.a, 0.0)); // A released
+      folder.fold(_buttonEvent('0', GamepadButton.b, 1.0)); // B held
+      folder.fold(_buttonEvent('0', GamepadButton.a, 1.0)); // A pressed again
+
+      final pressedOrder = folder
+          .snapshot()
+          .channels
+          .whereType<ButtonChannel>()
+          .where((b) => b.pressed)
+          .map((b) => b.rawName)
+          .toList();
+      // Both A and B are held, but A was the more recent press, so it must
+      // be last -- a LinkedHashMap reassignment alone would leave B last.
+      expect(pressedOrder, ['b', 'a']);
+    });
+
     test('events from a different gamepadId than begun are ignored', () {
       final folder = ControllerDiagnosticsFolder('pad:0');
       final changed = folder.fold(_axisEvent('1', GamepadAxis.leftStickX, 0.5));
@@ -235,6 +254,39 @@ void main() {
       expect(updated.single.pressed, false);
     });
 
+    test('re-pressing a button moves it to the end, latest last', () {
+      final folder = AndroidControllerDiagnosticsFolder('android-connection-1');
+      folder.foldButton({
+        'connectionId': 'android-connection-1',
+        'keyCode': 96, // A
+        'pressed': true,
+      });
+      folder.foldButton({
+        'connectionId': 'android-connection-1',
+        'keyCode': 96, // A released
+        'pressed': false,
+      });
+      folder.foldButton({
+        'connectionId': 'android-connection-1',
+        'keyCode': 97, // B held
+        'pressed': true,
+      });
+      folder.foldButton({
+        'connectionId': 'android-connection-1',
+        'keyCode': 96, // A pressed again
+        'pressed': true,
+      });
+
+      final pressedOrder = folder
+          .snapshot()
+          .channels
+          .whereType<ButtonChannel>()
+          .where((b) => b.pressed)
+          .map((b) => b.rawCode)
+          .toList();
+      expect(pressedOrder, [97, 96]);
+    });
+
     test('an axes payload for a different connectionId than begun is ignored', () {
       final folder = AndroidControllerDiagnosticsFolder('android-connection-1');
       final changed = folder.foldAxes({
@@ -251,6 +303,46 @@ void main() {
 
       expect(changed, false);
       expect(folder.snapshot().channels, isEmpty);
+    });
+
+    test('a channel echoed unchanged alongside another axis moving never '
+        'earns a DIGITAL verdict', () {
+      final folder = AndroidControllerDiagnosticsFolder('android-connection-1');
+      // Every payload carries all six channels; only the left stick actually
+      // moves (through switch-like -1/0/1 values on both its axes), while
+      // right/hat/l2/r2 are echoed back resting at a constant 0 in every
+      // payload.
+      for (var i = 0; i < 60; i++) {
+        folder.foldAxes({
+          'connectionId': 'android-connection-1',
+          'lx': i.isEven ? -1.0 : 1.0,
+          'ly': i.isEven ? 1.0 : -1.0,
+          'rx': 0.0,
+          'ry': 0.0,
+          'hatX': 0.0,
+          'hatY': 0.0,
+          'l2': 0.0,
+          'r2': 0.0,
+        });
+      }
+
+      final sticks = {
+        for (final s in folder.snapshot().channels.whereType<StickChannel>())
+          s.id: s,
+      };
+      expect(sticks['left']!.verdict, DiagnosticVerdict.digital);
+      // These never moved: a constant, repeatedly-echoed 0 must not count as
+      // switch-like evidence, or waggling only the left stick would brand
+      // the untouched channels DIGITAL too.
+      expect(sticks['right']!.verdict, DiagnosticVerdict.unknown);
+      expect(sticks['hat']!.verdict, DiagnosticVerdict.unknown);
+      final triggers = {
+        for (final t
+            in folder.snapshot().channels.whereType<TriggerChannel>())
+          t.id: t,
+      };
+      expect(triggers['l2']!.verdict, DiagnosticVerdict.unknown);
+      expect(triggers['r2']!.verdict, DiagnosticVerdict.unknown);
     });
 
     test('a button payload for a different connectionId than begun is ignored', () {

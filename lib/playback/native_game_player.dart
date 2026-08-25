@@ -298,9 +298,14 @@ class MethodChannelGamePlayer implements NativeGamePlayer {
     }
   }
 
+  // Allowed to throw, like restart(): the caller must not persist a type
+  // the core rejected.
   @override
   Future<void> setControllerType(int port, int deviceType) =>
-      _invoke('setControllerType', {'port': port, 'deviceType': deviceType});
+      _control.invokeMethod<void>('setControllerType', {
+        'port': port,
+        'deviceType': deviceType,
+      });
 
   @override
   Future<CoreInputDescriptors> getInputDescriptors() async {

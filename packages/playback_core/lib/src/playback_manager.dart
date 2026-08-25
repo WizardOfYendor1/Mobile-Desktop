@@ -23,6 +23,61 @@ class _ProgressGeneration {
   Duration stopPosition = Duration.zero;
 }
 
+/// How far a confirmed position may sit from the seek target. Streams land
+/// on a keyframe, not the exact frame asked for.
+const seekConfirmTolerance = Duration(seconds: 10);
+
+/// Whether a seek actually landed. The player reports the seek target as its
+/// position while the seek is still in flight, and a seek issued early in a
+/// file's life can quietly fail and fall back to the start, so a single read
+/// proves nothing. The position has to hold near the target across
+/// consecutive reads before the seek counts.
+Future<bool> confirmSeekHeld(
+  Duration target,
+  Duration Function() positionOf, {
+  Duration probeInterval = const Duration(milliseconds: 150),
+}) async {
+  const probes = 12;
+  const requiredHolds = 3;
+  var held = 0;
+  for (var i = 0; i < probes; i++) {
+    await Future.delayed(probeInterval);
+    held = (positionOf() - target).abs() < seekConfirmTolerance ? held + 1 : 0;
+    if (held >= requiredHolds) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Removes [vetoedCodecs] from every audio codec list in [profile], so the
+/// server neither direct plays nor copies a codec this device has proven it
+/// can't decode. An entry whose audio codec list empties is dropped outright,
+/// since a missing list reads as no restriction at all.
+void stripVetoedAudioCodecs(
+  Map<String, dynamic> profile,
+  Set<String> vetoedCodecs,
+) {
+  if (vetoedCodecs.isEmpty) return;
+  final lowered = vetoedCodecs.map((c) => c.toLowerCase()).toSet();
+  for (final key in const ['DirectPlayProfiles', 'TranscodingProfiles']) {
+    final entries = profile[key];
+    if (entries is! List) continue;
+    entries.removeWhere((entry) {
+      if (entry is! Map) return false;
+      final codecs = entry['AudioCodec'];
+      if (codecs is! String || codecs.isEmpty) return false;
+      final kept = codecs
+          .split(',')
+          .where((c) => !lowered.contains(c.trim().toLowerCase()))
+          .toList();
+      if (kept.isEmpty) return true;
+      entry['AudioCodec'] = kept.join(',');
+      return false;
+    });
+  }
+}
+
 class PlaybackManager implements AudioOwnable {
   static const _mediaReadyPollInterval = Duration(milliseconds: 100);
   static const _defaultMediaReadyTimeout = Duration(seconds: 60);
@@ -113,6 +168,7 @@ class PlaybackManager implements AudioOwnable {
   bool _forceExternalPlayerOnce = false;
   bool _forceExternalChooserOnce = false;
   bool _unsupportedAudioRecoveryInFlight = false;
+  final Set<String> _vetoedAudioCodecs = <String>{};
   bool _suppressNextGenericBackendError = false;
   bool _teardownForReResolve = false;
   DateTime? _lastTrackSwitchReResolveAt;
@@ -195,6 +251,24 @@ class PlaybackManager implements AudioOwnable {
   String? get lastExplicitSubtitleLanguage => _lastExplicitSubtitleLanguage;
   bool? get lastExplicitSubtitleEnabled => _lastExplicitSubtitleEnabled;
   bool get playbackDeferredToExternalPlayer => _deferPlaybackToExternalPlayer;
+
+  /// Marks the work that happens before [playItems] can take ownership of the
+  /// queue. Player routes use this to render launch feedback while item
+  /// hydration, prompts, and queue construction are still in progress.
+  void beginPlaybackPreparation() {
+    _setBringupState(
+      const PlaybackBringupState(phase: PlaybackBringupPhase.preparing),
+    );
+  }
+
+  /// Clears an abandoned preparation without overwriting a newer playback
+  /// phase that may already have taken ownership.
+  void cancelPlaybackPreparation() {
+    if (_bringupState.phase == PlaybackBringupPhase.preparing) {
+      _setBringupState(const PlaybackBringupState.idle());
+    }
+  }
+
   bool consumeSkipExternalRoutingOnce() {
     final shouldSkip = _skipExternalRoutingOnce;
     _skipExternalRoutingOnce = false;
@@ -764,6 +838,40 @@ class PlaybackManager implements AudioOwnable {
     return true;
   }
 
+  String? _selectedAudioCodecOf(StreamResolutionResult resolution) {
+    String? fallback;
+    for (final stream in resolution.mediaStreams) {
+      if ((stream['Type'] as String?) != 'Audio') continue;
+      final codec = (stream['Codec'] as String?)?.toLowerCase();
+      if (codec == null || codec.isEmpty) continue;
+      fallback ??= codec;
+      if (_audioStreamIndex != null && stream['Index'] == _audioStreamIndex) {
+        return codec;
+      }
+      if (_audioStreamIndex == null && stream['IsDefault'] == true) {
+        return codec;
+      }
+    }
+    return fallback;
+  }
+
+  /// Records the playing audio codec as one this device can't decode, so the
+  /// next resolve stops offering it. Returns whether anything new was
+  /// learned, a retry without new information would just repeat the failure.
+  bool _vetoSelectedAudioCodec(StreamResolutionResult resolution) {
+    final codec = _selectedAudioCodecOf(resolution);
+    if (codec == null || codec == 'raw' || codec.startsWith('pcm')) {
+      return false;
+    }
+    var added = _vetoedAudioCodecs.add(codec);
+    // The profile names DTS under both of its labels.
+    if (codec == 'dts' || codec == 'dca') {
+      final sibling = codec == 'dts' ? 'dca' : 'dts';
+      added = _vetoedAudioCodecs.add(sibling) || added;
+    }
+    return added;
+  }
+
   void _onBackendErrorEvent(Map<String, dynamic> event) {
     unawaited(_handleBackendErrorEvent(event));
   }
@@ -937,10 +1045,25 @@ class PlaybackManager implements AudioOwnable {
       return;
     }
 
-    if (!canReResolve()) {
+    // The device just proved it can't play this audio codec, so a retry has
+    // to stop offering it or the server copies the same track into the next
+    // stream and the failure repeats.
+    final vetoAdded = resolution != null && _vetoSelectedAudioCodec(resolution);
+
+    if (canReResolve()) {
+      await recoverViaTranscode();
       return;
     }
-    await recoverViaTranscode();
+
+    // Already transcoding. The failing codec got there because the profile
+    // still allowed it, so a fresh veto makes one more resolve meaningful.
+    if (vetoAdded &&
+        resolution.playMethod == StreamPlayMethod.transcode &&
+        !_isOfflinePlayback &&
+        !_waitingForMedia &&
+        !_unsupportedAudioRecoveryInFlight) {
+      await recoverViaTranscode();
+    }
   }
 
   Future<void> _autoNext() async {
@@ -1051,6 +1174,7 @@ class PlaybackManager implements AudioOwnable {
     bool enableTranscoding = true,
   }) async {
     _clearPendingItemOverrides();
+    _vetoedAudioCodecs.clear();
     _lastItemId = null;
     _lastExplicitAudioLanguage = null;
     _lastExplicitAudioIndex = null;
@@ -1220,6 +1344,7 @@ class PlaybackManager implements AudioOwnable {
     final profile = _backend!.getDeviceProfile(
       useProgressiveTranscode: forceTranscode,
     );
+    stripVetoedAudioCodecs(profile, _vetoedAudioCodecs);
     if (_maxBitrateOverrideMbps != null) {
       profile['MaxStreamingBitrate'] = _maxBitrateOverrideMbps! * 1000000;
     }
@@ -1877,10 +2002,14 @@ class PlaybackManager implements AudioOwnable {
     Duration position, {
     bool resumeAfterSeek = true,
   }) async {
-    await _backend!.seekTo(position);
-    for (var i = 0; i < 50; i++) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      if ((_backend!.position - position).abs() < const Duration(seconds: 10)) {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      await _backend!.seekTo(position);
+      if (await confirmSeekHeld(position, () => _backend!.position)) {
+        break;
+      }
+      // A dropped seek falls back to the start of the file. Anywhere else
+      // means something moved playback on purpose, so leave it alone.
+      if (_backend!.position > seekConfirmTolerance) {
         break;
       }
     }
@@ -1939,17 +2068,17 @@ class PlaybackManager implements AudioOwnable {
 
   Future<void> previous() async {
     if (await _maybeIntercept(TransportAction.previous)) return;
-    if (state.position.inSeconds > 3) {
+    // A press this far in restarts the item, and so does one with nothing to
+    // step back to.
+    if (state.position.inSeconds > 3 || !queueService.hasPrevious) {
       await seekTo(Duration.zero);
       return;
     }
     _mediaSourceId = null;
     await _stopAndReportCurrent(skipQueueChange: true);
     _resetBackendSelectionLock();
-    final hadPrevious = queueService.previous();
-    if (hadPrevious) {
-      await _playCurrentItem();
-    }
+    queueService.previous();
+    await _playCurrentItem();
   }
 
   Future<void> playFromQueue(int index) async {
@@ -3003,6 +3132,7 @@ class PlaybackStartupRecoveryAbortedException implements Exception {
 
 enum PlaybackBringupPhase {
   idle,
+  preparing,
   stoppingPrevious,
   resolving,
   opening,
@@ -3010,6 +3140,20 @@ enum PlaybackBringupPhase {
   seekingResume,
   ready,
   failed,
+}
+
+extension PlaybackBringupPhaseX on PlaybackBringupPhase {
+  bool get isInProgress => switch (this) {
+    PlaybackBringupPhase.preparing ||
+    PlaybackBringupPhase.stoppingPrevious ||
+    PlaybackBringupPhase.resolving ||
+    PlaybackBringupPhase.opening ||
+    PlaybackBringupPhase.waitingForReady ||
+    PlaybackBringupPhase.seekingResume => true,
+    PlaybackBringupPhase.idle ||
+    PlaybackBringupPhase.ready ||
+    PlaybackBringupPhase.failed => false,
+  };
 }
 
 class PlaybackBringupState {

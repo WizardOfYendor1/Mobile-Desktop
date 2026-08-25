@@ -118,6 +118,27 @@ void main() {
     },
   );
 
+  testWidgets('with two buttons pressed, the last in the channel list wins', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      harness(
+        const ControllerDiagnosticsSnapshot(
+          connectionId: 'a',
+          port: 0,
+          // Both held, but B is listed after A -- the folder's contract is
+          // latest-last, so the panel must show B, not A.
+          channels: [
+            ButtonChannel(rawName: 'a', pressed: true),
+            ButtonChannel(rawName: 'b', pressed: true),
+          ],
+        ),
+      ),
+    );
+
+    expect(find.text('(b)'), findsOneWidget);
+  });
+
   testWidgets('no hat channel shows the "reported as buttons" line', (
     tester,
   ) async {

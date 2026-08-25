@@ -313,7 +313,8 @@ struct lh_host {
   // Last device successfully handed to the core for each routable port. This
   // survives an internal restart, whose new core instance otherwise forgets
   // every retro_set_controller_port_device call.
-  unsigned controller_devices[LH_MAX_PORTS];
+  // Atomic, not mutex-guarded: independent per-port scalars, like input_level.
+  atomic_uint controller_devices[LH_MAX_PORTS];
 
   // RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS snapshot: a flat, core-supplied
   // list of (port, device, index, id) -> human-readable label entries. Kept
@@ -380,15 +381,6 @@ struct lh_host {
   // l2 packed in the high 16 bits, r2 in the low, for the same reason.
   atomic_uint trigger_level[LH_MAX_PORTS];
   uint32_t trigger_frame[LH_MAX_PORTS];        // emulation thread only
-
-  // Bit N set once the core has queried RETRO_DEVICE_ANALOG on port N, since
-  // the current content was loaded. Written from the emulation thread inside
-  // input_state_cb, read from the platform thread via lh_analog_queried_ports,
-  // so it is atomic. Per-game, not per-core (see the design doc: Stella
-  // queries analog on Breakout but not on a joystick game), so it is reset on
-  // every lh_load and every restart_core, alongside the other per-session
-  // input state.
-  atomic_uint analog_queried_ports;
 };
 
 // libretro's callbacks carry no user pointer, so the single live host is global.
@@ -1029,12 +1021,11 @@ static void reset_analog_state(struct lh_host *h) {
     h->analog_frame[p][1] = 0;
     h->trigger_frame[p] = 0;
   }
-  atomic_store(&h->analog_queried_ports, 0u);
 }
 
 static void reset_controller_devices(struct lh_host *h) {
   for (int port = 0; port < LH_MAX_PORTS; port++) {
-    h->controller_devices[port] = RETRO_DEVICE_JOYPAD;
+    atomic_store(&h->controller_devices[port], (unsigned)RETRO_DEVICE_JOYPAD);
   }
 }
 
@@ -1139,14 +1130,14 @@ static int controller_device_is_advertised(struct lh_host *h, int port,
 // in which case preserving a stale value is less safe than returning to Auto.
 static void reapply_controller_devices(struct lh_host *h) {
   for (int port = 0; port < LH_MAX_PORTS; port++) {
-    unsigned device = h->controller_devices[port];
+    unsigned device = atomic_load(&h->controller_devices[port]);
     if (!controller_device_is_advertised(h, port, device)) {
       diagnostic_log(
           "Controller device port=%d id=%u is no longer advertised after "
           "restart; using Auto (%u)",
           port, device, RETRO_DEVICE_JOYPAD);
       device = RETRO_DEVICE_JOYPAD;
-      h->controller_devices[port] = device;
+      atomic_store(&h->controller_devices[port], device);
     }
     if (h->core.set_controller_port_device) {
       h->core.set_controller_port_device((unsigned)port, device);
@@ -1155,7 +1146,7 @@ static void reapply_controller_devices(struct lh_host *h) {
           "Controller device port=%d id=%u could not be reapplied; core has "
           "no controller-device entry point",
           port, device);
-      h->controller_devices[port] = RETRO_DEVICE_JOYPAD;
+      atomic_store(&h->controller_devices[port], (unsigned)RETRO_DEVICE_JOYPAD);
     }
   }
 }
@@ -1619,19 +1610,6 @@ static int16_t RETRO_CALLCONV input_state_cb(unsigned port, unsigned device,
   if (!h || port >= LH_MAX_PORTS) return 0;
 
   if (device == RETRO_DEVICE_ANALOG) {
-    // Record that this port has been queried at all, so the platform can stop
-    // converting the stick to digital bits for it (see lh_analog_queried_ports).
-    // Measured at ~56 ANALOG reads/frame for some cores, so this has to stay
-    // cheap: a relaxed load first, and only the (rare) first-query-on-this-port
-    // call pays for the atomic RMW.
-    {
-      unsigned bit = 1u << port;
-      if (!(atomic_load_explicit(&h->analog_queried_ports, memory_order_relaxed) &
-            bit)) {
-        atomic_fetch_or_explicit(&h->analog_queried_ports, bit,
-                                 memory_order_relaxed);
-      }
-    }
     // Latched by input_poll_cb above, not a fresh read - see the digital
     // comment below for why that matters (torn diagonals here, instead of
     // torn button combinations).
@@ -1708,7 +1686,7 @@ static void execute_job(struct lh_host *h, lh_job *job) {
     case JOB_CONTROLLER_DEVICE:
       if (h->core.set_controller_port_device) {
         h->core.set_controller_port_device((unsigned)job->port, job->device);
-        h->controller_devices[job->port] = job->device;
+        atomic_store(&h->controller_devices[job->port], job->device);
         job->result_ok = 1;
       }
       break;
@@ -2006,12 +1984,6 @@ void lh_set_pad_state(lh_host *host, int port, uint16_t mask, int16_t lx,
   // tests call it directly) and leaves the analog words above untouched.
   atomic_fetch_or(&host->input_pending[port], (unsigned)mask);
   atomic_store(&host->input_level[port], (unsigned)mask);
-}
-
-unsigned lh_analog_queried_ports(lh_host *host) {
-  if (!host) return 0;
-  return atomic_load_explicit(&host->analog_queried_ports,
-                              memory_order_relaxed);
 }
 
 void lh_test_poll_input(lh_host *host) {

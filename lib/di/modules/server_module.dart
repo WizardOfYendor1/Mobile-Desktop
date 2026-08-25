@@ -13,14 +13,13 @@ import '../../data/services/push_messaging_service.dart';
 import '../../data/services/seerr_notification_service.dart';
 import '../../data/services/storage_path_service.dart';
 import '../../playback/server_transcode_capabilities.dart';
+import '../../preference/user_preferences.dart';
 
 final _getIt = GetIt.instance;
 
 void registerServerModule() {
   _getIt.registerLazySingleton<MediaServerClientFactory>(
-    () => MediaServerClientFactory(
-      deviceInfo: _getIt<DeviceInfo>(),
-    ),
+    () => MediaServerClientFactory(deviceInfo: _getIt<DeviceInfo>()),
   );
 
   if (!_getIt.isRegistered<DownloadNotificationService>()) {
@@ -33,7 +32,7 @@ void registerServerModule() {
   // switches, while DownloadService instances attach/detach to it.
   if (!_getIt.isRegistered<BackgroundDownloadCoordinator>()) {
     _getIt.registerLazySingleton<BackgroundDownloadCoordinator>(
-      () => BackgroundDownloadCoordinator(),
+      () => BackgroundDownloadCoordinator(_getIt<UserPreferences>()),
     );
   }
 
@@ -78,6 +77,9 @@ void setActiveServerClient(MediaServerClient client) {
   _getIt.registerSingleton<MediaServerClient>(wrapped);
 
   if (_getIt.isRegistered<DownloadService>()) {
+    // Detach the replaced instance's app-lifetime listeners (preferences,
+    // download coordinator); its in-flight downloads keep running.
+    _getIt<DownloadService>().detachFromGlobalState();
     _getIt.unregister<DownloadService>();
   }
   final downloadService = DownloadService(

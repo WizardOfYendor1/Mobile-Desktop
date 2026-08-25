@@ -327,10 +327,17 @@ class _MediaBarState extends State<MediaBar>
   // trailer the new route now covers. Main playback already cancels through
   // the audio arbiter, but a player route with no audio of its own, like the
   // photo viewer, does not.
+  //
+  // The trailer player is freed outright rather than just stopped. A stopped
+  // mpv instance keeps its render texture resident behind the full screen
+  // player, and this widget is never disposed while a player route merely
+  // sits on top of home, so nothing else would ever let go of it. The next
+  // trailer builds a fresh player on demand.
   void _onPlayerRouteChanged() {
     if (!mounted) return;
     if (PlayerRouteObserver.instance.isPlayerActive.value) {
       _cancelTrailerPreview(rebuild: false);
+      unawaited(_disposeTrailerPlayer());
     }
     setState(() {});
   }
@@ -417,7 +424,6 @@ class _MediaBarState extends State<MediaBar>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!PlatformDetection.isMobile) return;
     final topmost = ModalRoute.isCurrentOf(context) ?? true;
     if (topmost == _isHomeRouteTopmost) return;
     _isHomeRouteTopmost = topmost;

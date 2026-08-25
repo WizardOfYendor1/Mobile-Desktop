@@ -68,6 +68,9 @@ internal class NativePadInput(
     // while a pad is live.
     private var analogPollCounter = 0
 
+    // Seeds coreReadsAnalog for pads added between polls.
+    private var analogPortMask = 0
+
     /** True while a native session is loaded; checked first in dispatch. */
     @Volatile var active = false
         private set
@@ -128,10 +131,13 @@ internal class NativePadInput(
             // d-pad re-asserts them on its next event, but nothing else would.
             state.stickDirX = 0
             state.stickDirY = 0
-            applyMotionBit(state, RETRO_LEFT, false)
-            applyMotionBit(state, RETRO_RIGHT, false)
-            applyMotionBit(state, RETRO_UP, false)
-            applyMotionBit(state, RETRO_DOWN, false)
+            // Only the stick's contribution goes. A hat held across the flip
+            // keeps its direction: it re-asserts nothing until it next moves,
+            // so clearing it here would strand the user with no direction.
+            applyMotionBit(state, RETRO_LEFT, state.hatDirX == -1)
+            applyMotionBit(state, RETRO_RIGHT, state.hatDirX == 1)
+            applyMotionBit(state, RETRO_UP, state.hatDirY == -1)
+            applyMotionBit(state, RETRO_DOWN, state.hatDirY == 1)
             publishMask(state)
         }
     }
@@ -170,6 +176,7 @@ internal class NativePadInput(
      */
     private fun refreshAnalogPorts() {
         val mask = bridge.analogDescriptorPorts()
+        analogPortMask = mask
         for (port in 0 until NativeControllerPortRegistry.MAX_PORTS) {
             setCoreReadsAnalog(port, (mask shr port) and 1 != 0)
         }
@@ -187,6 +194,9 @@ internal class NativePadInput(
         clearPadStates(publish = false)
         bridge.resetPadMasks()
         analogPollCounter = 0
+        // Descriptors are per game, so the next game must not start on the
+        // last one's mask while the delayed refresh is still pending.
+        analogPortMask = 0
         if (value) {
             val connections = registry.activate(discoverCandidates(logDiagnostics = true))
             for (connection in connections) addPadState(connection)
@@ -376,9 +386,13 @@ internal class NativePadInput(
         // rest of the time (when it is still allowed to, see above).
         val rawHatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
         val rawHatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
+        // Kept apart from the stick's latched direction so a mode flip can
+        // preserve a held hat; Android sends no event until the hat moves.
+        state.hatDirX = direction(rawHatX)
+        state.hatDirY = direction(rawHatY)
         val stickDrivesDigital = !state.coreReadsAnalog || bridge.overlayOpen
-        val hatX = hatFallback(direction(rawHatX), state.stickDirX, !stickDrivesDigital)
-        val hatY = hatFallback(direction(rawHatY), state.stickDirY, !stickDrivesDigital)
+        val hatX = hatFallback(state.hatDirX, state.stickDirX, !stickDrivesDigital)
+        val hatY = hatFallback(state.hatDirY, state.stickDirY, !stickDrivesDigital)
         applyMotionBit(state, RETRO_LEFT, hatX == -1)
         applyMotionBit(state, RETRO_RIGHT, hatX == 1)
         applyMotionBit(state, RETRO_UP, hatY == -1)
@@ -397,12 +411,13 @@ internal class NativePadInput(
 
         // Triggers arrive as axes, not key events, so without this they could
         // never be bound: arming capture and squeezing one produced nothing.
-        // Report a crossing as a synthetic code the mapping layer can store
-        // like any other, so a trigger can drive whatever the user chooses.
+        // A crossing is reported under the keycode a pad with digital triggers
+        // would send, so one binding covers both report styles and the mapping
+        // table can hold it like any other key.
         if (captureActive && matchesCapture(connection)) {
             val crossed = when {
-                leftTrigger >= AXIS_THRESHOLD -> SYNTHETIC_KEYCODE_L2
-                rightTrigger >= AXIS_THRESHOLD -> SYNTHETIC_KEYCODE_R2
+                leftTrigger >= AXIS_THRESHOLD -> KeyEvent.KEYCODE_BUTTON_L2
+                rightTrigger >= AXIS_THRESHOLD -> KeyEvent.KEYCODE_BUTTON_R2
                 else -> null
             }
             if (crossed != null) {
@@ -412,8 +427,8 @@ internal class NativePadInput(
                 return true
             }
         }
-        applyMotionBit(state, RETRO_L2, leftTrigger >= AXIS_THRESHOLD)
-        applyMotionBit(state, RETRO_R2, rightTrigger >= AXIS_THRESHOLD)
+        applyTriggerBit(state, KeyEvent.KEYCODE_BUTTON_L2, RETRO_L2, leftTrigger >= AXIS_THRESHOLD)
+        applyTriggerBit(state, KeyEvent.KEYCODE_BUTTON_R2, RETRO_R2, rightTrigger >= AXIS_THRESHOLD)
 
         // Packed into a Long rather than a Pair: this is per motion event on
         // every pad, and a Pair would be a heap allocation each time.
@@ -569,13 +584,13 @@ internal class NativePadInput(
         return resolved
     }
 
-    // A pad returning under a new id leaves the old id's bits latched if its
-    // removal callback lands after this one. Releases input only; the registry
-    // keeps the vacated port for the pad to reclaim.
+    // A pad can return under a new id before Android reports the old id removed.
+    // Drop the vanished connection before allocating the replacement, so its
+    // port is available without moving any live player.
     private fun releaseVanishedPadStates() {
-        for (index in 0 until padStates.size()) {
+        for (index in padStates.size() - 1 downTo 0) {
             val state = padStates.valueAt(index)
-            if (InputDevice.getDevice(state.deviceId) == null) clearPadState(state, publish = active)
+            if (InputDevice.getDevice(state.deviceId) == null) removeDevice(state.deviceId)
         }
     }
 
@@ -588,14 +603,20 @@ internal class NativePadInput(
     }
 
     private fun onDeviceRemoved(deviceId: Int) {
-        val connection = registry.remove(deviceId) ?: return
+        removeDevice(deviceId)
+        if (active) bridge.setControllerCount(playableCount(), navigationOnly = navigationOnly(), force = true)
+    }
+
+    /** Clears state even when a late removal follows an add-before-remove reconnect. */
+    private fun removeDevice(deviceId: Int) {
+        val connection = registry.remove(deviceId)
         padStates.get(deviceId)?.let { clearPadState(it, publish = active) }
         padStates.remove(deviceId)
         triggerAxisCache.remove(deviceId)
+        val connectionId = connection?.connectionId ?: "android-connection-$deviceId"
         // No promotion pass here: reallocating would move live players.
-        if (captureConnectionId == connection.connectionId) setCapture(false, null)
-        if (diagnosticsConnectionId == connection.connectionId) setDiagnostics(false, null)
-        if (active) bridge.setControllerCount(playableCount(), navigationOnly = navigationOnly(), force = true)
+        if (captureConnectionId == connectionId) setCapture(false, null)
+        if (diagnosticsConnectionId == connectionId) setDiagnostics(false, null)
     }
 
     private fun onDeviceChanged(deviceId: Int) {
@@ -608,7 +629,13 @@ internal class NativePadInput(
         // A device can re-enumerate with a different HID descriptor under the
         // same id; re-probe trigger axes rather than trusting a stale cache.
         triggerAxisCache.remove(deviceId)
-        if (previous?.profileId != connection.profileId) {
+        // Port and class matter as well as profile: a reclassified device can
+        // now be re-allocated or lose its port, and a PadState carries the port
+        // it was built for.
+        if (previous?.profileId != connection.profileId ||
+            previous.port != connection.port ||
+            previous.deviceClass != connection.deviceClass
+        ) {
             padStates.get(deviceId)?.let { clearPadState(it, publish = active) }
             padStates.remove(deviceId)
             if (active && connection.supported) addPadState(connection)
@@ -668,6 +695,8 @@ internal class NativePadInput(
     private fun addPadState(connection: NativeControllerConnection) {
         val port = connection.port ?: return
         val state = PadState(connection.deviceId, connection.profileId, port, tableFor(connection.profileId))
+        state.snap = snapModes[connection.profileId] ?: StickSnap.OFF
+        state.coreReadsAnalog = (analogPortMask shr port) and 1 != 0
         padStates.put(connection.deviceId, state)
     }
 
@@ -704,6 +733,25 @@ internal class NativePadInput(
         val opposite = if (index in OPPOSITE.indices) OPPOSITE[index] else NONE
         if (opposite != NONE) state.keyMask = state.keyMask and (1 shl opposite).inv()
         if (state.keyMask and bit != 0) state.keyMask = state.keyMask and bit.inv()
+    }
+
+    /**
+     * Sets whichever RetroPad bit [keyCode] is bound to, falling back to
+     * [fallback] when the table holds no usable entry.
+     *
+     * The last bit driven is remembered per trigger so rebinding one while it
+     * is held releases the bit it used to drive instead of stranding it.
+     */
+    private fun applyTriggerBit(state: PadState, keyCode: Int, fallback: Int, pressed: Boolean) {
+        val index = indexFor(state.table, keyCode)
+        val target = if (index == NONE || index == SWALLOW) fallback else index
+        val left = keyCode == KeyEvent.KEYCODE_BUTTON_L2
+        val previous = if (left) state.l2Target else state.r2Target
+        if (previous != target) {
+            applyMotionBit(state, previous, false)
+            if (left) state.l2Target = target else state.r2Target = target
+        }
+        applyMotionBit(state, target, pressed)
     }
 
     private fun applyMotionBit(state: PadState, index: Int, pressed: Boolean) {
@@ -787,7 +835,7 @@ internal class NativePadInput(
             state.startConsumed = false
             state.startTimer?.let(handler::removeCallbacks)
             val timer = Runnable {
-                if (padStates.get(state.deviceId) !== state || !active) return@Runnable
+                if (!NativePadStateGuard.isCurrent(state, keyboardState, padStates.get(state.deviceId)) || !active) return@Runnable
                 state.startTimer = null
                 state.startConsumed = true
                 bridge.onMenu(state.port)
@@ -812,7 +860,7 @@ internal class NativePadInput(
         state.pulseMask = state.pulseMask or bit
         publishMask(state)
         val timer = Runnable {
-            if (padStates.get(state.deviceId) !== state || !active) return@Runnable
+            if (!NativePadStateGuard.isCurrent(state, keyboardState, padStates.get(state.deviceId)) || !active) return@Runnable
             state.pulseTimer = null
             state.pulseMask = state.pulseMask and bit.inv()
             publishMask(state)
@@ -866,6 +914,9 @@ internal class NativePadInput(
         // previous value to hold on to. Hat axes are stateless.
         var stickDirX: Int = 0,
         var stickDirY: Int = 0,
+        // The hat's own last direction, so a mode change can keep it.
+        var hatDirX: Int = 0,
+        var hatDirY: Int = 0,
         // Last-sent analog state, int16 range (-32768..32767 for axes,
         // 0..0x7fff for triggers). Used both as the value forwarded to
         // lh_set_pad_state and as the baseline analogMoved diffs against.
@@ -876,18 +927,20 @@ internal class NativePadInput(
         var trigL: Int = 0,
         var trigR: Int = 0,
         // Set once the host reports the running core queried RETRO_DEVICE_ANALOG
-        // on this port; see setCoreReadsAnalog. Resets to false whenever a new
-        // PadState is constructed, i.e. every game load.
+        // on this port; see setCoreReadsAnalog. addPadState seeds it.
         var coreReadsAnalog: Boolean = false,
         var snap: StickSnap = StickSnap.OFF,
+        // The bit each trigger axis currently drives; see applyTriggerBit.
+        var l2Target: Int = RETRO_L2,
+        var r2Target: Int = RETRO_R2,
     )
 
     private companion object {
         const val AXIS_THRESHOLD = 0.5f
         // Well clear of any real Android keycode (KEYCODE_* tops out in the
         // low hundreds), so a stored binding can never collide with one.
-        const val SYNTHETIC_KEYCODE_L2 = 0x10012
-        const val SYNTHETIC_KEYCODE_R2 = 0x10013
+        const val SYNTHETIC_KEYCODE_L2 = NativeMappingTables.SYNTHETIC_KEYCODE_L2
+        const val SYNTHETIC_KEYCODE_R2 = NativeMappingTables.SYNTHETIC_KEYCODE_R2
         // ~1/255 in int16 terms (32767/255 ≈ 128): the finest step the pads
         // actually report, per the design doc's measured 8-bit resolution.
         // A resting stick's rounding noise stays under this, a real move does
@@ -936,6 +989,12 @@ internal class NativePadInput(
     }
 }
 
+/** Identity check shared by delayed start actions; keyboardState is never in padStates. */
+internal object NativePadStateGuard {
+    fun isCurrent(state: Any, keyboardState: Any, registeredState: Any?): Boolean =
+        state === keyboardState || registeredState === state
+}
+
 /**
  * The RetroPad mapping tables: pure data plus the default-layout/override
  * logic, kept top-level (not nested in [NativePadInput]'s private companion)
@@ -944,6 +1003,10 @@ internal class NativePadInput(
  * than duplicating it; behaviour for every existing caller is unchanged.
  */
 internal object NativeMappingTables {
+    // Legacy trigger codes, kept only so mappings saved under them still load;
+    // deliberately outside the real Android keycode range.
+    const val SYNTHETIC_KEYCODE_L2 = 0x10012
+    const val SYNTHETIC_KEYCODE_R2 = 0x10013
     const val TABLE_SIZE = 256
     const val NONE = -1
     const val SWALLOW = -2
@@ -1025,7 +1088,14 @@ internal object NativeMappingTables {
     fun custom(overrides: Map<Int, Int>?): IntArray {
         if (overrides == null) return DEFAULT
         val table = DEFAULT.copyOf()
-        for ((keyCode, index) in overrides) {
+        for ((rawKeyCode, index) in overrides) {
+            // Trigger bindings were briefly written under synthetic codes; they
+            // live under the real trigger keycodes now.
+            val keyCode = when (rawKeyCode) {
+                SYNTHETIC_KEYCODE_L2 -> KeyEvent.KEYCODE_BUTTON_L2
+                SYNTHETIC_KEYCODE_R2 -> KeyEvent.KEYCODE_BUTTON_R2
+                else -> rawKeyCode
+            }
             if (keyCode in 0 until TABLE_SIZE && index in 0..15) table[keyCode] = index
         }
         return table
@@ -1134,10 +1204,7 @@ internal const val STICK_RELEASE = 0.20f
  *  actually report, vs the 0.125 they declare. See the design doc. */
 internal const val ANALOG_DEAD_ZONE = 0.02f
 
-/** Snap tolerance for [StickSnap.OFF]: corrects small drift only. */
-internal const val SNAP_DEGREES = 10f
-
-private const val SNAP_CARDINAL_RATIO = 0.176327f   // tan(10)
+private const val SNAP_CARDINAL_RATIO = 0.176327f   // tan(10), the OFF-snap drift tolerance
 private const val SNAP_DIAGONAL_RATIO = 0.700208f   // tan(35)
 private const val SNAP_EIGHT_WAY_RATIO = 0.414214f  // tan(22.5)
 private const val DIAGONAL_COMPONENT = 0.707107f    // cos(45)

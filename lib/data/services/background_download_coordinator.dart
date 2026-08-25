@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/foundation.dart';
 
+import '../../preference/user_preferences.dart';
 import '../../util/platform_detection.dart';
 
 /// App-lifetime owner of the background_downloader [FileDownloader] singleton.
@@ -16,6 +17,8 @@ import '../../util/platform_detection.dart';
 /// arrive while none is (e.g. downloads finishing during app startup before
 /// a server becomes active).
 class BackgroundDownloadCoordinator {
+  BackgroundDownloadCoordinator(this._prefs);
+
   /// Group for media file downloads. Side assets (posters, subtitles) are
   /// downloaded with dio and never reach the plugin.
   static const String mediaGroup = 'moonfinMedia';
@@ -24,6 +27,9 @@ class BackgroundDownloadCoordinator {
       !kIsWeb && !PlatformDetection.isTizen && !PlatformDetection.isAppleTV;
 
   Future<void>? _initFuture;
+  int? _configuredMaxConcurrentDownloads;
+
+  final UserPreferences _prefs;
 
   void Function(TaskStatusUpdate update)? _statusHandler;
   void Function(TaskProgressUpdate update)? _progressHandler;
@@ -37,12 +43,31 @@ class BackgroundDownloadCoordinator {
     return _initFuture ??= _initialize();
   }
 
+  int get _maxConcurrentDownloads =>
+      _prefs.effectiveDownloadConcurrentCount;
+
+  /// Applies a changed concurrency preference to the native task scheduler.
+  /// [DownloadService] also applies this limit itself, so the same cap covers
+  /// the legacy engine and any tasks started before the plugin receives this
+  /// updated configuration.
+  Future<void> configureMaximumConcurrentDownloads() async {
+    if (!isSupported) return;
+    await ensureInitialized();
+    final maxConcurrent = _maxConcurrentDownloads;
+    if (_configuredMaxConcurrentDownloads == maxConcurrent) return;
+    await FileDownloader().configure(
+      globalConfig: [(Config.holdingQueue, (maxConcurrent, null, null))],
+    );
+    _configuredMaxConcurrentDownloads = maxConcurrent;
+  }
+
   Future<void> _initialize() async {
+    final maxConcurrent = _maxConcurrentDownloads;
     await FileDownloader().configure(
       globalConfig: [
-        // Bounds native concurrency and caps retry storms. DownloadService
-        // serializes media downloads anyway.
-        (Config.holdingQueue, (3, null, null)),
+        // Mirrors the app-level scheduler so native tasks cannot exceed the
+        // user's selected maximum when the app is suspended or restarted.
+        (Config.holdingQueue, (maxConcurrent, null, null)),
       ],
       androidConfig: [
         // Long downloads (notably server transcodes, which can't pause and
@@ -62,6 +87,7 @@ class BackgroundDownloadCoordinator {
         if (kDebugMode) (Config.bypassTLSCertificateValidation, true),
       ],
     );
+    _configuredMaxConcurrentDownloads = maxConcurrent;
 
     FileDownloader().configureNotificationForGroup(
       mediaGroup,

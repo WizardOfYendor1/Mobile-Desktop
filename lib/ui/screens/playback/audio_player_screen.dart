@@ -26,6 +26,7 @@ import '../../../util/platform_detection.dart';
 import '../../../util/playback_time_label.dart';
 import '../../widgets/adaptive/sf_symbol.dart';
 import '../../widgets/overlay_sheet.dart';
+import '../../widgets/player_volume_control.dart';
 import '../../widgets/remote_play_to_session_dialog.dart';
 import '../../widgets/playback/audio_quality_badge.dart';
 import '../../widgets/playback/lyrics_view.dart';
@@ -77,6 +78,9 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
   final _tvLyricScrollController = ScrollController();
   DateTime? _tvBackPopSuppressedUntil;
   Timer? _sleepTimer;
+  Timer? _persistVolumeTimer;
+  double _playerVolume = 100.0;
+  double _volumeBeforeMute = 100.0;
   bool _radioFetchInFlight = false;
   String? _radioSeededItemId;
 
@@ -97,7 +101,10 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
     super.initState();
     _tvQueueFocusIndex = _queueStartIndex;
     _subs.addAll([
-      _manager.backendChangedStream.listen((_) => _rebuild()),
+      _manager.backendChangedStream.listen((_) {
+        _applyPlayerVolume();
+        _rebuild();
+      }),
       _state.playingStream.listen((_) => _rebuild()),
       _state.positionStream.listen((_) => _rebuild()),
       _state.durationStream.listen((_) => _rebuild()),
@@ -115,6 +122,14 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
       }),
     ]);
     unawaited(_activeMedia3Backend?.setVolume(100.0));
+    if (PlatformDetection.isDesktop) {
+      _playerVolume = _prefs
+          .get(UserPreferences.playerVolume)
+          .clamp(0.0, 100.0)
+          .toDouble();
+      _volumeBeforeMute = _playerVolume > 0 ? _playerVolume : 100.0;
+      _applyPlayerVolume();
+    }
     if (_isWidePlayer) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
@@ -755,6 +770,7 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
       sub.cancel();
     }
     _sleepTimer?.cancel();
+    _persistVolumeTimer?.cancel();
     _tvOverlayFocus.dispose();
     _queueScrollController.dispose();
     _tvLyricScrollController.dispose();
@@ -1493,6 +1509,22 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
     );
   }
 
+  void _applyPlayerVolume() {
+    if (!PlatformDetection.isDesktop) return;
+    unawaited(_manager.backend?.setVolume(_playerVolume));
+  }
+
+  void _setPlayerVolume(double volume) {
+    final clamped = volume.clamp(0.0, 100.0).toDouble();
+    if (clamped > 0) _volumeBeforeMute = clamped;
+    setState(() => _playerVolume = clamped);
+    _applyPlayerVolume();
+    _persistVolumeTimer?.cancel();
+    _persistVolumeTimer = Timer(const Duration(milliseconds: 400), () {
+      unawaited(_prefs.set(UserPreferences.playerVolume, _playerVolume));
+    });
+  }
+
   Widget _buildFavoriteRow(AggregatedItem item) {
     final isFav = _getIsFavorite(item);
     return IconButton(
@@ -1548,6 +1580,14 @@ class _AudioPlayerScreenState extends State<AudioPlayerScreen> {
                       : const SizedBox.shrink(),
                 ),
               ),
+              if (!PlatformDetection.isTV)
+                PlayerVolumeControl(
+                  volume: _playerVolume / 100.0,
+                  onChanged: (v) => _setPlayerVolume(v * 100.0),
+                  onToggleMute: () => _setPlayerVolume(
+                    _playerVolume > 0 ? 0.0 : _volumeBeforeMute,
+                  ),
+                ),
               if (item != null)
                 _tvFavoriteButton(item)
               else

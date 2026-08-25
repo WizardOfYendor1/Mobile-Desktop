@@ -102,7 +102,19 @@ internal class NativeControllerPortRegistry {
     fun addOrUpdate(candidate: NativeControllerCandidate): NativeControllerConnection {
         val existing = connections[candidate.deviceId]
         if (existing != null) {
-            val updated = candidate.toConnection(existing.port)
+            val reclassified = existing.profileId != candidate.profileId ||
+                existing.deviceClass != candidate.deviceClass
+            // A device that re-enumerates as something else has no claim on the
+            // port its previous identity held, and may have a pin of its own.
+            // Removing first lets allocatePort see the vacated port as free;
+            // every other live player keeps its port either way.
+            val port = if (!reclassified) {
+                existing.port
+            } else {
+                connections.remove(candidate.deviceId)
+                if (sessionActive && isEligible(candidate)) allocatePort(candidate.profileId) else null
+            }
+            val updated = candidate.toConnection(port)
             connections[candidate.deviceId] = updated
             if (updated.port != null && !updated.pinned) {
                 profilePortHints[candidate.profileId] = updated.port
@@ -136,10 +148,7 @@ internal class NativeControllerPortRegistry {
     /** Portless remote/keyboard connections -- the devices that feed the composed Player 1 navigation source. */
     fun navigationSourceCount(): Int = connections.values.count { !it.supported && !it.isGamepad }
 
-    /**
-     * Session-start allocation. Pins first, then fill, then the empty-Player-1
-     * guard, then overflow.
-     */
+    /** Session-start allocation. Pins first, then unpinned pads fill the lowest free ports. */
     private fun allocate(
         candidates: Collection<NativeControllerCandidate>,
     ): List<NativeControllerConnection> {
@@ -164,17 +173,6 @@ internal class NativeControllerPortRegistry {
             val slot = slots.indexOfFirst { it == null }.takeIf { it >= 0 } ?: break
             slots[slot] = candidate
             placed += candidate.deviceId
-        }
-
-        // Pass 3 -- promotion. Fills an empty Player 1 so a single-player game
-        // isn't dead with no error shown. Session-only: the stored pin is
-        // untouched, so the pinned pad reclaims Player 1 when it returns.
-        if (slots[0] == null) {
-            val lowest = (1 until MAX_PORTS).firstOrNull { slots[it] != null }
-            if (lowest != null) {
-                slots[0] = slots[lowest]
-                slots[lowest] = null
-            }
         }
 
         val portByDeviceId = HashMap<Int, Int>()
@@ -218,8 +216,8 @@ internal class NativeControllerPortRegistry {
             port = port,
             controllerNumber = controllerNumber,
             deviceClass = deviceClass,
-            // Pinned means sitting in the user-chosen port, not just having one
-            // somewhere; a pad promoted by pass 3 reads as unpinned/borrowed.
+            // Pinned means sitting in the user-chosen port, not merely holding
+            // a different port through lowest-free allocation.
             pinned = port != null && pins[profileId] == port,
         )
 

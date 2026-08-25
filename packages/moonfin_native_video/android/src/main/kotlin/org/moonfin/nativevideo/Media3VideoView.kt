@@ -56,6 +56,7 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.decoder.av1.Dav1dLibrary
 import androidx.media3.decoder.av1.Libdav1dVideoRenderer
 import androidx.media3.decoder.ffmpeg.FfmpegLibrary
+import androidx.media3.exoplayer.ExoPlaybackException
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
@@ -3575,15 +3576,19 @@ class Media3VideoView(
     /**
      * Enable or disable the stereo downmix on [channelMixingProcessor].
      *
-     * When enabled, registers downmix matrices for 3-8 input channels (to 2)
+     * When enabled, registers downmix matrices for 3-12 input channels (to 2)
      * and identity matrices for mono/stereo input. Identity matrices for 1-2 are
      * required: the processor throws on any input channel count it has no matrix
      * for once it is active. When disabled, all counts get identity matrices so
      * isActive() is false and the processor is bypassed entirely.
+     *
+     * The range runs to 12 because Dolby's platform E-AC3 JOC decoder renders
+     * Atmos to 7.1.4 PCM, and a count with no matrix fails the whole
+     * AudioTrack init rather than one track.
      */
     private fun applyStereoDownmix(enabled: Boolean) {
         stereoDownmixEnabled = enabled
-        for (channelCount in 1..8) {
+        for (channelCount in 1..12) {
             val matrix = if (enabled && channelCount > 2) {
                 ChannelMixingMatrix(channelCount, 2, buildStereoDownmixCoefficients(channelCount))
             } else {
@@ -3655,6 +3660,13 @@ class Media3VideoView(
         }.getOrDefault(false)
     }
 
+    private fun errorIsFromAudioRenderer(error: PlaybackException): Boolean {
+        val exo = error as? ExoPlaybackException ?: return false
+        if (exo.type != ExoPlaybackException.TYPE_RENDERER) return false
+        return exo.rendererFormat?.sampleMimeType
+            ?.startsWith("audio/") == true
+    }
+
     private fun emitRecoverablePlayerError(
         error: PlaybackException,
         audioOffloadRetryTriggered: Boolean,
@@ -3673,6 +3685,13 @@ class Media3VideoView(
             PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
             PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
             -> if (containerFallbackAttempted) null else "unsupported_container"
+
+            // Some platform decoders accept a format on paper and then throw
+            // a raw codec error on the first frames, Tensor's Dolby E-AC3
+            // decoder on a JOC stream for one. From an audio renderer that is
+            // the same situation as an init failure: the codec has to go.
+            PlaybackException.ERROR_CODE_DECODING_FAILED ->
+                if (errorIsFromAudioRenderer(error)) "unsupported_audio" else null
 
             else -> null
         }

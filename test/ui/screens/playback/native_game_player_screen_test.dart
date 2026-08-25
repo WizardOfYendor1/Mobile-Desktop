@@ -6,12 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
+import 'package:gamepads/gamepads.dart';
 import 'package:playback_core/playback_core.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:moonfin/data/services/retro_artwork/retro_artwork_activity_gate.dart';
 import 'package:moonfin/l10n/app_localizations.dart';
 import 'package:moonfin/playback/native_game_player.dart';
+import 'package:moonfin/ui/screens/playback/native_controller_mapping_screen.dart';
 import 'package:moonfin/ui/screens/playback/native_game_player_screen.dart';
 import 'package:moonfin/util/core_input_descriptors.dart';
 import 'package:moonfin/util/game_cores.dart';
@@ -181,6 +183,14 @@ class _FakeNativeGamePlayer implements NativeGamePlayer {
     _eventsController.add({'event': 'coreMessage', 'message': message});
   }
 
+  void emitButton(int index, bool pressed) {
+    _eventsController.add({
+      'event': 'button',
+      'index': index,
+      'pressed': pressed,
+    });
+  }
+
   void dispose() => _eventsController.close();
 
   /// The settings the screen resolved for this game and handed to the core.
@@ -323,6 +333,121 @@ void main() {
     // A couple of tests flip this to reach the TV-only notice gate; reset
     // unconditionally so it never leaks into a later test in this file.
     PlatformDetection.setTvMode(false);
+  });
+
+  // The warning exists to point at a BETTER option going unused, not at an
+  // empty slot: a remote really does feed port 0, so with no gamepad connected
+  // there is nothing to suggest and nothing worth interrupting for.
+  group('Player 1 exit warning', () {
+    const remote = NativeControllerDevice(
+      id: 'remote',
+      name: 'Remote',
+      supported: false,
+      assignable: false,
+      deviceClass: NativeControllerDeviceClass.remote,
+    );
+    const keyboardOnPlayerOne = NativeControllerDevice(
+      id: 'keyboard',
+      name: 'Keyboard',
+      port: 0,
+      deviceClass: NativeControllerDeviceClass.keyboard,
+    );
+    const playerOneGamepad = NativeControllerDevice(
+      id: 'pad',
+      name: 'Gamepad',
+      port: 0,
+    );
+    const playerTwoGamepad = NativeControllerDevice(
+      id: 'pad2',
+      name: 'Gamepad 2',
+      port: 1,
+    );
+
+    test('a gamepad on Player 1 is silent', () {
+      expect(playerOneWarningFor([playerOneGamepad]), isNull);
+      expect(playerOneWarningFor([playerOneGamepad, remote]), isNull);
+    });
+
+    test('a keyboard deliberately pinned to Player 1 is silent', () {
+      expect(playerOneWarningFor([keyboardOnPlayerOne]), isNull);
+      expect(playerOneWarningFor([keyboardOnPlayerOne, playerTwoGamepad]), isNull);
+    });
+
+    test('a remote with no gamepad to suggest is silent', () {
+      expect(playerOneWarningFor([remote]), isNull);
+      expect(playerOneWarningFor(const []), isNull);
+    });
+
+    test('gamepads pinned past Player 1 warn, even with a remote connected', () {
+      // The reported bug: pinning pads to Players 2-4 left port 0 without a
+      // gamepad, and the connected remote silently satisfied the old check.
+      expect(
+        playerOneWarningFor([playerTwoGamepad, remote]),
+        PlayerOneWarning.gamepadNotAssigned,
+      );
+      expect(
+        playerOneWarningFor([playerTwoGamepad]),
+        PlayerOneWarning.gamepadNotAssigned,
+      );
+    });
+
+    test("Player 1's pinned pad missing while another is connected warns", () {
+      expect(
+        playerOneWarningFor(
+          [playerTwoGamepad, remote],
+          pinnedPlayerOneProfileId: 'gone',
+        ),
+        PlayerOneWarning.assignedControllerMissing,
+      );
+    });
+
+    test("Player 1's pinned pad missing with nothing to suggest is silent", () {
+      expect(
+        playerOneWarningFor([remote], pinnedPlayerOneProfileId: 'gone'),
+        isNull,
+      );
+    });
+  });
+
+  // Windows and Linux read gamepads in Dart, and their triggers arrive as AXES
+  // while the mapping stores them as BUTTONS (codes 1006/1007). These cover the
+  // resolution both paths share, which is what stopped an analog trigger on
+  // desktop from ever honouring its binding.
+  test('an unbound trigger resolves to no binding, so the caller keeps L2/R2', () {
+    const empty = NativeControllerMapping.empty;
+    expect(desktopBoundBit(empty, GamepadButton.leftTrigger), isNull);
+    expect(desktopBoundBit(empty, GamepadButton.rightTrigger), isNull);
+    expect(desktopBoundBit(null, GamepadButton.leftTrigger), isNull);
+  });
+
+  test('a rebound trigger resolves to the button it was bound to', () {
+    final mapping = NativeControllerMapping(const {
+      1006: RetroPadButton.a,
+      1007: RetroPadButton.b,
+    });
+
+    expect(
+      desktopBoundBit(mapping, GamepadButton.leftTrigger),
+      1 << RetroPadButton.a.retroPadIndex,
+    );
+    expect(
+      desktopBoundBit(mapping, GamepadButton.rightTrigger),
+      1 << RetroPadButton.b.retroPadIndex,
+    );
+    // Not the hardwired L2/R2 bits the axis path used to send regardless.
+    expect(desktopBoundBit(mapping, GamepadButton.leftTrigger), isNot(1 << 12));
+    expect(desktopBoundBit(mapping, GamepadButton.rightTrigger), isNot(1 << 13));
+  });
+
+  test('a rebound face button still resolves, and one binding does not move another', () {
+    final mapping = NativeControllerMapping(const {1000: RetroPadButton.y});
+
+    expect(
+      desktopBoundBit(mapping, GamepadButton.a),
+      1 << RetroPadButton.y.retroPadIndex,
+    );
+    expect(desktopBoundBit(mapping, GamepadButton.b), isNull);
+    expect(desktopBoundBit(mapping, GamepadButton.leftTrigger), isNull);
   });
 
   testWidgets(
@@ -919,6 +1044,124 @@ void main() {
         expect(find.textContaining('playing with the remote'), findsNothing);
       } finally {
         debugDefaultTargetPlatformOverride = null;
+      }
+    },
+  );
+
+  testWidgets(
+    'a press while confirming the controller-mapping exit drives the '
+    'confirmation instead of vanishing into the unmounted mapping screen',
+    (tester) async {
+      // The Player 1-vacant confirmation only exists on Android:
+      // _requestControllerMappingClose gates it behind PlatformDetection
+      // .isAndroid and reads live device state through AndroidGamepadChannel.
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      const gamepadChannel = MethodChannel('org.moonfin.androidtv/gamepad');
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(gamepadChannel, (call) async {
+        if (call.method == 'getNativeGamepadDevices') {
+          // One connected pad, but not on port 0: nothing satisfies
+          // hasConnectedPlayerOneInput, so closing the mapping screen must
+          // ask for confirmation instead of leaving silently.
+          return [
+            {'id': 'pad-1', 'name': 'Pad', 'supported': false},
+          ];
+        }
+        return null;
+      });
+      try {
+        final coreId = libretroCoreId('snes')!;
+        final coresDir = await coresDirectory();
+        final coreFile = File('${coresDir.path}/${coreFileName(coreId)}');
+        // Real filesystem work has to leave the fake-async zone: its
+        // completion is delivered by the real event loop, which the zone
+        // never runs, so awaiting it here directly hangs for ever.
+        await tester.runAsync(() async {
+          await coreFile.parent.create(recursive: true);
+          await coreFile.writeAsBytes([0]);
+        });
+
+        final router = GoRouter(
+          initialLocation: '/game',
+          routes: [
+            GoRoute(
+              path: '/game',
+              builder: (context, state) => NativeGamePlayerScreen(
+                libraryId: 'lib1',
+                gameId: 'game1',
+                core: 'snes',
+                startFresh: true,
+                player: player,
+              ),
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        );
+        for (
+          var i = 0;
+          i < 60 && find.byType(Texture).evaluate().isEmpty;
+          i++
+        ) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 20)),
+          );
+          await tester.pump(const Duration(milliseconds: 20));
+        }
+        expect(find.byType(Texture), findsOneWidget);
+
+        player.emitMenuPressed();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.scrollUntilVisible(
+          find.text('Controller mapping'),
+          200,
+          scrollable: find.byType(Scrollable).last,
+        );
+        await tester.tap(find.text('Controller mapping'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        // RetroPad index 8 (B / cancel) at the mapping list's top level asks
+        // to close, which kicks off the async Player 1 check.
+        player.emitButton(8, true);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.text('Keep editing'), findsOneWidget);
+        expect(find.text('Leave with Player 1 vacant'), findsOneWidget);
+
+        // The regression under test: the mapping screen is unmounted while
+        // confirming (see _buildOverlayBody), so routing these presses to it
+        // would reach a null currentState and do nothing. They must instead
+        // fall through to _nav and drive the confirmation's own rows.
+        player.emitButton(5, true); // down: Keep editing -> Leave with...
+        await tester.pump();
+        player.emitButton(0, true); // confirm the highlighted row
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(
+          find.text('Leave with Player 1 vacant'),
+          findsNothing,
+          reason: 'confirming must resolve the dialog, not leave it stranded',
+        );
+        expect(find.text('Resume'), findsOneWidget);
+        expect(
+          find.byType(Texture),
+          findsOneWidget,
+          reason: 'leaving the mapping screen must not end the session',
+        );
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(gamepadChannel, null);
       }
     },
   );

@@ -167,6 +167,10 @@ class ControllerDiagnosticsFolder {
     if (axis != null) return _foldAxis(axis, event.value);
     final button = event.button;
     if (button != null) {
+      // Remove before reinserting: a LinkedHashMap keeps a reassigned key's
+      // original position, so an in-place update would not move it to the
+      // end and `snapshot()` would stop emitting latest-last.
+      _buttons.remove(button.name);
       _buttons[button.name] = ButtonChannel(
         rawName: button.name,
         pressed: event.value != 0,
@@ -334,6 +338,9 @@ class AndroidControllerDiagnosticsFolder {
   final Map<int, ButtonChannel> _buttons = {};
   final Map<String, AxisVerdictTracker> _axisTrackers = {};
 
+  // Every payload echoes all six channels, so only a changed value is evidence.
+  final Map<String, double> _lastAxisValue = {};
+
   /// Folds one axis-snapshot payload. Returns false (nothing folded) when the
   /// payload is for a different connection than [connectionId], same filter
   /// capture and the desktop folder both apply.
@@ -361,6 +368,8 @@ class AndroidControllerDiagnosticsFolder {
     if (payload['connectionId']?.toString() != connectionId) return false;
     final keyCode = (payload['keyCode'] as num?)?.toInt();
     if (keyCode == null) return false;
+    // Reinsert to keep latest-last; see the desktop folder.
+    _buttons.remove(keyCode);
     _buttons[keyCode] = ButtonChannel(
       rawCode: keyCode,
       rawName: payload['keyName']?.toString(),
@@ -380,8 +389,8 @@ class AndroidControllerDiagnosticsFolder {
   }) {
     final x = (rawX as num?)?.toDouble() ?? 0.0;
     final y = (rawY as num?)?.toDouble() ?? 0.0;
-    _axisTrackers.putIfAbsent(_trackerKey(id, true), AxisVerdictTracker.new).sample(x);
-    _axisTrackers.putIfAbsent(_trackerKey(id, false), AxisVerdictTracker.new).sample(y);
+    _sampleIfChanged(_trackerKey(id, true), x);
+    _sampleIfChanged(_trackerKey(id, false), y);
     _sticks[id] = StickChannel(
       id: id,
       x: x,
@@ -398,9 +407,21 @@ class AndroidControllerDiagnosticsFolder {
 
   void _foldTrigger(String id, dynamic rawValue) {
     final value = (rawValue as num?)?.toDouble() ?? 0.0;
-    final tracker = _axisTrackers.putIfAbsent(id, AxisVerdictTracker.new);
-    tracker.sample(value);
-    _triggers[id] = TriggerChannel(id: id, value: value, verdict: tracker.verdict);
+    _sampleIfChanged(id, value);
+    _triggers[id] = TriggerChannel(
+      id: id,
+      value: value,
+      verdict: _axisTrackers[id]!.verdict,
+    );
+  }
+
+  /// Samples only a changed value: a resting channel is echoed, not evidence.
+  void _sampleIfChanged(String key, double value) {
+    final tracker = _axisTrackers.putIfAbsent(key, AxisVerdictTracker.new);
+    if (_lastAxisValue[key] != value) {
+      tracker.sample(value);
+    }
+    _lastAxisValue[key] = value;
   }
 
   static String _trackerKey(String id, bool isX) => '$id.${isX ? 'x' : 'y'}';

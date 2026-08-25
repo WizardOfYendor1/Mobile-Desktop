@@ -46,13 +46,22 @@ class StickChannel extends ControllerChannel {
     this.snapMode,
   });
 
-  StickChannel copyWith({double? x, double? y, DiagnosticVerdict? verdict}) =>
-      StickChannel(
-        id: id,
-        x: x ?? this.x,
-        y: y ?? this.y,
-        verdict: verdict ?? this.verdict,
-      );
+  StickChannel copyWith({
+    double? x,
+    double? y,
+    DiagnosticVerdict? verdict,
+    double? snapX,
+    double? snapY,
+    String? snapMode,
+  }) => StickChannel(
+    id: id,
+    x: x ?? this.x,
+    y: y ?? this.y,
+    verdict: verdict ?? this.verdict,
+    snapX: snapX ?? this.snapX,
+    snapY: snapY ?? this.snapY,
+    snapMode: snapMode ?? this.snapMode,
+  );
 
   @override
   bool operator ==(Object other) =>
@@ -61,10 +70,13 @@ class StickChannel extends ControllerChannel {
           other.id == id &&
           other.x == x &&
           other.y == y &&
-          other.verdict == verdict);
+          other.verdict == verdict &&
+          other.snapX == snapX &&
+          other.snapY == snapY &&
+          other.snapMode == snapMode);
 
   @override
-  int get hashCode => Object.hash(id, x, y, verdict);
+  int get hashCode => Object.hash(id, x, y, verdict, snapX, snapY, snapMode);
 
   @override
   String toString() => 'StickChannel($id, x: $x, y: $y, verdict: $verdict)';
@@ -141,12 +153,14 @@ class ButtonChannel extends ControllerChannel {
     int? rawCode,
     String? rawName,
     String? retroPad,
+    int? retroPadIndex,
     String? label,
     bool? pressed,
   }) => ButtonChannel(
     rawCode: rawCode ?? this.rawCode,
     rawName: rawName ?? this.rawName,
     retroPad: retroPad ?? this.retroPad,
+    retroPadIndex: retroPadIndex ?? this.retroPadIndex,
     label: label ?? this.label,
     pressed: pressed ?? this.pressed,
   );
@@ -158,11 +172,13 @@ class ButtonChannel extends ControllerChannel {
           other.rawCode == rawCode &&
           other.rawName == rawName &&
           other.retroPad == retroPad &&
+          other.retroPadIndex == retroPadIndex &&
           other.label == label &&
           other.pressed == pressed);
 
   @override
-  int get hashCode => Object.hash(rawCode, rawName, retroPad, label, pressed);
+  int get hashCode =>
+      Object.hash(rawCode, rawName, retroPad, retroPadIndex, label, pressed);
 
   @override
   String toString() =>
