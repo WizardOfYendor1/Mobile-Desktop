@@ -43,14 +43,10 @@ enum PlayerOneWarning {
 
 /// Why leaving deserves a warning, or null when it does not.
 ///
-/// The question is NOT "is Player 1 empty": an unpinnable remote is composed
-/// into port 0, so it never quite is. It is "is a better input going unused".
-/// A warning only earns its interruption when there is a gamepad the user
-/// could move to Player 1 -- with none connected the remote is the only
-/// option, so there is nothing to suggest and nothing worth interrupting for.
-///
-/// Holding port 0 is what owns Player 1, which deliberately covers a keyboard
-/// the user pinned there: that is a choice, not an accident.
+/// The question is not "is Player 1 empty" -- a remote is composed into port 0,
+/// so it never is -- but "is a better input going unused". Only a connected
+/// gamepad the user could move there earns the interruption. Holding port 0
+/// owns Player 1, which covers a keyboard deliberately pinned to it.
 @visibleForTesting
 PlayerOneWarning? playerOneWarningFor(
   List<NativeControllerDevice> devices, {
@@ -71,9 +67,8 @@ PlayerOneWarning? playerOneWarningFor(
 
 /// The RetroPad bit a saved binding gives [button], or null when it is unbound.
 ///
-/// Split out from the screen so the desktop trigger path can be tested: the
-/// gamepad stream is a static, and Windows/Linux are the only platforms that
-/// read it in Dart.
+/// Split out so the desktop trigger path is testable: the gamepad stream is a
+/// static, and only Windows/Linux read it in Dart.
 @visibleForTesting
 int? desktopBoundBit(NativeControllerMapping? mapping, GamepadButton button) {
   final code = desktopGamepadButtonCodes[button];
@@ -622,9 +617,8 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
   ) {
     final mapping = _controllerMappings[desktopControllerDeviceId(gamepadId)];
     final bit = desktopBoundBit(mapping, trigger) ?? fallbackBit;
-    // Keyed by pad as well as trigger: two controllers resolve the same
-    // trigger to different bits, and a shared key let one pad's event clear
-    // the bit the other was still holding.
+    // Keyed by pad too: two controllers resolve the same trigger to different
+    // bits, and a shared key let one clear the bit the other was holding.
     final key = (gamepadId, trigger);
     final previous = _triggerBits[key];
     if (previous != null && previous != bit) _stickMask &= ~previous;
@@ -2009,9 +2003,8 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
 
   /// Whether [deviceId]'s mapping may be written back to the server.
   ///
-  /// EVERY mapping write must pass through this. A profile whose read failed
-  /// holds a fallback rather than the stored truth, so writing it replaces
-  /// bindings we never saw.
+  /// Every mapping write must pass through this: a profile whose read failed
+  /// holds a fallback, so writing it replaces bindings we never saw.
   bool _canPersistMapping(String deviceId) =>
       !_unreadableMappingProfiles.contains(deviceId);
 
@@ -2024,9 +2017,8 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
   ) async {
     final games = _client.gamesApi;
     if (games == null) return;
-    // Applied to the session FIRST, so the panel's own display and what the
-    // core actually receives agree. Only the write is refused: returning
-    // before this left the user looking at a binding gameplay never got.
+    // Applied to the session first, so the panel's display and what the core
+    // receives agree; only the write is refused.
     setState(() {
       _controllerMappings = Map.unmodifiable({
         ..._controllerMappings,

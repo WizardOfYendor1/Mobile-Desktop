@@ -167,6 +167,28 @@ static void test_input_latch(void) {
   lh_test_poll_input(host);
   CHECK(lh_test_read_input(host, 0) == 0x0000, "and is gone on the poll after that");
 
+  // Pausing suspends polling, so without lh_resume dropping the latch a button
+  // pressed while paused would fire on the first frame after resuming -- the
+  // reported bug: a button tested in the controller panel peppering in game.
+  lh_set_input(host, 0, 0x0010);
+  lh_set_input(host, 0, 0x0000);
+  lh_pause(host);
+  lh_resume(host);
+  lh_test_poll_input(host);
+  CHECK(lh_test_read_input(host, 0) == 0x0000,
+        "a press made while paused does not fire after resuming");
+
+  // The other half: a button genuinely still held across the resume must keep
+  // working, which is why only pending is dropped and never the level.
+  lh_set_input(host, 0, 0x0020);
+  lh_pause(host);
+  lh_resume(host);
+  lh_test_poll_input(host);
+  CHECK(lh_test_read_input(host, 0) == 0x0020,
+        "a button still held across a resume is preserved");
+  lh_set_input(host, 0, 0x0000);
+  lh_test_poll_input(host);
+
   // Ports latch independently.
   lh_set_input(host, 0, 0x0010);
   lh_set_input(host, 1, 0x0020);

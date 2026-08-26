@@ -2285,7 +2285,22 @@ int lh_start(lh_host *h) {
 }
 
 void lh_pause(lh_host *h) { h->paused = 1; }
-void lh_resume(lh_host *h) { h->paused = 0; }
+void lh_resume(lh_host *h) {
+  // The pending latch exists so a press+release falling entirely between two
+  // polls is still observed for one frame (see test_input_latch). While paused
+  // there IS no next poll, so anything pressed in a menu -- the controller test
+  // panel most obviously, where pressing buttons is the whole point -- stays
+  // latched and fires on the first frame after resuming.
+  //
+  // Only the latch is dropped. input_level is left alone, so a button that is
+  // genuinely still held across the resume keeps working. The platform layers
+  // cannot do this themselves: they can only publish a mask, and publishing 0
+  // ORs nothing into pending, so the stale edge would survive.
+  for (int p = 0; p < LH_MAX_PORTS; p++) {
+    atomic_store(&h->input_pending[p], 0u);
+  }
+  h->paused = 0;
+}
 
 void lh_set_fast_forward(lh_host *h, int factor) {
   if (factor < 1) factor = 1;

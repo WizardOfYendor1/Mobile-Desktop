@@ -611,10 +611,8 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
 
   /// Dismisses the overlay, resuming the game unless [resume] says otherwise.
   ///
-  /// Handing the screen to the emulator's own controls picker closes this
-  /// overlay without the user dismissing it, and the game must stay paused
-  /// behind that picker. Whoever holds the pause is then responsible for
-  /// releasing it -- see [_onEmulatorControlsClosed].
+  /// The controls picker is a handoff, not a dismissal: it keeps the pause and
+  /// releases it in [_onEmulatorControlsClosed].
   void _closeOverlay({bool resume = true}) {
     if (!_overlayOpen) return;
     setState(() {
@@ -659,10 +657,7 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
     // first, so the default highlight cannot end the game.
     if (_confirmingExit) {
       return [
-        // Back, not Resume: this returns to the pause menu it came from and
-        // leaves the game paused. It shared the `resume` key with the menu
-        // entry that really does resume, so every locale read it as a promise
-        // to start playing again.
+        // Back, not Resume: this returns to the pause menu and stays paused.
         _OverlayItem(
           Icons.arrow_back,
           l?.back ?? 'Back',
@@ -785,9 +780,8 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
       );
       return;
     }
-    // Stays paused: the picker is a handoff, not a dismissal. Tracked on
-    // every platform, or the page's close message is dropped and the pause
-    // this holds is never released. The Android channel call self-guards.
+    // Tracked on every platform, or the page's close message is dropped and
+    // the pause taken here is never released. The Android call self-guards.
     _closeOverlay(resume: false);
     setState(() => _emulatorControlsOpen = true);
     _watchForControlsClose();
@@ -822,9 +816,8 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
     // A controller may have connected while the picker was open. Re-query it
     // before gameplay resumes instead of requiring a page reload.
     unawaited(_registerAndroidGamepads());
-    // Back is the deliberate exit path to Moonfin's pause menu, which pauses
-    // for itself. Any other close returns to the game, so release the pause
-    // taken when the picker opened. Harmless if the player already resumed.
+    // Back returns to Moonfin's pause menu, which pauses for itself. Any other
+    // close returns to the game, so release the pause the picker took.
     if (reason == 'back') {
       _openOverlay();
       return;
@@ -842,21 +835,17 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
 
   /// Polls the player for the controls menu closing.
   ///
-  /// The page announces a close only from its own controller-input handler,
-  /// so a menu dismissed any other way -- a mouse click on the footer Close,
-  /// which is the normal thing to do on web -- is never reported, and the
-  /// pause taken when the menu opened would never be released. Asking is the
-  /// only way to find out. A player page without the query is treated as
-  /// still open, so an older one behaves exactly as it does today.
+  /// The page reports a close only from its own controller-input handler, so a
+  /// mouse click on Close is never announced and asking is the only way to
+  /// find out. A page without the query is treated as still open.
   void _watchForControlsClose() {
     _controlsCloseWatch?.cancel();
     _controlsCloseWatch = Timer.periodic(const Duration(milliseconds: 400), (
       _,
     ) async {
-      // Timer.periodic does not await this callback, and the non-web fallback
-      // is a real platform-channel round trip. Without this a stalled call
-      // would let ticks pile up on the channel that also carries controller
-      // input; a skipped tick costs at most another 400ms.
+      // Timer.periodic does not await this, and the non-web fallback is a real
+      // channel round trip: a stalled call would pile ticks onto the channel
+      // carrying controller input. A skipped tick costs 400ms.
       if (_controlsCloseQueryInFlight) return;
       if (!mounted || !_emulatorControlsOpen) {
         _controlsCloseWatch?.cancel();

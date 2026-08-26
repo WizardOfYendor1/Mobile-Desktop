@@ -101,9 +101,9 @@ class ControllerTestPanel extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           const Divider(color: Colors.white24, height: 1),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -112,9 +112,9 @@ class ControllerTestPanel extends StatelessWidget {
               Expanded(child: _StickField(label: 'Right stick', stick: right)),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           _DpadRow(hat: hat),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Row(
             children: [
               Expanded(child: _TriggerMeter(label: 'L2', trigger: l2)),
@@ -122,16 +122,16 @@ class ControllerTestPanel extends StatelessWidget {
               Expanded(child: _TriggerMeter(label: 'R2', trigger: r2)),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           const Text(
             'Last button',
             style: TextStyle(color: _bright, fontSize: 16),
           ),
           const SizedBox(height: 4),
           _LastButton(button: _lastPressed),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           const Divider(color: Colors.white24, height: 1),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Row(
             children: [
               // The ring only appears while B is actually held, so the footer
@@ -186,10 +186,10 @@ class _StickField extends StatelessWidget {
           label,
           style: const TextStyle(color: Colors.white70, fontSize: 14),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         SizedBox(
-          width: 64,
-          height: 64,
+          width: 52,
+          height: 52,
           child: DecoratedBox(
             decoration: BoxDecoration(
               border: Border.all(color: Colors.white24),
