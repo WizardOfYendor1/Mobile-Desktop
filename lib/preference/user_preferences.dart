@@ -383,6 +383,7 @@ class UserPreferences extends ChangeNotifier {
     'poster_size_playlist',
     'pref_home_rows_fullscreen',
     'pref_show_seerr_button',
+    'pref_show_server_messages_button',
     'pref_show_media_details_on_library_page',
     'pref_use_detailed_sub_headings',
     'pref_hide_backdrops_in_libraries',
@@ -1187,6 +1188,15 @@ class UserPreferences extends ChangeNotifier {
         PlatformDetection.isAppleTV,
   );
 
+  /// Whether a game controller drives the app UI. Off by default. Games take
+  /// the pad for themselves either way. Belongs to the device rather than the
+  /// account, like [useExternalPlayer], so it's neither synced nor stored per
+  /// server.
+  static final gamepadNavigationEnabled = Preference(
+    key: 'pref_gamepad_navigation_enabled',
+    defaultValue: false,
+  );
+
   static final visualTheme = EnumPreference(
     key: 'app_theme_id',
     defaultValue: PlatformDetection.isApple || PlatformDetection.isAppleTV
@@ -1365,6 +1375,13 @@ class UserPreferences extends ChangeNotifier {
   static final showSeerrButton = Preference(
     key: 'pref_show_seerr_button',
     defaultValue: true,
+  );
+
+  /// Off by default. An admin who wants it on for everyone can set it in the
+  /// Moonbase default settings.
+  static final showServerMessagesButton = Preference(
+    key: 'pref_show_server_messages_button',
+    defaultValue: false,
   );
 
   static final adminDrawerOrder = Preference(
@@ -1594,8 +1611,24 @@ class UserPreferences extends ChangeNotifier {
     values: DesktopScrollWheelAction.values,
   );
 
-  static final trickPlayEnabled = Preference(
-    key: 'trick_play_enabled',
+  static final trickPlayMode = EnumPreference(
+    key: 'trickplay_mode',
+    defaultValue: TrickplayMode.single,
+    values: TrickplayMode.values,
+  );
+
+  static final trickPlayPreviewScalePercent = Preference<int>(
+    key: 'trickplay_preview_scale_percent',
+    defaultValue: 30,
+  );
+
+  static final trickPlayVerticalPositionPercent = Preference<int>(
+    key: 'trickplay_vertical_position_percent',
+    defaultValue: 0,
+  );
+
+  static final trickPlayFollowScrubPosition = Preference<bool>(
+    key: 'trickplay_follow_scrub_position',
     defaultValue: true,
   );
 

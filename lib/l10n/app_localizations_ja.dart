@@ -266,6 +266,16 @@ class AppLocalizationsJa extends AppLocalizations {
   String get keyboardPreferSystemImeDescription => '文字入力に標準でデバイスの入力方式を使用します';
 
   @override
+  String get controller => 'Controller';
+
+  @override
+  String get gamepadNavigation => 'Gamepad navigation';
+
+  @override
+  String get gamepadNavigationDescription =>
+      'Let a connected game controller move focus and select items';
+
+  @override
   String get themeMoonfin => 'Moonfin';
 
   @override
@@ -2413,6 +2423,32 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get showPreviewThumbnailsWhenSeeking => 'シーク時にプレビューのサムネイルを表示する';
+
+  @override
+  String get trickplayDisplayStyleSingle => 'Single Thumbnail';
+
+  @override
+  String get trickplayDisplayStyleStrip => 'Filmstrip';
+
+  @override
+  String get trickplayModeFull => 'Full Screen';
+
+  @override
+  String get trickplaySettingsPreviewHint =>
+      'Drag the slider to preview scrubbing';
+
+  @override
+  String get trickplayPreviewScale => 'Preview Size';
+
+  @override
+  String get trickplayVerticalOffset => 'Distance From Seekbar';
+
+  @override
+  String get trickplayFollowScrubPosition => 'Follow Scrub Position';
+
+  @override
+  String get trickplayFollowScrubPositionSubtitle =>
+      'Preview slides along the seekbar as you scrub, instead of staying centered';
 
   @override
   String get showDescriptionOnPause => '一時停止時に説明を表示';
@@ -10756,4 +10792,20 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get runSetupAgain => 'Run setup again';
+
+  @override
+  String get serverMessages => 'Messages';
+
+  @override
+  String get serverMessagesEmpty => 'No messages from your server yet';
+
+  @override
+  String get serverMessagesMarkAllRead => 'Mark all as read';
+
+  @override
+  String get serverMessagesShowButton => 'Show messages button';
+
+  @override
+  String get serverMessagesShowButtonSubtitle =>
+      'Adds a button to the menu for messages sent by your server admin';
 }

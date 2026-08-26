@@ -47,6 +47,15 @@ class AndroidGamepadChannel {
     await _channel.invokeMethod('setActive', {'active': active});
   }
 
+  /// Tell the native side whether a pad may drive the UI at all. Pad buttons
+  /// reach Flutter as real key events on Android, so the gate has to sit in
+  /// the Activity, ahead of anything Dart sees.
+  static Future<void> setNavigationEnabled(bool enabled) async {
+    if (!PlatformDetection.isAndroid) return;
+    _navigator?.reset();
+    await _channel.invokeMethod('setNavigationEnabled', {'enabled': enabled});
+  }
+
   static Future<void> setEmulatorControlsActive(bool active) async {
     if (!PlatformDetection.isAndroid) return;
     await _channel.invokeMethod('setEmulatorControlsActive', {

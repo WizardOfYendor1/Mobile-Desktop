@@ -49,7 +49,7 @@
     "@loginFailed": {
         "description": "Generic login failure message"
     },
-    "quickConnectUnavailable": "Pikayhteys ei käytettävissä: {detail}",
+    "quickConnectUnavailable": "Pikayhdistys ei käytettävissä: {detail}",
     "@quickConnectUnavailable": {
         "description": "Quick Connect generic error message",
         "placeholders": {
@@ -58,7 +58,7 @@
             }
         }
     },
-    "quickConnectUnavailableWithStatus": "Pikayhteys ei käytettävissä ({status}): {detail}",
+    "quickConnectUnavailableWithStatus": "Pikayhdistys ei käytettävissä ({status}): {detail}",
     "@quickConnectUnavailableWithStatus": {
         "description": "Quick Connect error message with HTTP status info",
         "placeholders": {
@@ -224,7 +224,7 @@
     "@embyConnectNetworkError": {
         "description": "Generic network error during Emby Connect flow"
     },
-    "loadingLinkedServers": "Ladataan linkitettyjä palvelimia…",
+    "loadingLinkedServers": "Ladataan linkitettyjä palvelimia...",
     "@loadingLinkedServers": {
         "description": "Status text while fetching Emby Connect server list"
     },
@@ -1066,7 +1066,7 @@
     "@read": {
         "description": "Action button label to start reading a book"
     },
-    "resumeFrom": "Jatka osoitteesta {position}",
+    "resumeFrom": "Jatka kohdasta {position}",
     "@resumeFrom": {
         "description": "Action button label showing resume position",
         "placeholders": {
@@ -2633,7 +2633,7 @@
     "@signInAndSecurity": {
         "description": "Account section description"
     },
-    "administration": "Hallinto",
+    "administration": "Hallinta",
     "@administration": {
         "description": "Administration section title"
     },
@@ -4567,7 +4567,7 @@
     "unmute": "Poista mykistys",
     "mute": "Mykistä",
     "branding": "Brändäys",
-    "adminDrawerDashboard": "Kojelauta",
+    "adminDrawerDashboard": "Hallintapaneeli",
     "adminDrawerAnalytics": "Analytiikka",
     "adminDrawerSettings": "Asetukset",
     "adminDrawerBranding": "Brändäys",
@@ -5069,7 +5069,7 @@
     "adminNoLogFiles": "Lokitiedostoja ei löytynyt",
     "adminLogCopied": "Loki kopioitu leikepöydälle",
     "adminSaveLogFile": "Tallenna lokitiedosto",
-    "adminSavedTo": "Tallennettu osoitteeseen {path}",
+    "adminSavedTo": "Tallennettu kohteeseen {path}",
     "@adminSavedTo": {
         "placeholders": {
             "path": {
@@ -5991,7 +5991,7 @@
     "adminTaskDetailEnded": "Päättyi",
     "adminTaskDetailDuration": "Kesto",
     "adminTaskDetailErrorLabel": "Virhe:",
-    "adminTaskTriggerDaily": "Päivittäin osoitteessa {time}",
+    "adminTaskTriggerDaily": "Päivittäin klo {time}",
     "@adminTaskTriggerDaily": {
         "placeholders": {
             "time": {
@@ -7326,7 +7326,7 @@
     "@empty": {
         "description": "Label indicating a section or category is empty"
     },
-    "detailScreenStyle": "Tietonäkymän tyyli",
+    "detailScreenStyle": "Tietonäkymän Tyyli",
     "@detailScreenStyle": {
         "description": "Label for the media detail screen layout style setting"
     },
@@ -9421,5 +9421,157 @@
     "personalRatingSaveFailed": "Arvostelua ei voitu tallentaa",
     "@personalRatingSaveFailed": {
         "description": "Error shown when saving a personal rating fails."
-    }
+    },
+    "interfaceLayout": "Käyttöliittymän ulkoasu",
+    "@interfaceLayout": {
+        "description": "Setting to override which UI layout the app uses"
+    },
+    "interfaceLayoutSubtitle": "Ohita havaittu asettelu, jos laitteen tiedot on luettu virheellisesti. Käynnistä Moonfin uudelleen, jotta muutokset astuvat voimaan.",
+    "@interfaceLayoutSubtitle": {
+        "description": "Subtitle for the interface layout setting"
+    },
+    "interfaceLayoutAutomatic": "Automaattinen",
+    "@interfaceLayoutAutomatic": {
+        "description": "Interface layout option: detect from the device"
+    },
+    "interfaceLayoutTv": "TV",
+    "@interfaceLayoutTv": {
+        "description": "Interface layout option: 10-foot TV layout"
+    },
+    "interfaceLayoutDesktop": "Työpöytä",
+    "@interfaceLayoutDesktop": {
+        "description": "Interface layout option: desktop layout"
+    },
+    "interfaceLayoutPhone": "Puhelin",
+    "@interfaceLayoutPhone": {
+        "description": "Interface layout option: phone layout"
+    },
+    "queuedDownload": "Jonossa",
+    "@queuedDownload": {
+        "description": "Status label for a download waiting in the queue for a free download slot"
+    },
+    "starring": "PÄÄOSASSA",
+    "@starring": {
+        "description": "Metadata label for the leading cast"
+    },
+    "recordSeries": "Tallenna Sarja",
+    "@recordSeries": {
+        "description": "Button label to record every showing of a live TV series"
+    },
+    "seriesSetToRecord": "Sarja on valmis tallennettavaksi",
+    "@seriesSetToRecord": {
+        "description": "Snackbar confirmation after scheduling a live TV series recording"
+    },
+    "seriesRecordingCancelled": "Sarjan tallennus peruutettu",
+    "@seriesRecordingCancelled": {
+        "description": "Snackbar confirmation after cancelling a live TV series recording"
+    },
+    "unableToCreateSeriesRecording": "Sarjatallennusta ei voitu luoda",
+    "@unableToCreateSeriesRecording": {
+        "description": "Error when creating a live TV series recording fails"
+    },
+    "mixedRowsOnly": "Vain sekarivit",
+    "@mixedRowsOnly": {
+        "description": "Option: only show the label on rows holding both movies and series"
+    },
+    "manual": "Käyttöopas",
+    "@manual": {
+        "description": "Option: manual"
+    },
+    "autoDetect": "Automaattinen tunnistus",
+    "@autoDetect": {
+        "description": "Option: detect the value automatically"
+    },
+    "playerSwipeGestures": "Äänenvoimakkuuden ja kirkkauden pyyhkäisyt",
+    "@playerSwipeGestures": {
+        "description": "Setting for player swipe gestures"
+    },
+    "playerSwipeGesturesDescription": "Liu’uta soittimen ylä- tai alaosaa säätääksesi kirkkautta vasemmalla ja äänenvoimakkuutta oikealla",
+    "@playerSwipeGesturesDescription": {
+        "description": "Description for player swipe gestures"
+    },
+    "tvOfflineDownloads": "Ota offline-lataukset käyttöön",
+    "@tvOfflineDownloads": {
+        "description": "TV-only toggle in the Offline Downloads settings: offer download actions on item pages"
+    },
+    "tvOfflineDownloadsSubtitle": "Näytä lataustoiminnot kohteiden sivuilla",
+    "@tvOfflineDownloadsSubtitle": {
+        "description": "Subtitle for the TV-only offline downloads toggle"
+    },
+    "mediaBarModeBookshelf": "Kirjahylly",
+    "@mediaBarModeBookshelf": {
+        "description": "Media bar style option: Bookshelf"
+    },
+    "mediaBarModeGallery": "Galleria",
+    "@mediaBarModeGallery": {
+        "description": "Media bar style option: Gallery"
+    },
+    "mediaBarModeBanner": "Banneri",
+    "@mediaBarModeBanner": {
+        "description": "Media bar style option: Banner"
+    },
+    "mediaBarModeAya": "Aya",
+    "@mediaBarModeAya": {
+        "description": "Media bar style option: Aya"
+    },
+    "mediaBarSourceType": "Lähde",
+    "@mediaBarSourceType": {
+        "description": "Setting for which titles the media bar draws from"
+    },
+    "mediaBarSourceRandom": "Satunnainen",
+    "@mediaBarSourceRandom": {
+        "description": "Media bar source: any eligible title"
+    },
+    "recentlyReleasedSeriesType": "Äskettäin julkaistut sarjat, lajittele",
+    "@recentlyReleasedSeriesType": {
+        "description": "Setting for sorting series in recently released series row"
+    },
+    "recentlyReleasedSeriesTypeDescription": "Lajittele äskettäin julkaistujen sarjojen kotirivit sarjan, uusimman kauden tai uusimman jakson esityspäivän mukaan",
+    "@recentlyReleasedSeriesTypeDescription": {
+        "description": "Description for recently released series type setting"
+    },
+    "favoriteChannels": "Suosikkikanavat",
+    "@favoriteChannels": {
+        "description": "Home row: favourited live TV channels"
+    },
+    "adminMetadataFieldCustomRating": "Mukautettu arviointi",
+    "adminMetadataFieldDisplayOrder": "Näyttöjärjestys",
+    "adminMetadataDisplayOrderAired": "Esitetty",
+    "adminMetadataDisplayOrderOriginalAirDate": "Ensiesityspäivä",
+    "adminMetadataDisplayOrderAbsolute": "Absoluuttinen",
+    "adminMetadataDisplayOrderDvd": "DVD",
+    "adminMetadataDisplayOrderDigital": "Digitaalinen",
+    "adminMetadataDisplayOrderStoryArc": "Juonikaari",
+    "adminMetadataDisplayOrderProduction": "Tuotanto",
+    "adminMetadataDisplayOrderTv": "TV",
+    "adminMetadataDisplayOrderAlternate": "Vaihtoehtoinen",
+    "adminMetadataDisplayOrderRegional": "Alueellinen",
+    "adminMetadataDisplayOrderAlternateDvd": "Vaihtoehtoinen DVD",
+    "adminMetadataDisplayOrderDateModified": "Muokkauspäivämäärä",
+    "adminMetadataDisplayOrderSortName": "Lajittele nimen mukaan",
+    "adminMetadataDisplayOrderReleaseDate": "Julkaisupäivä",
+    "adminMetadataSettings": "Metatietojen asetukset",
+    "adminMetadataDownloadLanguage": "Haluttu latauskieli",
+    "adminMetadataCountryRegion": "Maa/alue",
+    "adminMetadataInheritHelp": "Jätä tämä oletusasetukseksi, jolloin asetus periytyy yläkohteesta tai palvelimen oletusasetuksesta.",
+    "adminMetadataField3DFormat": "3D-muoto",
+    "adminMetadataPersonKindUnknown": "Tuntematon",
+    "adminMetadataPersonKindActor": "Näyttelijä",
+    "adminMetadataPersonKindDirector": "Ohjaaja",
+    "adminMetadataPersonKindComposer": "Säveltäjä",
+    "adminMetadataPersonKindWriter": "Kirjailija",
+    "adminMetadataPersonKindGuestStar": "Vierailija",
+    "adminMetadataPersonKindProducer": "Tuottaja",
+    "adminMetadataPersonKindConductor": "Kapellimestari",
+    "adminMetadataPersonKindLyricist": "Sanoittaja",
+    "adminMetadataPersonKindArranger": "Järjestä",
+    "adminMetadataPersonKindMixer": "Sekoita",
+    "adminMetadataPersonKindRemixer": "Remixer",
+    "adminMetadataPersonKindCreator": "Luoja",
+    "adminMetadataPersonKindArtist": "Artisti",
+    "adminMetadataPersonKindAlbumArtist": "Albumin artisti",
+    "adminMetadataPersonKindAuthor": "Luoja",
+    "adminMetadataPersonKindIllustrator": "Kuvittaja",
+    "adminMetadataPersonKindTranslator": "Kääntäjä",
+    "adminMetadataPersonKindNarrator": "Kertoja"
 }

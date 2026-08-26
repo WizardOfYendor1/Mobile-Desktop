@@ -9658,5 +9658,424 @@
     "scrollDirectionHorizontal": "Orizzontale",
     "@scrollDirectionHorizontal": {
         "description": "Library scroll direction option: horizontal grid for ultrawide displays"
+    },
+    "interfaceLayout": "Layout Interfaccia",
+    "@interfaceLayout": {
+        "description": "Setting to override which UI layout the app uses"
+    },
+    "interfaceLayoutSubtitle": "Sovrascrivi il layout rilevato quando il dispositivo viene identificato in modo errato. Riavvia Moonfin per applicare le modifiche.",
+    "@interfaceLayoutSubtitle": {
+        "description": "Subtitle for the interface layout setting"
+    },
+    "interfaceLayoutAutomatic": "Automatico",
+    "@interfaceLayoutAutomatic": {
+        "description": "Interface layout option: detect from the device"
+    },
+    "interfaceLayoutTv": "TV",
+    "@interfaceLayoutTv": {
+        "description": "Interface layout option: 10-foot TV layout"
+    },
+    "interfaceLayoutDesktop": "Desktop",
+    "@interfaceLayoutDesktop": {
+        "description": "Interface layout option: desktop layout"
+    },
+    "interfaceLayoutPhone": "Telefono",
+    "@interfaceLayoutPhone": {
+        "description": "Interface layout option: phone layout"
+    },
+    "queuedDownload": "In coda",
+    "@queuedDownload": {
+        "description": "Status label for a download waiting in the queue for a free download slot"
+    },
+    "starring": "CON",
+    "@starring": {
+        "description": "Metadata label for the leading cast"
+    },
+    "recordSeries": "Registra Serie",
+    "@recordSeries": {
+        "description": "Button label to record every showing of a live TV series"
+    },
+    "seriesSetToRecord": "Serie impostata per la registrazione",
+    "@seriesSetToRecord": {
+        "description": "Snackbar confirmation after scheduling a live TV series recording"
+    },
+    "seriesRecordingCancelled": "Registrazione serie annullata",
+    "@seriesRecordingCancelled": {
+        "description": "Snackbar confirmation after cancelling a live TV series recording"
+    },
+    "unableToCreateSeriesRecording": "Impossibile creare la registrazione della serie",
+    "@unableToCreateSeriesRecording": {
+        "description": "Error when creating a live TV series recording fails"
+    },
+    "mixedRowsOnly": "Solo righe miste",
+    "@mixedRowsOnly": {
+        "description": "Option: only show the label on rows holding both movies and series"
+    },
+    "manual": "Manuale",
+    "@manual": {
+        "description": "Option: manual"
+    },
+    "autoDetect": "Rilevamento Automatico",
+    "@autoDetect": {
+        "description": "Option: detect the value automatically"
+    },
+    "playerSwipeGestures": "Swipe Volume e Luminosità",
+    "@playerSwipeGestures": {
+        "description": "Setting for player swipe gestures"
+    },
+    "playerSwipeGesturesDescription": "Scorri verso l'alto o il basso sul player per modificare la luminosità a sinistra e il volume a destra",
+    "@playerSwipeGesturesDescription": {
+        "description": "Description for player swipe gestures"
+    },
+    "tvOfflineDownloads": "Abilita download offline",
+    "@tvOfflineDownloads": {
+        "description": "TV-only toggle in the Offline Downloads settings: offer download actions on item pages"
+    },
+    "tvOfflineDownloadsSubtitle": "Mostra le azioni di download nelle pagine degli elementi",
+    "@tvOfflineDownloadsSubtitle": {
+        "description": "Subtitle for the TV-only offline downloads toggle"
+    },
+    "mediaBarModeBookshelf": "Scaffale",
+    "@mediaBarModeBookshelf": {
+        "description": "Media bar style option: Bookshelf"
+    },
+    "mediaBarModeGallery": "Galleria",
+    "@mediaBarModeGallery": {
+        "description": "Media bar style option: Gallery"
+    },
+    "mediaBarModeBanner": "Banner",
+    "@mediaBarModeBanner": {
+        "description": "Media bar style option: Banner"
+    },
+    "mediaBarModeAya": "Aya",
+    "@mediaBarModeAya": {
+        "description": "Media bar style option: Aya"
+    },
+    "mediaBarSourceType": "Fonte",
+    "@mediaBarSourceType": {
+        "description": "Setting for which titles the media bar draws from"
+    },
+    "mediaBarSourceRandom": "Casuale",
+    "@mediaBarSourceRandom": {
+        "description": "Media bar source: any eligible title"
+    },
+    "recentlyReleasedSeriesType": "Ordina Serie Uscite di Recente per",
+    "@recentlyReleasedSeriesType": {
+        "description": "Setting for sorting series in recently released series row"
+    },
+    "recentlyReleasedSeriesTypeDescription": "Ordina le righe Home Serie Uscite di Recente per serie, ultima stagione o data di trasmissione dell'ultimo episodio",
+    "@recentlyReleasedSeriesTypeDescription": {
+        "description": "Description for recently released series type setting"
+    },
+    "favoriteChannels": "Canali Preferiti",
+    "@favoriteChannels": {
+        "description": "Home row: favourited live TV channels"
+    },
+    "adminMetadataFieldCustomRating": "Classificazione personalizzata",
+    "adminMetadataFieldDisplayOrder": "Ordine di visualizzazione",
+    "adminMetadataDisplayOrderAired": "Trasmesso",
+    "adminMetadataDisplayOrderOriginalAirDate": "Data di trasmissione originale",
+    "adminMetadataDisplayOrderAbsolute": "Assoluto",
+    "adminMetadataDisplayOrderDvd": "DVD",
+    "adminMetadataDisplayOrderDigital": "Digitale",
+    "adminMetadataDisplayOrderStoryArc": "Arco narrativo",
+    "adminMetadataDisplayOrderProduction": "Produzione",
+    "adminMetadataDisplayOrderTv": "TV",
+    "adminMetadataDisplayOrderAlternate": "Alternativo",
+    "adminMetadataDisplayOrderRegional": "Regionale",
+    "adminMetadataDisplayOrderAlternateDvd": "DVD alternativo",
+    "adminMetadataDisplayOrderDateModified": "Data modifica",
+    "adminMetadataDisplayOrderSortName": "Nome ordinamento",
+    "adminMetadataDisplayOrderReleaseDate": "Data di uscita",
+    "adminMetadataSettings": "Impostazioni Metadati",
+    "adminMetadataDownloadLanguage": "Lingua di download preferita",
+    "adminMetadataCountryRegion": "Paese/Regione",
+    "adminMetadataInheritHelp": "Lascia su Predefinito per ereditare l'impostazione da un elemento superiore, o dal valore predefinito del server.",
+    "adminMetadataField3DFormat": "Formato 3D",
+    "adminMetadataPersonKindUnknown": "Sconosciuto",
+    "adminMetadataPersonKindActor": "Attore",
+    "adminMetadataPersonKindDirector": "Regista",
+    "adminMetadataPersonKindComposer": "Compositore",
+    "adminMetadataPersonKindWriter": "Sceneggiatore",
+    "adminMetadataPersonKindGuestStar": "Guest star",
+    "adminMetadataPersonKindProducer": "Produttore",
+    "adminMetadataPersonKindConductor": "Direttore d'orchestra",
+    "adminMetadataPersonKindLyricist": "Paroliere",
+    "adminMetadataPersonKindArranger": "Arrangiatore",
+    "adminMetadataPersonKindEngineer": "Fonico",
+    "adminMetadataPersonKindMixer": "Mixer",
+    "adminMetadataPersonKindRemixer": "Remixer",
+    "adminMetadataPersonKindCreator": "Creatore",
+    "adminMetadataPersonKindArtist": "Artista",
+    "adminMetadataPersonKindAlbumArtist": "Artista dell'album",
+    "adminMetadataPersonKindAuthor": "Autore",
+    "adminMetadataPersonKindIllustrator": "Illustratore",
+    "adminMetadataPersonKindPenciller": "Disegnatore",
+    "adminMetadataPersonKindInker": "Inchiostratore",
+    "adminMetadataPersonKindColorist": "Colorista",
+    "adminMetadataPersonKindLetterer": "Letterista",
+    "adminMetadataPersonKindCoverArtist": "Autore copertina",
+    "adminMetadataPersonKindEditor": "Redattore",
+    "adminMetadataPersonKindTranslator": "Traduttore",
+    "adminMetadataPersonKindNarrator": "Narratore",
+    "adminMetadataAirDays": "Giorni di trasmissione",
+    "adminMetadataLockItem": "Blocca questo elemento per impedire future modifiche ai metadati",
+    "adminMetadataEnabledFields": "Campi Abilitati",
+    "adminMetadataEnabledFieldsHelp": "Deseleziona un campo per bloccarlo e impedire la modifica dei suoi dati.",
+    "adminMetadataLockFieldName": "Nome",
+    "adminMetadataLockFieldOverview": "Panoramica",
+    "adminMetadataLockFieldGenres": "Generi",
+    "adminMetadataLockFieldOfficialRating": "Classificazione ufficiale",
+    "adminMetadataLockFieldCast": "Persone",
+    "adminMetadataLockFieldProductionLocations": "Luoghi di produzione",
+    "adminMetadataLockFieldBirthLocation": "Luogo di nascita",
+    "adminMetadataLockFieldRuntime": "Durata",
+    "adminMetadataLockFieldStudios": "Studi",
+    "adminMetadataLockFieldTags": "Tag",
+    "adminPluginsRestartRequired": "Riavvio richiesto",
+    "@adminPluginsRestartRequired": {
+        "description": "Label for the installed-plugin filter showing changes that require a server restart"
+    },
+    "adminPluginsNoneActive": "Nessun plugin attivo",
+    "@adminPluginsNoneActive": {
+        "description": "Empty state for the active installed-plugin filter"
+    },
+    "adminPluginsNoneRequireRestart": "Nessun plugin richiede un riavvio del server",
+    "@adminPluginsNoneRequireRestart": {
+        "description": "Empty state for the installed-plugin filter showing changes that require a server restart"
+    },
+    "emulatorCoreResetSettings": "Ripristina impostazioni predefinite di {system}",
+    "@emulatorCoreResetSettings": {
+        "description": "Semantic label for the button that resets one core's saved emulator settings",
+        "placeholders": {
+            "system": {
+                "type": "String"
+            }
+        }
+    },
+    "emulatorCoreSettingsReset": "Impostazioni ripristinate ai valori predefiniti.",
+    "@emulatorCoreSettingsReset": {
+        "description": "Snackbar shown after resetting a core's saved emulator settings"
+    },
+    "emulatorCoreResetSettingsFailed": "Impossibile ripristinare le impostazioni. Controlla la connessione e riprova.",
+    "@emulatorCoreResetSettingsFailed": {
+        "description": "Snackbar shown when resetting a core's saved emulator settings fails"
+    },
+    "settingsMediaSegmentTypeAction": "Segmenti {segment}",
+    "@settingsMediaSegmentTypeAction": {
+        "description": "Setting label for what to do with one type of media segment",
+        "placeholders": {
+            "segment": {
+                "type": "String"
+            }
+        }
+    },
+    "personalRatingMine": "La Mia Valutazione",
+    "@personalRatingMine": {
+        "description": "Label under the viewer's own rating in the ratings row."
+    },
+    "filterInProgress": "In Corso",
+    "@filterInProgress": {
+        "description": "Library filter for items the viewer has started but not finished."
+    },
+    "filterUnreleased": "Non Ancora Uscito",
+    "@filterUnreleased": {
+        "description": "Series status filter for shows that have not started airing."
+    },
+    "filterTrailers": "Trailer",
+    "@filterTrailers": {
+        "description": "Library filter for items that have a trailer."
+    },
+    "filterExtras": "Contenuti Extra",
+    "@filterExtras": {
+        "description": "Library filter for items that have bonus features."
+    },
+    "filterThemeSongs": "Sigle Musicali",
+    "@filterThemeSongs": {
+        "description": "Library filter for items that have a theme song."
+    },
+    "filterThemeVideos": "Video Sigla",
+    "@filterThemeVideos": {
+        "description": "Library filter for items that have a theme video."
+    },
+    "source": "Fonte",
+    "@source": {
+        "description": "Heading for the disc source filters in the library filter picker."
+    },
+    "years": "Anni",
+    "@years": {
+        "description": "Heading for the release year filters in the library filter picker."
+    },
+    "audioLanguage": "Lingua Audio",
+    "@audioLanguage": {
+        "description": "Heading for the audio language filters in the library filter picker."
+    },
+    "subtitleLanguage": "Lingua Sottotitoli",
+    "@subtitleLanguage": {
+        "description": "Heading for the subtitle language filters in the library filter picker."
+    },
+    "clearFilters": "Cancella Filtri",
+    "@clearFilters": {
+        "description": "Action that turns every library filter back off."
+    },
+    "seerrShortcutsRow": "Sfoglia Seerr",
+    "@seerrShortcutsRow": {
+        "description": "Title of the Seerr shortcuts row that jumps to Discover, Movies, Series, Requests and Issues."
+    },
+    "seerrReleased": "Uscita",
+    "@seerrReleased": {
+        "description": "Heading for the release window filter in the Seerr browse dialog."
+    },
+    "seerrMinRating": "Valutazione Minima",
+    "@seerrMinRating": {
+        "description": "Heading for the TMDB score floor filter in the Seerr browse dialog."
+    },
+    "seerrMinVotes": "Voti Minimi",
+    "@seerrMinVotes": {
+        "description": "Heading for the TMDB vote count floor filter in the Seerr browse dialog."
+    },
+    "seerrOriginalLanguage": "Lingua Originale",
+    "@seerrOriginalLanguage": {
+        "description": "Heading for the original language filter in the Seerr browse dialog."
+    },
+    "seerrRuntime": "Durata",
+    "@seerrRuntime": {
+        "description": "Heading for the runtime window filter in the Seerr browse dialog."
+    },
+    "subtitleHdrSeparate": "Stile HDR Separato",
+    "@subtitleHdrSeparate": {
+        "description": "Toggle for a second subtitle appearance used only while HDR is playing."
+    },
+    "subtitleHdrSeparateSubtitle": "Il bianco è molto più luminoso in HDR che in SDR, quindi uno stile più tenue qui evita l'abbagliamento",
+    "@subtitleHdrSeparateSubtitle": {
+        "description": "Explains why a separate HDR subtitle style is worth setting."
+    },
+    "scrollSensitivity": "Sensibilità Scorrimento",
+    "@scrollSensitivity": {
+        "description": "Title of the desktop setting that scales mouse wheel scrolling."
+    },
+    "scrollSensitivitySubtitle": "Quanto scorre un singolo scatto della rotella del mouse",
+    "@scrollSensitivitySubtitle": {
+        "description": "Explains the desktop scroll sensitivity slider."
+    },
+    "mediaDetailsAndSpoilers": "Dettagli Media e Spoiler",
+    "@mediaDetailsAndSpoilers": {
+        "description": "Section header for media details and spoiler settings"
+    },
+    "openTrailersExternally": "Apri i Trailer in un'App Esterna",
+    "@openTrailersExternally": {
+        "description": "Details screen setting that hands trailers to the system"
+    },
+    "openTrailersExternallySubtitle": "I trailer si aprono nell'app YouTube o nel browser invece che nel player integrato",
+    "@openTrailersExternallySubtitle": {
+        "description": "Subtitle for the external trailers setting"
+    },
+    "hideDetailsMediaDescription": "Nascondi Descrizione Media nella Pagina Dettagli",
+    "@hideDetailsMediaDescription": {
+        "description": "Setting title to hide media description on details screen"
+    },
+    "hideDetailsMediaDescriptionSubtitle": "Nasconde il testo descrittivo del film o dell'episodio.",
+    "@hideDetailsMediaDescriptionSubtitle": {
+        "description": "Description for setting to hide media description on details page"
+    },
+    "detailUseSeriesThumbnails": "Usa Miniature Serie nella Pagina Dettagli",
+    "@detailUseSeriesThumbnails": {
+        "description": "Setting title to replace thumbnails on Classic details page with series thumbnail"
+    },
+    "detailUseSeriesThumbnailsSubtitle": "Sostituisce tutte le miniature nella pagina dettagli Classica con la miniatura della serie",
+    "@detailUseSeriesThumbnailsSubtitle": {
+        "description": "Description for setting to use series thumbnails on Classic details page"
+    },
+    "hideHomeMediaDescription": "Nascondi Descrizione Media nella Home",
+    "@hideHomeMediaDescription": {
+        "description": "Setting title to hide media description on home screen"
+    },
+    "hideHomeMediaDescriptionSubtitle": "Nasconde il testo descrittivo del film o dell'episodio.",
+    "@hideHomeMediaDescriptionSubtitle": {
+        "description": "Description for setting to hide media description on home screen"
+    },
+    "continueWatchingAndNextUpHeader": "Continua a Guardare e Prossimo",
+    "@continueWatchingAndNextUpHeader": {
+        "description": "Header for settings section containing Continue Watching and Next Up options"
+    },
+    "setupSkip": "Salta configurazione",
+    "@setupSkip": {
+        "description": "Leaves the first-run setup wizard without answering anything"
+    },
+    "setupNavbarQuestion": "Dove deve trovarsi la navigazione?",
+    "@setupNavbarQuestion": {
+        "description": "Setup question asking where the navigation bar should sit"
+    },
+    "setupMediaBarQuestion": "Come deve apparire la parte superiore della tua Home?",
+    "@setupMediaBarQuestion": {
+        "description": "Setup wizard question for the media bar style"
+    },
+    "setupHomeRowsQuestion": "Come devono apparire le tue righe?",
+    "@setupHomeRowsQuestion": {
+        "description": "Setup wizard question for the home row style"
+    },
+    "setupDetailQuestion": "Come deve apparire un film o una serie quando lo apri?",
+    "@setupDetailQuestion": {
+        "description": "Setup wizard question for the detail screen style"
+    },
+    "setupTourQuestion": "Tutto pronto. Ecco cos'altro c'è qui dentro.",
+    "@setupTourQuestion": {
+        "description": "Heading of the final setup wizard screen"
+    },
+    "setupStyleClassic": "Classico",
+    "@setupStyleClassic": {
+        "description": "Name of the original layout, offered in the setup wizard"
+    },
+    "setupStyleModern": "Moderno",
+    "@setupStyleModern": {
+        "description": "Name of the newer layout, offered in the setup wizard"
+    },
+    "setupRowsClassicHint": "Compatto. Più righe a schermo contemporaneamente.",
+    "@setupRowsClassicHint": {
+        "description": "What the classic home row style gives you"
+    },
+    "setupRowsModernHint": "Schede più grandi con i titoli sotto.",
+    "@setupRowsModernHint": {
+        "description": "What the modern home row style gives you"
+    },
+    "setupDetailClassicHint": "Tutto centrato in un unico blocco.",
+    "@setupDetailClassicHint": {
+        "description": "What the classic detail screen style gives you"
+    },
+    "setupDetailModernHint": "Cinematico, con schede per cast e contenuti extra.",
+    "@setupDetailModernHint": {
+        "description": "What the modern detail screen style gives you"
+    },
+    "setupPickALook": "Scegli uno stile",
+    "@setupPickALook": {
+        "description": "Label above the theme swatches on the final setup screen"
+    },
+    "setupTourMoreHeader": "C'è altro ad aspettarti nelle Impostazioni",
+    "@setupTourMoreHeader": {
+        "description": "Heading of the closing setup screen block that lists features found in settings"
+    },
+    "setupTourBulletRequests": "Richieste Seerr",
+    "@setupTourBulletRequests": {
+        "description": "Bullet on the closing setup screen for the Seerr request feature"
+    },
+    "setupTourBulletSyncPlay": "Serate di visione SyncPlay",
+    "@setupTourBulletSyncPlay": {
+        "description": "Bullet on the closing setup screen for SyncPlay"
+    },
+    "setupTourBulletThemes": "Temi personalizzati",
+    "@setupTourBulletThemes": {
+        "description": "Bullet on the closing setup screen for custom themes"
+    },
+    "setupTourBulletDownloads": "Download offline",
+    "@setupTourBulletDownloads": {
+        "description": "Bullet on the closing setup screen for downloads"
+    },
+    "setupTourBulletMore": "E molto altro ancora",
+    "@setupTourBulletMore": {
+        "description": "Closing bullet on the setup screen settings list"
+    },
+    "runSetupAgain": "Esegui di nuovo la configurazione",
+    "@runSetupAgain": {
+        "description": "Starts the first-run setup wizard again from settings"
     }
 }

@@ -9,6 +9,7 @@ import '../../../data/models/aggregated_item.dart';
 import '../../../data/repositories/item_mutation_repository.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../preference/user_preferences.dart';
+import '../../../util/item_watch_state.dart';
 import '../../navigation/destinations.dart';
 import '../add_to_collection_dialog.dart';
 import '../add_to_playlist_dialog.dart';
@@ -78,6 +79,20 @@ List<ItemContextAction> contextActionsFor(
       type == 'BoxSet';
 
   if (isMediaType) {
+    // First so a remote lands on it with no extra presses. The detail screen
+    // does the playing, which keeps the next episode lookup for a series and
+    // the external player preference working the way the Play button does.
+    actions.add(ItemContextAction(
+      icon: Icons.play_arrow,
+      label: watchStateOf(item).hasProgress ? l10n.resume : l10n.play,
+      onSelect: () async {
+        if (!context.mounted) return;
+        context.push(
+          Destinations.item(item.id, serverId: item.serverId, autoPlay: true),
+        );
+      },
+    ));
+
     actions.add(ItemContextAction(
       icon: item.isPlayed
           ? Icons.visibility_off_outlined

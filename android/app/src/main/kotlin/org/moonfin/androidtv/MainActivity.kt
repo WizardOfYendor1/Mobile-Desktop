@@ -47,7 +47,10 @@ import com.google.android.gms.cast.framework.SessionManagerListener
 import com.google.android.gms.common.api.PendingResult
 import com.google.android.gms.common.images.WebImage
 import com.ryanheise.audioservice.AudioServiceActivity
+import com.ryanheise.audioservice.AudioServicePlugin
+import com.ryanheise.audioservice.AudioServiceState
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.embedding.engine.FlutterEngineCache
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
@@ -156,6 +159,7 @@ class MainActivity : AudioServiceActivity(), GamepadsCompatibleActivity {
     }
 
     companion object {
+        private var engineHandedToActivity: FlutterEngine? = null
         private const val CHANNEL = "org.moonfin.androidtv/pip"
         private const val CAST_CHANNEL = "com.moonfin/native_cast"
         private const val CAST_EVENTS_CHANNEL = "com.moonfin/native_cast_events"
@@ -232,6 +236,7 @@ class MainActivity : AudioServiceActivity(), GamepadsCompatibleActivity {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        discardHeadlessEngine()
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             runCatching { window.colorMode = ActivityInfo.COLOR_MODE_HDR }
@@ -257,11 +262,28 @@ class MainActivity : AudioServiceActivity(), GamepadsCompatibleActivity {
         return "moonfin://item?$query"
     }
 
+    // audio_service boots the app on an engine of its own whenever something
+    // binds the media service with no Activity around, a car head unit or a
+    // media button for instance, then hands that engine to the next Activity.
+    // By then TV detection, the codec probes and the screensaver timer have
+    // all settled for an Activity that wasn't there, so unless it's busy
+    // playing the launch starts over on a fresh engine. The media service
+    // keeps answering until the new engine configures it.
+    private fun discardHeadlessEngine() {
+        val cache = FlutterEngineCache.getInstance()
+        val id = AudioServicePlugin.getFlutterEngineId()
+        val cached = cache.get(id) ?: return
+        if (cached === engineHandedToActivity || AudioServiceState.isPlaying()) return
+        cache.remove(id)
+        cached.destroy()
+    }
+
     // Null travels back to Dart as "ask again" rather than as "not a TV".
     private fun isTvDevice(): Boolean? = isTelevisionOrNull(this)
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        engineHandedToActivity = flutterEngine
 
         val bridge = LibretroBridge(
             flutterEngine,
@@ -339,6 +361,10 @@ class MainActivity : AudioServiceActivity(), GamepadsCompatibleActivity {
                 }
                 "setEmulatorControlsActive" -> {
                     gameInputRouter.setEmulatorControlsActive(call.argument<Boolean>("active") ?: false)
+                    result.success(true)
+                }
+                "setNavigationEnabled" -> {
+                    gameInputRouter.setNavigationEnabled(call.argument<Boolean>("enabled") ?: false)
                     result.success(true)
                 }
                 "setControllerMapping" -> {
@@ -713,6 +739,9 @@ class MainActivity : AudioServiceActivity(), GamepadsCompatibleActivity {
         val pad = nativePad
         if (pad != null && pad.active && pad.onKey(event)) return true
         if (gameInputRouter.onKeyEvent(event)) return true
+        // A native session decides for itself what a pad button does, so the
+        // gate waits for it to finish.
+        if (pad?.active != true && gameInputRouter.blocksNavigation(event)) return true
         // keyHandler is the gamepads_android plugin's registration
         // (GamepadsCompatibleActivity.registerKeyEventHandler), which forwards
         // to the xyz.luan/gamepads channel's Gamepads.normalizedEvents stream.

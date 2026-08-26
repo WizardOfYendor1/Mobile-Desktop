@@ -911,7 +911,8 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
       );
       if (contentPath == null) {
         _releaseGameplayArtworkBlock();
-        if (mounted) {
+        // Extraction may already have reported something more specific than this.
+        if (mounted && _error == null) {
           setState(() => _error = 'This archive format is not supported.');
         }
         return;
@@ -1041,15 +1042,20 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
   /// zip's own name and expect every chip inside it, so extracting "the
   /// largest file" like every other system does would destroy the set.
   /// 7z is not readable here yet.
+  ///
+  /// The file's signature decides, not its name: a server unpacks a single-ROM
+  /// archive itself and sends the raw ROM under the archive's own name, so a
+  /// download called .zip is often a plain ROM already.
   Future<String?> _extractIfArchive(
     File file,
     Directory cacheDir, {
     bool preserveArchive = false,
   }) async {
-    final lower = file.path.toLowerCase();
-    if (lower.endsWith('.7z')) return null;
-    if (!lower.endsWith('.zip')) return file.path;
     if (preserveArchive) return file.path;
+
+    final signature = await _readSignature(file);
+    if (_is7zSignature(signature)) return null;
+    if (!_isZipSignature(signature)) return file.path;
 
     final marker = File('${cacheDir.path}/.extracted');
     if (await marker.exists()) {
@@ -1095,6 +1101,31 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
       await input.close();
     }
   }
+
+  static Future<List<int>> _readSignature(File file) async {
+    final handle = await file.open();
+    try {
+      return await handle.read(6);
+    } finally {
+      await handle.close();
+    }
+  }
+
+  static bool _isZipSignature(List<int> s) =>
+      s.length >= 4 &&
+      s[0] == 0x50 &&
+      s[1] == 0x4B &&
+      s[2] == 0x03 &&
+      s[3] == 0x04;
+
+  static bool _is7zSignature(List<int> s) =>
+      s.length >= 6 &&
+      s[0] == 0x37 &&
+      s[1] == 0x7A &&
+      s[2] == 0xBC &&
+      s[3] == 0xAF &&
+      s[4] == 0x27 &&
+      s[5] == 0x1C;
 
   /// This game's emulator settings for this device, falling back through the
   /// documents written before each narrowing of scope: per game, then the

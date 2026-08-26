@@ -11,6 +11,7 @@ import 'package:jellyfin_preference/jellyfin_preference.dart';
 import 'package:server_core/server_core.dart';
 
 import '../../data/repositories/seerr_repository.dart';
+import 'server_messages_service.dart';
 import 'storage_path_service.dart';
 import 'synced_fields.dart';
 import '../../ui/widgets/navigation_layout.dart';
@@ -37,6 +38,13 @@ class PluginSyncService extends ChangeNotifier {
 
   SeerrPreferences get _seerrPrefs => GetIt.instance<SeerrPreferences>();
 
+  /// Null when the app has not registered it yet, which is the case in tests
+  /// that only exercise settings sync.
+  ServerMessagesService? get _messages =>
+      GetIt.instance.isRegistered<ServerMessagesService>()
+      ? GetIt.instance<ServerMessagesService>()
+      : null;
+
   bool _pluginAvailable = false;
   bool get pluginAvailable => _pluginAvailable;
 
@@ -61,7 +69,6 @@ class PluginSyncService extends ChangeNotifier {
   bool _tmdbAvailable = false;
   bool get tmdbAvailable => _tmdbAvailable;
   String? _activeThemeCacheServerId;
-  void Function(String message)? onAdminMessage;
   void Function(
     String title,
     String body,
@@ -238,6 +245,10 @@ class PluginSyncService extends ChangeNotifier {
       _seerrEnabled = _readBool(pingResult, 'seerrEnabled') ?? false;
       _mdblistAvailable = _readBool(pingResult, 'mdblistAvailable') ?? false;
       _tmdbAvailable = _readBool(pingResult, 'tmdbAvailable') ?? false;
+      // Older plugins leave this out, which reads as false and hides the button.
+      _messages?.setSupported(
+        _readBool(pingResult, 'messagesSupported') ?? false,
+      );
 
       final seerrConfig = await _fetchSeerrConfig(client);
       if (seerrConfig != null) {
@@ -325,6 +336,9 @@ class PluginSyncService extends ChangeNotifier {
       if (availability == _PluginAvailabilityStatus.available) {
         _syncRetryCount = 0;
       }
+
+      // Reads the cache first, so messages are there even with no connection.
+      await _messages?.refresh(client, serverId: serverId);
 
       final syncInitializedPref =
           UserPreferences.pluginSyncInitializedForServer(
@@ -464,13 +478,14 @@ class PluginSyncService extends ChangeNotifier {
     final type = _eventValue(parsed, 'type');
 
     if (type == 'adminMessage') {
-      final text = _eventValue(parsed, 'text');
-      if (text is String) {
-        final trimmed = text.trim();
-        if (trimmed.isNotEmpty) {
-          onAdminMessage?.call(trimmed);
-        }
-      }
+      // Broadcasts are saved as messages now, so refreshing is enough: the
+      // stored copy is set to open the window, which the messages service does.
+      await _messages?.refresh(client);
+      return;
+    }
+
+    if (type == 'messagesChanged') {
+      await _messages?.refresh(client);
       return;
     }
 

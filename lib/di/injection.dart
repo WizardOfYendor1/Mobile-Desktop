@@ -362,6 +362,29 @@ Future<void> migrateAudioPassthroughMode(PreferenceStore store) async {
   await store.setBool(UserPreferences.audioModeMigrated.key, true);
 }
 
+const _legacyTrickPlayEnabledKey = 'trick_play_enabled';
+
+/// The old on/off switch became the trickPlayMode enum. Only an explicit off
+/// is carried over, since the new default is on.
+Future<void> migrateTrickplayPreferenceConsolidation(
+  PreferenceStore store,
+) async {
+  const migrationKey = 'pref_trickplay_consolidation_v1';
+  if (store.getBool(migrationKey) == true) {
+    return;
+  }
+
+  if (!store.containsKey(UserPreferences.trickPlayMode.key) &&
+      store.getBool(_legacyTrickPlayEnabledKey) == false) {
+    await store.setString(
+      UserPreferences.trickPlayMode.key,
+      TrickplayMode.disabled.name,
+    );
+  }
+
+  await store.setBool(migrationKey, true);
+}
+
 // Minimal DI for background isolates like the Watch Next worker. This must not
 // call registerPlaybackModule: constructing Media3PlayerBackend subscribes to
 // the process-global moonfin/media3_video_events channel and would hijack the
@@ -400,6 +423,7 @@ Future<void> configureDependencies() async {
   await _migrateAndroidMobileAudioDefaults(preferenceStore);
   await migrateAudioPreferenceSplit(preferenceStore);
   await migrateAudioPassthroughMode(preferenceStore);
+  await migrateTrickplayPreferenceConsolidation(preferenceStore);
 
   var deviceId = preferenceStore.getString('device_id');
   if (deviceId == null) {

@@ -1,8 +1,11 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:gamepads/gamepads.dart';
+import 'package:get_it/get_it.dart';
 
+import '../../../preference/user_preferences.dart';
 import '../../platform_detection.dart';
 import 'android_gamepad_channel.dart';
 import 'gamepad_axis_gate.dart';
@@ -16,19 +19,32 @@ import 'gamepad_suppressor.dart';
 /// goes through the native channel instead, since pad buttons already arrive
 /// there as real key events and only the left stick needs bridging.
 ///
+/// Everything here answers to [UserPreferences.gamepadNavigationEnabled], which
+/// is off by default. The stream is only listened to while it's on, and the
+/// platforms that gate the pad natively are told whenever it changes.
+///
 /// This reads the normalized event stream directly rather than using the
 /// companion flutter_gamepads widget layer, which resolves its intents against
 /// the focused widget and drops them when nothing has focus, and which reports
 /// one-shot activations so a held direction never repeats. Axis edge detection
 /// and repeat timing are all it would have contributed, and both are here.
 class GamepadNavigationScope extends StatefulWidget {
-  const GamepadNavigationScope({super.key, required this.child});
+  const GamepadNavigationScope({super.key, required this.child, this.events});
 
   final Widget child;
+
+  /// Stands in for the plugin stream in tests.
+  final Stream<NormalizedGamepadEvent>? events;
 
   static bool get isSupported =>
       (PlatformDetection.isDesktop || PlatformDetection.isIOS) &&
       !PlatformDetection.isTV;
+
+  /// Whether a pad can reach the UI here at all, so the settings know whether
+  /// to offer the switch. Android and Apple TV hand pad input to Flutter
+  /// natively and are gated there instead.
+  static bool get isConfigurable =>
+      isSupported || PlatformDetection.isAndroid || PlatformDetection.isAppleTV;
 
   @override
   State<GamepadNavigationScope> createState() => _GamepadNavigationScopeState();
@@ -38,6 +54,10 @@ class _GamepadNavigationScopeState extends State<GamepadNavigationScope> {
   /// Below this the stick counts as centred.
   static const double _deadzone = 0.5;
 
+  static const MethodChannel _appleTvSystem = MethodChannel(
+    'moonfin/appletv_system',
+  );
+
   final GamepadKeyRepeater _keys = GamepadKeyRepeater(GamepadKeySynthesizer());
   final GamepadDuplicateGuard _duplicateGuard = GamepadDuplicateGuard();
   final GamepadAxisGate _axisGate = GamepadAxisGate(deadzone: _deadzone);
@@ -45,6 +65,9 @@ class _GamepadNavigationScopeState extends State<GamepadNavigationScope> {
     deadzone: _deadzone,
     onStep: _fireScroll,
   );
+
+  late final UserPreferences _prefs;
+  bool _enabled = false;
 
   StreamSubscription<NormalizedGamepadEvent>? _subscription;
 
@@ -57,10 +80,55 @@ class _GamepadNavigationScopeState extends State<GamepadNavigationScope> {
     // Installed here rather than when a game opens, so stick navigation works
     // from launch.
     AndroidGamepadChannel.ensureInstalled();
+    _prefs = GetIt.instance<UserPreferences>();
+    _prefs.addListener(_onPreferencesChanged);
+    _apply(_prefs.get(UserPreferences.gamepadNavigationEnabled));
+  }
+
+  @override
+  void dispose() {
+    _prefs.removeListener(_onPreferencesChanged);
+    _stopListening();
+    super.dispose();
+  }
+
+  void _onPreferencesChanged() {
+    final enabled = _prefs.get(UserPreferences.gamepadNavigationEnabled);
+    if (enabled != _enabled) _apply(enabled);
+  }
+
+  void _apply(bool enabled) {
+    _enabled = enabled;
+    unawaited(_tellNative(enabled));
     if (!GamepadNavigationScope.isSupported) return;
+    if (enabled) {
+      _startListening();
+    } else {
+      _stopListening();
+    }
+  }
+
+  /// A channel failure shouldn't take the app down. The user is left with
+  /// whatever the native side last heard, and the preference default matches
+  /// what it starts with.
+  Future<void> _tellNative(bool enabled) async {
+    try {
+      if (PlatformDetection.isAndroid) {
+        await AndroidGamepadChannel.setNavigationEnabled(enabled);
+      } else if (PlatformDetection.isAppleTV) {
+        await _appleTvSystem.invokeMethod(
+          'setGamepadNavigationEnabled',
+          enabled,
+        );
+      }
+    } catch (_) {}
+  }
+
+  void _startListening() {
+    if (_subscription != null) return;
     _duplicateGuard.start();
     GamepadSuppressor.depth.addListener(_onSuppressionChanged);
-    _subscription = Gamepads.normalizedEvents.listen(
+    _subscription = (widget.events ?? Gamepads.normalizedEvents).listen(
       _onGamepadEvent,
       // A plugin-side failure shouldn't take the app down. The user falls back
       // to keyboard and pointer input.
@@ -68,20 +136,23 @@ class _GamepadNavigationScopeState extends State<GamepadNavigationScope> {
     );
   }
 
-  @override
-  void dispose() {
-    _subscription?.cancel();
+  void _stopListening() {
+    if (_subscription == null) return;
+    _subscription!.cancel();
+    _subscription = null;
     GamepadSuppressor.depth.removeListener(_onSuppressionChanged);
     _duplicateGuard.stop();
-    _keys.releaseAll();
-    _scroll.stop();
-    super.dispose();
+    _releaseEverything();
   }
 
   void _onSuppressionChanged() {
     if (!GamepadSuppressor.suppressed) return;
     // Something else took the pad mid-hold, so drop everything we think is
     // down rather than leaving a key stuck or a scroll running.
+    _releaseEverything();
+  }
+
+  void _releaseEverything() {
     _axisDirection.clear();
     _keys.releaseAll();
     _scroll.stop();

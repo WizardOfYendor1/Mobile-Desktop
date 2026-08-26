@@ -9958,5 +9958,132 @@
     "runSetupAgain": "Kurulumu yeniden çalıştır",
     "@runSetupAgain": {
         "description": "Starts the first-run setup wizard again from settings"
+    },
+    "queuedDownload": "Sırada",
+    "@queuedDownload": {
+        "description": "Status label for a download waiting in the queue for a free download slot"
+    },
+    "manual": "Elle",
+    "@manual": {
+        "description": "Option: manual"
+    },
+    "autoDetect": "Otomatik Tespit Et",
+    "@autoDetect": {
+        "description": "Option: detect the value automatically"
+    },
+    "tvOfflineDownloads": "Çevrimdışı indirmeleri etkinleştir",
+    "@tvOfflineDownloads": {
+        "description": "TV-only toggle in the Offline Downloads settings: offer download actions on item pages"
+    },
+    "tvOfflineDownloadsSubtitle": "Öğe sayfalarında indirme işlemlerini göster",
+    "@tvOfflineDownloadsSubtitle": {
+        "description": "Subtitle for the TV-only offline downloads toggle"
+    },
+    "adminMetadataFieldCustomRating": "Özel derecelendirme",
+    "adminMetadataFieldDisplayOrder": "Görüntüleme sırası",
+    "adminMetadataDisplayOrderAired": "Yayın tarihi",
+    "adminMetadataDisplayOrderOriginalAirDate": "Orijinal yayın tarihi",
+    "adminMetadataDisplayOrderAbsolute": "Mutlak Sıralama",
+    "adminMetadataDisplayOrderDvd": "DVD",
+    "adminMetadataDisplayOrderDigital": "Dijital",
+    "adminMetadataDisplayOrderStoryArc": "Hikaye Örgüsü",
+    "adminMetadataDisplayOrderProduction": "Yapım Sırası",
+    "adminMetadataDisplayOrderTv": "TV",
+    "adminMetadataDisplayOrderAlternate": "Alternatif",
+    "adminMetadataDisplayOrderRegional": "Bölgesel",
+    "adminMetadataDisplayOrderAlternateDvd": "Alternatif DVD",
+    "adminMetadataDisplayOrderDateModified": "Değiştirilme Tarihi",
+    "adminMetadataDisplayOrderSortName": "Sıralama Adı",
+    "adminMetadataDisplayOrderReleaseDate": "Yayınlanma Tarihi",
+    "adminMetadataSettings": "Metaveri Ayarları",
+    "adminMetadataDownloadLanguage": "Tercih edilen indirme dili",
+    "adminMetadataCountryRegion": "Ülke / Bölge",
+    "adminMetadataInheritHelp": "Ayarı üst öğeden veya sunucu varsayılanından devralmak için bunu Varsayılan olarak bırakın.",
+    "adminMetadataField3DFormat": "3D format",
+    "adminMetadataPersonKindUnknown": "Bilinmeyen",
+    "adminMetadataPersonKindActor": "Aktör",
+    "adminMetadataPersonKindDirector": "Yönetmen",
+    "adminMetadataPersonKindComposer": "Besteci",
+    "adminMetadataPersonKindWriter": "Yazar",
+    "adminMetadataPersonKindGuestStar": "Konuk Oyuncu",
+    "adminMetadataPersonKindProducer": "Yapımcı",
+    "adminMetadataPersonKindConductor": "Şef",
+    "adminMetadataPersonKindLyricist": "Söz Yazarı",
+    "adminMetadataPersonKindArranger": "Aranjör",
+    "adminMetadataPersonKindEngineer": "Mühendis",
+    "adminMetadataPersonKindMixer": "Miksaj",
+    "adminMetadataPersonKindRemixer": "Remiks Yapan",
+    "adminMetadataPersonKindCreator": "Yaratıcı",
+    "adminMetadataPersonKindArtist": "Sanatçı",
+    "adminMetadataPersonKindAlbumArtist": "Albüm Sanatçısı",
+    "adminMetadataPersonKindAuthor": "Yazar",
+    "adminMetadataPersonKindIllustrator": "Çizer",
+    "adminMetadataPersonKindPenciller": "Kurşun Kalem Çizeri",
+    "adminMetadataPersonKindInker": "Mürekkep Çizeri",
+    "adminMetadataPersonKindColorist": "Renklendirici",
+    "adminMetadataPersonKindLetterer": "Harf Dizgici",
+    "adminMetadataPersonKindCoverArtist": "Kapak Çizeri",
+    "adminMetadataPersonKindEditor": "Editör",
+    "adminMetadataPersonKindTranslator": "Çevirmen",
+    "adminMetadataPersonKindNarrator": "Anlatıcı",
+    "adminMetadataAirDays": "Yayın Günleri",
+    "adminMetadataLockItem": "Gelecekteki üstveri değişikliklerini önlemek için bu öğeyi kilitle",
+    "adminMetadataEnabledFields": "Etkin Alanlar",
+    "adminMetadataEnabledFieldsHelp": "Bir alanı kilitlemek ve verilerinin değiştirilmesini önlemek için tikini kaldırın.",
+    "adminMetadataLockFieldName": "İsim",
+    "adminMetadataLockFieldOverview": "Özet",
+    "adminMetadataLockFieldGenres": "Türler",
+    "adminMetadataLockFieldOfficialRating": "Ebeveyn Derecelendirmesi",
+    "adminMetadataLockFieldCast": "Kişiler",
+    "adminMetadataLockFieldProductionLocations": "Çekim Yerleri",
+    "adminMetadataLockFieldBirthLocation": "Doğum Yeri",
+    "adminMetadataLockFieldRuntime": "Süre",
+    "adminMetadataLockFieldStudios": "Stüdyolar",
+    "adminMetadataLockFieldTags": "Etiketler",
+    "adminPluginsRestartRequired": "Yeniden başlatma gerekli",
+    "@adminPluginsRestartRequired": {
+        "description": "Label for the installed-plugin filter showing changes that require a server restart"
+    },
+    "adminPluginsNoneActive": "Etkin eklenti yok",
+    "@adminPluginsNoneActive": {
+        "description": "Empty state for the active installed-plugin filter"
+    },
+    "adminPluginsNoneRequireRestart": "Hiçbir eklenti sunucunun yeniden başlatılmasını gerektirmiyor",
+    "@adminPluginsNoneRequireRestart": {
+        "description": "Empty state for the installed-plugin filter showing changes that require a server restart"
+    },
+    "emulatorCoreResetSettings": "{system} ayarlarını varsayılana sıfırla",
+    "@emulatorCoreResetSettings": {
+        "description": "Semantic label for the button that resets one core's saved emulator settings",
+        "placeholders": {
+            "system": {
+                "type": "String"
+            }
+        }
+    },
+    "emulatorCoreSettingsReset": "Ayarlar varsayılana sıfırlandı.",
+    "@emulatorCoreSettingsReset": {
+        "description": "Snackbar shown after resetting a core's saved emulator settings"
+    },
+    "emulatorCoreResetSettingsFailed": "Ayarlar sıfırlanamadı. Bağlantınızı kontrol edip tekrar deneyin.",
+    "@emulatorCoreResetSettingsFailed": {
+        "description": "Snackbar shown when resetting a core's saved emulator settings fails"
+    },
+    "settingsMediaSegmentTypeAction": "{segment} Bölüm",
+    "@settingsMediaSegmentTypeAction": {
+        "description": "Setting label for what to do with one type of media segment",
+        "placeholders": {
+            "segment": {
+                "type": "String"
+            }
+        }
+    },
+    "openTrailersExternally": "Fragmanları Harici Uygulamada Aç",
+    "@openTrailersExternally": {
+        "description": "Details screen setting that hands trailers to the system"
+    },
+    "openTrailersExternallySubtitle": "Fragmanlar yerleşik oynatıcı yerine YouTube uygulamasında veya tarayıcıda açılır",
+    "@openTrailersExternallySubtitle": {
+        "description": "Subtitle for the external trailers setting"
     }
 }

@@ -88,6 +88,7 @@ import '../../../util/audio_labels.dart';
 import '../../../util/detail_trailer.dart';
 import '../../../util/download_utils.dart';
 import '../../../util/episode_playability.dart';
+import '../../../util/item_watch_state.dart';
 import '../../../util/season_queue_context.dart';
 import '../../../util/focus/dpad_keys.dart';
 import '../../../util/language_matching.dart';
@@ -6077,56 +6078,9 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
       );
 
       final isPhoto = item.type == 'Photo';
-      final ws = _computeWatchState(item);
+      final ws = watchStateOf(item);
       _play(context, item, resume: !isPhoto && ws.hasProgress);
     });
-  }
-
-  // ---------------------------------------------------------------------------
-  // Watch-state helper — avoids repeating the same 6-line block in three places
-  // ---------------------------------------------------------------------------
-
-  ({
-    bool isFullyWatched,
-    bool isFullyUnwatched,
-    bool isPartiallyWatched,
-    bool hasProgress,
-  })
-  _computeWatchState(AggregatedItem item) {
-    final isSeries = item.type == 'Series';
-    final isContainer =
-        item.type == 'Series' ||
-        item.type == 'Season' ||
-        item.type == 'BoxSet' ||
-        item.type == 'MusicAlbum';
-    if (!isContainer) {
-      final hasProgress =
-          (item.playedPercentage ?? 0) > 0 ||
-          (item.playbackPosition?.inMilliseconds ?? 0) > 0;
-      return (
-        isFullyWatched: item.isPlayed,
-        isFullyUnwatched: !item.isPlayed && !hasProgress,
-        isPartiallyWatched: hasProgress,
-        hasProgress: hasProgress,
-      );
-    }
-    final totalEpisodes = isSeries
-        ? (item.recursiveItemCount ?? 0)
-        : (item.childCount ?? item.recursiveItemCount ?? 0);
-    final unplayed = item.unplayedItemCount ?? totalEpisodes;
-    final isFullyWatched = item.isPlayed || unplayed == 0;
-    final isFullyUnwatched = unplayed == totalEpisodes;
-    final isPartiallyWatched = !isFullyWatched && !isFullyUnwatched;
-    final hasProgress = isSeries
-        ? isPartiallyWatched
-        : ((item.playedPercentage ?? 0) > 0 ||
-              (item.playbackPosition?.inMilliseconds ?? 0) > 0);
-    return (
-      isFullyWatched: isFullyWatched,
-      isFullyUnwatched: isFullyUnwatched,
-      isPartiallyWatched: isPartiallyWatched,
-      hasProgress: hasProgress,
-    );
   }
 
   List<Map<String, dynamic>> _streamsForTrackSelectors(
@@ -6281,7 +6235,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
         item.type == 'MusicVideo';
     final isPlayableMedia =
         isPlayableVideo || item.type == 'Audio' || item.type == 'AudioBook';
-    final ws = _computeWatchState(item);
+    final ws = watchStateOf(item);
     final isFullyWatched = ws.isFullyWatched;
     final isFullyUnwatched = ws.isFullyUnwatched;
     final hasProgress = ws.hasProgress;
@@ -8358,7 +8312,7 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
               throw PlaybackStartupRecoveryAbortedException();
             }
 
-            final ws = _computeWatchState(item);
+            final ws = watchStateOf(item);
             final isFullyWatched = ws.isFullyWatched;
             final isFullyUnwatched = ws.isFullyUnwatched;
 

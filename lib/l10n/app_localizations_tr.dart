@@ -271,6 +271,16 @@ class AppLocalizationsTr extends AppLocalizations {
       'Metin girişi için varsayılan olarak cihazınızın giriş yöntemini kullanın';
 
   @override
+  String get controller => 'Controller';
+
+  @override
+  String get gamepadNavigation => 'Gamepad navigation';
+
+  @override
+  String get gamepadNavigationDescription =>
+      'Let a connected game controller move focus and select items';
+
+  @override
   String get themeMoonfin => 'Moonfin';
 
   @override
@@ -1139,7 +1149,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get finalizingDownload => 'Tamamlanıyor…';
 
   @override
-  String get queuedDownload => 'Queued';
+  String get queuedDownload => 'Sırada';
 
   @override
   String get downloadAll => 'Tümünü İndir';
@@ -2440,10 +2450,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get disabled => 'Devre dışı';
 
   @override
-  String get manual => 'Manual';
+  String get manual => 'Elle';
 
   @override
-  String get autoDetect => 'Auto Detect';
+  String get autoDetect => 'Otomatik Tespit Et';
 
   @override
   String get scaleOnTv => 'TV\'de Ölçekle';
@@ -2457,6 +2467,32 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get showPreviewThumbnailsWhenSeeking =>
       'Sararken önizleme küçük resimlerini göster';
+
+  @override
+  String get trickplayDisplayStyleSingle => 'Single Thumbnail';
+
+  @override
+  String get trickplayDisplayStyleStrip => 'Filmstrip';
+
+  @override
+  String get trickplayModeFull => 'Full Screen';
+
+  @override
+  String get trickplaySettingsPreviewHint =>
+      'Drag the slider to preview scrubbing';
+
+  @override
+  String get trickplayPreviewScale => 'Preview Size';
+
+  @override
+  String get trickplayVerticalOffset => 'Distance From Seekbar';
+
+  @override
+  String get trickplayFollowScrubPosition => 'Follow Scrub Position';
+
+  @override
+  String get trickplayFollowScrubPositionSubtitle =>
+      'Preview slides along the seekbar as you scrub, instead of staying centered';
 
   @override
   String get showDescriptionOnPause => 'Duraklatıldığında Açıklamayı Göster';
@@ -3154,11 +3190,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get wifiOnlyDownloads => 'Yalnızca WiFi İndirmeleri';
 
   @override
-  String get tvOfflineDownloads => 'Enable offline downloads';
+  String get tvOfflineDownloads => 'Çevrimdışı indirmeleri etkinleştir';
 
   @override
   String get tvOfflineDownloadsSubtitle =>
-      'Show download actions on item pages';
+      'Öğe sayfalarında indirme işlemlerini göster';
 
   @override
   String get reportDownloadsActivity => 'İndirmeleri sunucuda göster';
@@ -6909,7 +6945,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get adminMetadataFieldCriticRating => 'Eleştirmen puanı';
 
   @override
-  String get adminMetadataFieldCustomRating => 'Custom rating';
+  String get adminMetadataFieldCustomRating => 'Özel derecelendirme';
 
   @override
   String get adminMetadataFieldTagline => 'Slogan';
@@ -6918,188 +6954,188 @@ class AppLocalizationsTr extends AppLocalizations {
   String get adminMetadataFieldOverview => 'Genel Bakış';
 
   @override
-  String get adminMetadataFieldDisplayOrder => 'Display order';
+  String get adminMetadataFieldDisplayOrder => 'Görüntüleme sırası';
 
   @override
-  String get adminMetadataDisplayOrderAired => 'Aired';
+  String get adminMetadataDisplayOrderAired => 'Yayın tarihi';
 
   @override
-  String get adminMetadataDisplayOrderOriginalAirDate => 'Original air date';
+  String get adminMetadataDisplayOrderOriginalAirDate =>
+      'Orijinal yayın tarihi';
 
   @override
-  String get adminMetadataDisplayOrderAbsolute => 'Absolute';
+  String get adminMetadataDisplayOrderAbsolute => 'Mutlak Sıralama';
 
   @override
   String get adminMetadataDisplayOrderDvd => 'DVD';
 
   @override
-  String get adminMetadataDisplayOrderDigital => 'Digital';
+  String get adminMetadataDisplayOrderDigital => 'Dijital';
 
   @override
-  String get adminMetadataDisplayOrderStoryArc => 'Story arc';
+  String get adminMetadataDisplayOrderStoryArc => 'Hikaye Örgüsü';
 
   @override
-  String get adminMetadataDisplayOrderProduction => 'Production';
+  String get adminMetadataDisplayOrderProduction => 'Yapım Sırası';
 
   @override
   String get adminMetadataDisplayOrderTv => 'TV';
 
   @override
-  String get adminMetadataDisplayOrderAlternate => 'Alternate';
+  String get adminMetadataDisplayOrderAlternate => 'Alternatif';
 
   @override
-  String get adminMetadataDisplayOrderRegional => 'Regional';
+  String get adminMetadataDisplayOrderRegional => 'Bölgesel';
 
   @override
-  String get adminMetadataDisplayOrderAlternateDvd => 'Alternate DVD';
+  String get adminMetadataDisplayOrderAlternateDvd => 'Alternatif DVD';
 
   @override
-  String get adminMetadataDisplayOrderDateModified => 'Date modified';
+  String get adminMetadataDisplayOrderDateModified => 'Değiştirilme Tarihi';
 
   @override
-  String get adminMetadataDisplayOrderSortName => 'Sort name';
+  String get adminMetadataDisplayOrderSortName => 'Sıralama Adı';
 
   @override
-  String get adminMetadataDisplayOrderReleaseDate => 'Release date';
+  String get adminMetadataDisplayOrderReleaseDate => 'Yayınlanma Tarihi';
 
   @override
-  String get adminMetadataSettings => 'Metadata Settings';
+  String get adminMetadataSettings => 'Metaveri Ayarları';
 
   @override
-  String get adminMetadataDownloadLanguage => 'Preferred download language';
+  String get adminMetadataDownloadLanguage => 'Tercih edilen indirme dili';
 
   @override
-  String get adminMetadataCountryRegion => 'Country/Region';
+  String get adminMetadataCountryRegion => 'Ülke / Bölge';
 
   @override
   String get adminMetadataInheritHelp =>
-      'Leave this on Default to inherit the setting from a parent item, or from the server default.';
+      'Ayarı üst öğeden veya sunucu varsayılanından devralmak için bunu Varsayılan olarak bırakın.';
 
   @override
   String get adminMetadataField3DFormat => '3D format';
 
   @override
-  String get adminMetadataPersonKindUnknown => 'Unknown';
+  String get adminMetadataPersonKindUnknown => 'Bilinmeyen';
 
   @override
-  String get adminMetadataPersonKindActor => 'Actor';
+  String get adminMetadataPersonKindActor => 'Aktör';
 
   @override
-  String get adminMetadataPersonKindDirector => 'Director';
+  String get adminMetadataPersonKindDirector => 'Yönetmen';
 
   @override
-  String get adminMetadataPersonKindComposer => 'Composer';
+  String get adminMetadataPersonKindComposer => 'Besteci';
 
   @override
-  String get adminMetadataPersonKindWriter => 'Writer';
+  String get adminMetadataPersonKindWriter => 'Yazar';
 
   @override
-  String get adminMetadataPersonKindGuestStar => 'Guest star';
+  String get adminMetadataPersonKindGuestStar => 'Konuk Oyuncu';
 
   @override
-  String get adminMetadataPersonKindProducer => 'Producer';
+  String get adminMetadataPersonKindProducer => 'Yapımcı';
 
   @override
-  String get adminMetadataPersonKindConductor => 'Conductor';
+  String get adminMetadataPersonKindConductor => 'Şef';
 
   @override
-  String get adminMetadataPersonKindLyricist => 'Lyricist';
+  String get adminMetadataPersonKindLyricist => 'Söz Yazarı';
 
   @override
-  String get adminMetadataPersonKindArranger => 'Arranger';
+  String get adminMetadataPersonKindArranger => 'Aranjör';
 
   @override
-  String get adminMetadataPersonKindEngineer => 'Engineer';
+  String get adminMetadataPersonKindEngineer => 'Mühendis';
 
   @override
-  String get adminMetadataPersonKindMixer => 'Mixer';
+  String get adminMetadataPersonKindMixer => 'Miksaj';
 
   @override
-  String get adminMetadataPersonKindRemixer => 'Remixer';
+  String get adminMetadataPersonKindRemixer => 'Remiks Yapan';
 
   @override
-  String get adminMetadataPersonKindCreator => 'Creator';
+  String get adminMetadataPersonKindCreator => 'Yaratıcı';
 
   @override
-  String get adminMetadataPersonKindArtist => 'Artist';
+  String get adminMetadataPersonKindArtist => 'Sanatçı';
 
   @override
-  String get adminMetadataPersonKindAlbumArtist => 'Album artist';
+  String get adminMetadataPersonKindAlbumArtist => 'Albüm Sanatçısı';
 
   @override
-  String get adminMetadataPersonKindAuthor => 'Author';
+  String get adminMetadataPersonKindAuthor => 'Yazar';
 
   @override
-  String get adminMetadataPersonKindIllustrator => 'Illustrator';
+  String get adminMetadataPersonKindIllustrator => 'Çizer';
 
   @override
-  String get adminMetadataPersonKindPenciller => 'Penciller';
+  String get adminMetadataPersonKindPenciller => 'Kurşun Kalem Çizeri';
 
   @override
-  String get adminMetadataPersonKindInker => 'Inker';
+  String get adminMetadataPersonKindInker => 'Mürekkep Çizeri';
 
   @override
-  String get adminMetadataPersonKindColorist => 'Colorist';
+  String get adminMetadataPersonKindColorist => 'Renklendirici';
 
   @override
-  String get adminMetadataPersonKindLetterer => 'Letterer';
+  String get adminMetadataPersonKindLetterer => 'Harf Dizgici';
 
   @override
-  String get adminMetadataPersonKindCoverArtist => 'Cover artist';
+  String get adminMetadataPersonKindCoverArtist => 'Kapak Çizeri';
 
   @override
-  String get adminMetadataPersonKindEditor => 'Editor';
+  String get adminMetadataPersonKindEditor => 'Editör';
 
   @override
-  String get adminMetadataPersonKindTranslator => 'Translator';
+  String get adminMetadataPersonKindTranslator => 'Çevirmen';
 
   @override
-  String get adminMetadataPersonKindNarrator => 'Narrator';
+  String get adminMetadataPersonKindNarrator => 'Anlatıcı';
 
   @override
-  String get adminMetadataAirDays => 'Air days';
+  String get adminMetadataAirDays => 'Yayın Günleri';
 
   @override
   String get adminMetadataLockItem =>
-      'Lock this item to prevent future metadata changes';
+      'Gelecekteki üstveri değişikliklerini önlemek için bu öğeyi kilitle';
 
   @override
-  String get adminMetadataEnabledFields => 'Enabled Fields';
+  String get adminMetadataEnabledFields => 'Etkin Alanlar';
 
   @override
   String get adminMetadataEnabledFieldsHelp =>
-      'Uncheck a field to lock it and prevent its data from being changed.';
+      'Bir alanı kilitlemek ve verilerinin değiştirilmesini önlemek için tikini kaldırın.';
 
   @override
-  String get adminMetadataLockFieldName => 'Name';
+  String get adminMetadataLockFieldName => 'İsim';
 
   @override
-  String get adminMetadataLockFieldOverview => 'Overview';
+  String get adminMetadataLockFieldOverview => 'Özet';
 
   @override
-  String get adminMetadataLockFieldGenres => 'Genres';
+  String get adminMetadataLockFieldGenres => 'Türler';
 
   @override
-  String get adminMetadataLockFieldOfficialRating => 'Parental rating';
+  String get adminMetadataLockFieldOfficialRating => 'Ebeveyn Derecelendirmesi';
 
   @override
-  String get adminMetadataLockFieldCast => 'People';
+  String get adminMetadataLockFieldCast => 'Kişiler';
 
   @override
-  String get adminMetadataLockFieldProductionLocations =>
-      'Production locations';
+  String get adminMetadataLockFieldProductionLocations => 'Çekim Yerleri';
 
   @override
-  String get adminMetadataLockFieldBirthLocation => 'Birth location';
+  String get adminMetadataLockFieldBirthLocation => 'Doğum Yeri';
 
   @override
-  String get adminMetadataLockFieldRuntime => 'Runtime';
+  String get adminMetadataLockFieldRuntime => 'Süre';
 
   @override
-  String get adminMetadataLockFieldStudios => 'Studios';
+  String get adminMetadataLockFieldStudios => 'Stüdyolar';
 
   @override
-  String get adminMetadataLockFieldTags => 'Tags';
+  String get adminMetadataLockFieldTags => 'Etiketler';
 
   @override
   String get adminMetadataGenres => 'Türler';
@@ -7221,7 +7257,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get adminPluginsRestart => 'Tekrar başlat';
 
   @override
-  String get adminPluginsRestartRequired => 'Restart required';
+  String get adminPluginsRestartRequired => 'Yeniden başlatma gerekli';
 
   @override
   String get adminPluginsNoSearchResults => 'Aramanızla eşleşen eklenti yok';
@@ -7230,11 +7266,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get adminPluginsNoneInstalled => 'Hiçbir eklenti yüklü değil';
 
   @override
-  String get adminPluginsNoneActive => 'No active plugins';
+  String get adminPluginsNoneActive => 'Etkin eklenti yok';
 
   @override
   String get adminPluginsNoneRequireRestart =>
-      'No plugins require a server restart';
+      'Hiçbir eklenti sunucunun yeniden başlatılmasını gerektirmiyor';
 
   @override
   String adminPluginsUpdateAvailable(String version) {
@@ -8852,15 +8888,15 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String emulatorCoreResetSettings(String system) {
-    return 'Reset $system settings to defaults';
+    return '$system ayarlarını varsayılana sıfırla';
   }
 
   @override
-  String get emulatorCoreSettingsReset => 'Settings reset to defaults.';
+  String get emulatorCoreSettingsReset => 'Ayarlar varsayılana sıfırlandı.';
 
   @override
   String get emulatorCoreResetSettingsFailed =>
-      'Could not reset settings. Check your connection and try again.';
+      'Ayarlar sıfırlanamadı. Bağlantınızı kontrol edip tekrar deneyin.';
 
   @override
   String get downloadedGames => 'İndirilen Oyunlar';
@@ -9020,7 +9056,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String settingsMediaSegmentTypeAction(String segment) {
-    return '$segment Segments';
+    return '$segment Bölüm';
   }
 
   @override
@@ -10986,11 +11022,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get mediaDetailsAndSpoilers => 'Medya Ayrıntıları ve Spoiler\'lar';
 
   @override
-  String get openTrailersExternally => 'Open Trailers in External App';
+  String get openTrailersExternally => 'Fragmanları Harici Uygulamada Aç';
 
   @override
   String get openTrailersExternallySubtitle =>
-      'Trailers open in the YouTube app or browser instead of the built-in player';
+      'Fragmanlar yerleşik oynatıcı yerine YouTube uygulamasında veya tarayıcıda açılır';
 
   @override
   String get hideDetailsMediaDescription =>
@@ -11085,4 +11121,20 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get runSetupAgain => 'Kurulumu yeniden çalıştır';
+
+  @override
+  String get serverMessages => 'Messages';
+
+  @override
+  String get serverMessagesEmpty => 'No messages from your server yet';
+
+  @override
+  String get serverMessagesMarkAllRead => 'Mark all as read';
+
+  @override
+  String get serverMessagesShowButton => 'Show messages button';
+
+  @override
+  String get serverMessagesShowButtonSubtitle =>
+      'Adds a button to the menu for messages sent by your server admin';
 }

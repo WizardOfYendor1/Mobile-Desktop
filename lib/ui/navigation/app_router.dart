@@ -635,6 +635,7 @@ final appRouter = GoRouter(
 
     // Admin
     ShellRoute(
+      navigatorKey: AdminShellScreen.navigatorKey,
       builder: (context, state, child) => AdminShellScreen(child: child),
       routes: [
         GoRoute(

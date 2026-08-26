@@ -552,6 +552,13 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
         subtitle: l10n.keyboardPreferSystemImeDescription,
         keywords: ['keyboard', 'input'],
       ),
+    if (GamepadNavigationScope.isConfigurable)
+      style.leaf(
+        'pref_gamepad_navigation_enabled',
+        l10n.gamepadNavigation,
+        subtitle: l10n.gamepadNavigationDescription,
+        keywords: ['gamepad', 'controller', 'input'],
+      ),
     style.leaf('pref_clock_behavior', l10n.clockDisplay, keywords: ['time']),
     style.leaf(
       'pref_use_24_hour_clock',
@@ -1118,10 +1125,16 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
       keywords: ['music', 'song', 'track'],
     ),
     video.leaf(
-      'trick_play_enabled',
+      'trickplay_mode',
       l10n.trickPlay,
       subtitle: l10n.showPreviewThumbnailsWhenSeeking,
-      keywords: ['scrubbing', 'seek thumbnails'],
+      keywords: [
+        'scrubbing',
+        'seek thumbnails',
+        'preview size',
+        'distance from seekbar',
+        'follow scrub',
+      ],
     ),
     if (PlatformDetection.useDesktopUi)
       video.leaf(
@@ -1324,6 +1337,12 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
       'subtitles_offset_position',
       l10n.verticalOffset,
       keywords: ['position', 'height'],
+    ),
+    subtitleStyle.leaf(
+      'subtitles_hdr_separate',
+      l10n.subtitleHdrSeparate,
+      subtitle: l10n.subtitleHdrSeparateSubtitle,
+      keywords: ['hdr', 'brightness', 'grey'],
     ),
 
     automation.screen(keywords: ['skip intro', 'autoplay', 'queue']),

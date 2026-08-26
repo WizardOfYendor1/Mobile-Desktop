@@ -12,10 +12,13 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import dev.fluttercommunity.plus.device_info.DeviceInfoPlusPlugin
+import dev.fluttercommunity.plus.packageinfo.PackageInfoPlugin
 import io.flutter.FlutterInjector
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.dart.DartExecutor
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.plugins.sharedpreferences.SharedPreferencesPlugin
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -61,10 +64,14 @@ class WatchNextWorker(
                     loader.ensureInitializationComplete(applicationContext, null)
                 }
 
-                // FlutterEngine(context) already registers all generated plugins;
-                // do not call GeneratedPluginRegistrant.registerWith() again.
-                val flutterEngine = FlutterEngine(applicationContext)
+                // Registering every plugin would pull in audio_service, which
+                // binds its media service as soon as it attaches and boots the
+                // whole app headless. Only what the refresh reads is attached.
+                val flutterEngine = FlutterEngine(applicationContext, null, false)
                 engine = flutterEngine
+                flutterEngine.plugins.add(SharedPreferencesPlugin())
+                flutterEngine.plugins.add(PackageInfoPlugin())
+                flutterEngine.plugins.add(DeviceInfoPlusPlugin())
 
                 MethodChannel(
                     flutterEngine.dartExecutor.binaryMessenger,

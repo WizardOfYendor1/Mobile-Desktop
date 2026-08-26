@@ -26,11 +26,14 @@ import '../navigation/destinations.dart';
 import '../navigation/home_refresh_bus.dart';
 import '../navigation/route_lifecycle_observer.dart';
 import 'expandable_icon_button.dart';
+import 'overlay_sheet.dart';
 import 'navigation_layout.dart';
 import 'settings/settings_panel.dart';
 import '../screens/settings/settings_side_panel.dart';
 import '../screens/syncplay/syncplay_screen.dart';
 import 'seerr_icons.dart';
+import 'server_messages_dialog.dart';
+import 'server_messages_nav_slot.dart';
 import 'shuffle_overlay.dart';
 import 'user_menu_dialog.dart';
 
@@ -110,6 +113,9 @@ class _TopToolbarState extends State<TopToolbar> with RouteAware {
   final _avatarFocus = FocusNode();
   final _homeFocus = FocusNode(debugLabel: 'TopToolbarHome');
   final _settingsFocus = FocusNode(debugLabel: 'TopToolbarSettings');
+  final _serverMessagesFocus = FocusNode(
+    debugLabel: 'TopToolbarServerMessages',
+  );
   final _inlineLibrariesTriggerFocus = FocusNode(
     debugLabel: 'TopToolbarInlineLibrariesTrigger',
   );
@@ -232,6 +238,7 @@ class _TopToolbarState extends State<TopToolbar> with RouteAware {
     _avatarFocus.dispose();
     _homeFocus.dispose();
     _settingsFocus.dispose();
+    _serverMessagesFocus.dispose();
     _inlineLibrariesTriggerFocus.dispose();
     _musicBarFocusNode.dispose();
     _userSub?.cancel();
@@ -1103,6 +1110,17 @@ class _TopToolbarState extends State<TopToolbar> with RouteAware {
               ],
               _gap(),
               _orderButton(
+                order: 98,
+                // The slot is taken here rather than inside the builder, so the
+                // settings icon keeps its colour whether or not there are any
+                // messages to show.
+                child: _buildServerMessagesButton(
+                  navColor: nextNavColor(),
+                  alwaysExpanded: alwaysExpanded,
+                  label: l10n.serverMessages,
+                ),
+              ),
+              _orderButton(
                 order: 99,
                 child: ExpandableIconButton(
                   key: const ValueKey('toolbar_settings'),
@@ -1259,6 +1277,38 @@ class _TopToolbarState extends State<TopToolbar> with RouteAware {
           );
         }
       },
+    );
+  }
+
+  /// The messages button, or nothing when there is nothing to show. The nav
+  /// colour is passed in so the caller decides which palette slot it takes.
+  /// The gap to the next button travels with it, so it only takes up room when
+  /// the button is there.
+  Widget _buildServerMessagesButton({
+    required Color? navColor,
+    required bool alwaysExpanded,
+    required String label,
+  }) {
+    return ServerMessagesNavSlot(
+      builder: (context, unread) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ExpandableIconButton(
+            key: const ValueKey('toolbar_server_messages'),
+            forceExpanded: alwaysExpanded,
+            icon: Icons.info_outline_rounded,
+            label: label,
+            baseColor: navColor,
+            badgeCount: unread,
+            focusNode: _serverMessagesFocus,
+            onPressed: () async {
+              await showServerMessagesDialog(context);
+              if (mounted) _serverMessagesFocus.requestFocus();
+            },
+          ),
+          _gap(),
+        ],
+      ),
     );
   }
 
@@ -1869,9 +1919,14 @@ class _LibrariesDropdownState extends State<_LibrariesDropdown> {
   }
 
   void _removeOverlay() {
+    InlineBackInterceptor.remove(_closeFromBack);
     _overlayEntry?.remove();
     _overlayEntry = null;
   }
+
+  // The dropdown is an overlay entry rather than a route, so nothing pops it on
+  // back. Registering it lets the key close it instead of leaving the page.
+  void _closeFromBack() => _hideDropdown(focusButton: true);
 
   void _showDropdown({bool focusFirstItem = false}) {
     _hideTimer?.cancel();
@@ -1892,6 +1947,7 @@ class _LibrariesDropdownState extends State<_LibrariesDropdown> {
 
     _overlayEntry = OverlayEntry(builder: _buildOverlay);
     Overlay.of(context).insert(_overlayEntry!);
+    InlineBackInterceptor.push(_closeFromBack);
     setState(() {});
 
     if (focusFirstItem && _itemFocusNodes.isNotEmpty) {

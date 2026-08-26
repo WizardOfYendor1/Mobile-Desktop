@@ -127,6 +127,19 @@ class _GeneralStyleScreenState extends State<_GeneralStyleScreen> {
                   ],
                 ),
               ],
+              if (GamepadNavigationScope.isConfigurable) ...[
+                _SectionHeader(l10n.controller),
+                adaptiveListSection(
+                  children: [
+                    SwitchPreferenceTile(
+                      preference: UserPreferences.gamepadNavigationEnabled,
+                      title: l10n.gamepadNavigation,
+                      subtitle: l10n.gamepadNavigationDescription,
+                      icon: Icons.sports_esports_outlined,
+                    ),
+                  ],
+                ),
+              ],
               _SectionHeader(l10n.clock),
               adaptiveListSection(
                 children: [

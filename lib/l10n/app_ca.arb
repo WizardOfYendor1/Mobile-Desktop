@@ -180,7 +180,7 @@
     "@themeMoonfinSubtitle": {
         "description": "Preview description for the Moonfin theme"
     },
-    "themeNeonPulse": "pols de neó",
+    "themeNeonPulse": "Neon Pulse",
     "@themeNeonPulse": {
         "description": "Display name for the Neon Pulse theme"
     },
@@ -2316,7 +2316,7 @@
     "@savedMedia": {
         "description": "Header title for saved/downloaded media screen"
     },
-    "tvShows": "Programes de televisió",
+    "tvShows": "Sèries",
     "@tvShows": {
         "description": "Filter label for TV shows"
     },
@@ -3585,7 +3585,7 @@
     "@contentType": {
         "description": "Setting for content type"
     },
-    "moviesAndTvShows": "Pel·lícules i programes de televisió",
+    "moviesAndTvShows": "Pel·lícules i Sèries",
     "@moviesAndTvShows": {
         "description": "Content type: movies and TV shows"
     },
@@ -3593,7 +3593,7 @@
     "@moviesOnly": {
         "description": "Content type: movies only"
     },
-    "tvShowsOnly": "Només programes de televisió",
+    "tvShowsOnly": "Només Sèries",
     "@tvShowsOnly": {
         "description": "Content type: TV shows only"
     },
@@ -4011,7 +4011,7 @@
     "@recentlyAdded": {
         "description": "Seerr row: recently added"
     },
-    "trending": "Tendència",
+    "trending": "Tendències",
     "@trending": {
         "description": "Seerr row: trending"
     },
@@ -4039,7 +4039,7 @@
     "@seriesGenres": {
         "description": "Seerr row: series genres"
     },
-    "upcomingSeries": "Pròxima Sèrie",
+    "upcomingSeries": "Pròximes Sèries",
     "@upcomingSeries": {
         "description": "Seerr row: upcoming series"
     },
@@ -6606,8 +6606,8 @@
     "settingsDolbyVisionProfile7DirectPlay": "Dolby Vision Perfil 7 Direct Play",
     "settingsDolbyVisionProfile7DirectPlayDescription": "Controla si els fluxos de capa de millora del perfil Dolby Vision 7 han de dirigir la reproducció.",
     "settingsAutoAftkrtEnabled": "Auto",
-    "settingsEnabledOnThisDevice": "Habilitat en aquest dispositiu",
-    "settingsDisabledPreferTranscode": "Desactivat (prefereix la transcodificació)",
+    "settingsEnabledOnThisDevice": "Habilitat",
+    "settingsDisabledPreferTranscode": "Desactivat",
     "settingsResumeRewindDescription": "Quan es reprèn la reproducció (des de Continuar mirant o des de la pàgina d'un element multimèdia), quants segons s'han de rebobinar?",
     "settingsUnpauseRewindDescription": "Quan es reprèn la reproducció després de prémer el botó de pausa, quants segons s'han de rebobinar?",
     "settingsSkipBackLengthDescription": "Quants segons cal saltar enrere després de prémer el botó de rebobinar.",
@@ -6974,11 +6974,11 @@
     "@disableTunnelingSubtitle": {
         "description": "Setting subtitle for disable tunneling"
     },
-    "mapDolbyVisionP7Title": "Assigna el perfil Dolby Vision 7 a HEVC",
+    "mapDolbyVisionP7Title": "Reprodueix el perfil 7 de Dolby Vision com a HDR10",
     "@mapDolbyVisionP7Title": {
         "description": "Setting title: play DV P7 as HDR10 HEVC on non-DV devices"
     },
-    "mapDolbyVisionP7Subtitle": "Reprodueix els fluxos de Dolby Vision perfil 7 com a HEVC compatible amb HDR10 en dispositius sense DV.",
+    "mapDolbyVisionP7Subtitle": "Omet la conversió al perfil 8 i converteix els fluxos del perfil Dolby Vision 7 a HEVC compatible amb HDR10. Utilitza-ho si els fluxos convertits es mostren incorrectament.",
     "@mapDolbyVisionP7Subtitle": {
         "description": "Setting subtitle for DV P7 to HEVC mapping"
     },
@@ -7233,7 +7233,7 @@
     "homeVideos": "Vídeos de la llar",
     "mixedContent": "Contingut mixt",
     "homeVideosAndPhotos": "Vídeos i fotos d'inici",
-    "mixedMoviesAndShows": "Pel·lícules i programes mixtes",
+    "mixedMoviesAndShows": "Pel·lícules i sèries barrejades",
     "intelQuickSync": "Intel Quick Sync",
     "rockchipMpp": "Rockchip MPP",
     "dolbyVision": "Dolby Vision",
@@ -8996,12 +8996,12 @@
     "@adminLibChapterImageResolutionMatchSource": {
         "description": "Chapter image resolution option that matches the source resolution"
     },
-    "imdbTop250Movies": "Top 250 pel·lícules d'IMDb",
-    "imdbTop250TvShows": "Top 250 sèries de TV d'IMDb",
-    "imdbMostPopularMovies": "Pel·lícules més populars d'IMDb",
-    "imdbMostPopularTvShows": "Sèries de TV més populars d'IMDb",
-    "imdbLowestRatedMovies": "Pel·lícules pitjor valorades d'IMDb",
-    "imdbTopEnglishMovies": "Millors pel·lícules en anglès d'IMDb",
+    "imdbTop250Movies": "Top 250 pel·lícules a IMDb",
+    "imdbTop250TvShows": "Top 250 sèries a IMDb",
+    "imdbMostPopularMovies": "Pel·lícules més populars a IMDb",
+    "imdbMostPopularTvShows": "Sèries més populars a IMDb",
+    "imdbLowestRatedMovies": "Pel·lícules pitjor valorades a IMDb",
+    "imdbTopEnglishMovies": "Millors pel·lícules en anglès a IMDb",
     "castMembers": "Repartiment",
     "@castMembers": {
         "description": "Section title for the list of actors and performers in movie and TV metadata. Not the casting-to-a-device action"
@@ -9517,7 +9517,7 @@
     "@recentlyReleasedSeriesType": {
         "description": "Setting for sorting series in recently released series row"
     },
-    "recentlyReleasedSeriesTypeDescription": "Ordena les files de la pàgina d'inici de les sèries recentment estrenades per sèrie, temporada més recent o data d'emissió de l'episodi més recent",
+    "recentlyReleasedSeriesTypeDescription": "Ordena les files de la pàgina d'inici de les sèries recentment estrenades per sèrie, temporada o episodi més recent",
     "@recentlyReleasedSeriesTypeDescription": {
         "description": "Description for recently released series type setting"
     },
@@ -9568,7 +9568,7 @@
     "favoritesRowSortOrderDescription": "Ordena les files de favorits en ordre ascendent o descendent.",
     "collectionsRowSortOrderDescription": "Ordena les files de les col·leccions en ordre ascendent o descendent.",
     "collectionsRowShowEpisodes": "Mostra els episodis individuals",
-    "collectionsRowShowEpisodesSubtitle": "Expandir els programes de televisió per mostrar cada episodi per separat.",
+    "collectionsRowShowEpisodesSubtitle": "Expandir les sèries per mostrar cada episodi per separat.",
     "genresRowSortOrderDescription": "Ordena les files de gèneres en ordre ascendent o descendent.",
     "displayStudiosRows": "Mostra la fila de l'estudi",
     "displayStudiosRowsSubtitle": "Mostra la fila de l'estudi a les seccions d'inici.",
@@ -9584,5 +9584,498 @@
     "selectedStudiosFilter": "Estudis seleccionats",
     "unselectedStudiosFilter": "Estudis no seleccionats",
     "filtersHeader": "Filtres",
-    "showHeader": "Mostra"
+    "showHeader": "Mostra",
+    "setupNavbarQuestion": "On hauria d'anar la navegació?",
+    "@setupNavbarQuestion": {
+        "description": "Setup question asking where the navigation bar should sit"
+    },
+    "hideHomeMediaDescriptionSubtitle": "Amaga el text descriptiu de la pel·lícula o de l'episodi.",
+    "@hideHomeMediaDescriptionSubtitle": {
+        "description": "Description for setting to hide media description on home screen"
+    },
+    "decrease": "Disminuir",
+    "@decrease": {
+        "description": "Action that decreases a numeric personal rating."
+    },
+    "personalRatingClear": "Suprimir la puntuació",
+    "@personalRatingClear": {
+        "description": "Action that removes the personal rating from the media item."
+    },
+    "playlistsRowShowEpisodesSubtitle": "Expandir les sèries per mostrar cada episodi per separat.",
+    "playlistsRowSortOrderDescription": "Ordena les files de la llista de reproducció en ordre ascendent o descendent.",
+    "setupPickALook": "Tria un aspecte",
+    "@setupPickALook": {
+        "description": "Label above the theme swatches on the final setup screen"
+    },
+    "setupTourQuestion": "Ja està tot a punt. Aquí tens què més hi ha.",
+    "@setupTourQuestion": {
+        "description": "Heading of the final setup wizard screen"
+    },
+    "setupStyleClassic": "Clàsic",
+    "@setupStyleClassic": {
+        "description": "Name of the original layout, offered in the setup wizard"
+    },
+    "clearFilters": "Netejar filtres",
+    "@clearFilters": {
+        "description": "Action that turns every library filter back off."
+    },
+    "source": "Font",
+    "@source": {
+        "description": "Heading for the disc source filters in the library filter picker."
+    },
+    "playbackTimeMusicSection": "Reproductor de música",
+    "@playbackTimeMusicSection": {
+        "description": "Section header above the music progress bar time option"
+    },
+    "personalRatingStars": "5 estrelles",
+    "@personalRatingStars": {
+        "description": "Personal rating style using a five-star scale."
+    },
+    "scrollSensitivitySubtitle": "Quant es desplaça un clic de la roda del ratolí",
+    "@scrollSensitivitySubtitle": {
+        "description": "Explains the desktop scroll sensitivity slider."
+    },
+    "interfaceLayoutSubtitle": "Canvia el tipus de disposicó detectada si el teu dispositiu no es reconeix correctament. Reinicia Moonfin per aplicar els canvis.",
+    "@interfaceLayoutSubtitle": {
+        "description": "Subtitle for the interface layout setting"
+    },
+    "emulatorCoreResetSettings": "Restabliu la configuració del {system} als valors per defecte",
+    "@emulatorCoreResetSettings": {
+        "description": "Semantic label for the button that resets one core's saved emulator settings",
+        "placeholders": {
+            "system": {
+                "type": "String"
+            }
+        }
+    },
+    "playlistsRowShowEpisodes": "Mostrar els episodis individuals",
+    "playbackTimeDisplay": "Temps a la barra de progrés",
+    "@playbackTimeDisplay": {
+        "description": "Setting title for what is shown next to the playback progress bar"
+    },
+    "playbackTimeRemaining": "Temps restant",
+    "@playbackTimeRemaining": {
+        "description": "Progress bar time option showing how much is left to play"
+    },
+    "playbackTimeEndsAt": "Acaba a",
+    "@playbackTimeEndsAt": {
+        "description": "Progress bar time option showing the clock time playback finishes"
+    },
+    "personalRatingThumbs": "M'agrada / no m'agrada",
+    "@personalRatingThumbs": {
+        "description": "Personal rating style using like and dislike actions."
+    },
+    "personalRatingNumeric": "Puntuació numèrica d'1 a 10",
+    "@personalRatingNumeric": {
+        "description": "Personal rating style using a numeric score out of ten."
+    },
+    "dislike": "No m'agrada",
+    "@dislike": {
+        "description": "Personal rating action for a negative rating."
+    },
+    "personalRatingRated": "Puntuat",
+    "@personalRatingRated": {
+        "description": "Tooltip for a media item that has a numeric personal rating."
+    },
+    "personalRatingMine": "La meva valoració",
+    "@personalRatingMine": {
+        "description": "Label under the viewer's own rating in the ratings row."
+    },
+    "increase": "Incrementar",
+    "@increase": {
+        "description": "Action that increases a numeric personal rating."
+    },
+    "personalRatingOutOfTen": "{rating} / 10",
+    "@personalRatingOutOfTen": {
+        "description": "Numeric personal rating displayed on a scale out of ten.",
+        "placeholders": {
+            "rating": {
+                "type": "String"
+            }
+        }
+    },
+    "personalRatingOutOfFive": "{rating} / 5",
+    "@personalRatingOutOfFive": {
+        "description": "Personal rating displayed on a five-star scale.",
+        "placeholders": {
+            "rating": {
+                "type": "String"
+            }
+        }
+    },
+    "filterInProgress": "En progrés",
+    "@filterInProgress": {
+        "description": "Library filter for items the viewer has started but not finished."
+    },
+    "filterThemeVideos": "Vídeos temàtics",
+    "@filterThemeVideos": {
+        "description": "Library filter for items that have a theme video."
+    },
+    "audioLanguage": "Idioma de l'àudio",
+    "@audioLanguage": {
+        "description": "Heading for the audio language filters in the library filter picker."
+    },
+    "subtitleLanguage": "Idioma dels subtítols",
+    "@subtitleLanguage": {
+        "description": "Heading for the subtitle language filters in the library filter picker."
+    },
+    "seerrShortcutsRow": "Navegació de Seerr",
+    "@seerrShortcutsRow": {
+        "description": "Title of the Seerr shortcuts row that jumps to Discover, Movies, Series, Requests and Issues."
+    },
+    "seerrReleased": "Publicat",
+    "@seerrReleased": {
+        "description": "Heading for the release window filter in the Seerr browse dialog."
+    },
+    "seerrMinRating": "Puntuació mínima",
+    "@seerrMinRating": {
+        "description": "Heading for the TMDB score floor filter in the Seerr browse dialog."
+    },
+    "seerrMinVotes": "Vots mínims",
+    "@seerrMinVotes": {
+        "description": "Heading for the TMDB vote count floor filter in the Seerr browse dialog."
+    },
+    "seerrOriginalLanguage": "Idioma Original",
+    "@seerrOriginalLanguage": {
+        "description": "Heading for the original language filter in the Seerr browse dialog."
+    },
+    "detailUseSeriesThumbnailsSubtitle": "Substitueix totes les miniatures a la pàgina de detalls clàssica per la miniatura de la sèrie",
+    "@detailUseSeriesThumbnailsSubtitle": {
+        "description": "Description for setting to use series thumbnails on Classic details page"
+    },
+    "continueWatchingAndNextUpHeader": "Continuar mirant i A continuació",
+    "@continueWatchingAndNextUpHeader": {
+        "description": "Header for settings section containing Continue Watching and Next Up options"
+    },
+    "setupSkip": "Omet la configuració",
+    "@setupSkip": {
+        "description": "Leaves the first-run setup wizard without answering anything"
+    },
+    "setupMediaBarQuestion": "Quin aspecte hauria de tenir la part superior de la pantalla d'inici?",
+    "@setupMediaBarQuestion": {
+        "description": "Setup wizard question for the media bar style"
+    },
+    "settingsPlaybackTimeDisplayDescription": "Tria quines etiquetes de temps apareixen al voltant de la barra de progrés de reproducció.",
+    "@settingsPlaybackTimeDisplayDescription": {
+        "description": "Setting description for the progress bar time option"
+    },
+    "playbackTimeBelowBarRight": "A sota de la barra, a la dreta",
+    "@playbackTimeBelowBarRight": {
+        "description": "Progress bar time slot below the bar on the right"
+    },
+    "groupByTitle": "Agrupar per",
+    "@groupByTitle": {
+        "description": "Dialog title and button label for library group by options"
+    },
+    "showAlphabeticalFilters": "Mostra l'alfabet",
+    "@showAlphabeticalFilters": {
+        "description": "Checkbox label for toggling alphabetical picker visibility in Sort and Filter options"
+    },
+    "rate": "Puntuar",
+    "@rate": {
+        "description": "Action that opens the personal rating control."
+    },
+    "like": "M'agrada",
+    "@like": {
+        "description": "Personal rating action for a positive rating."
+    },
+    "personalRatingSaveFailed": "No s'ha pogut desar la valoració",
+    "@personalRatingSaveFailed": {
+        "description": "Error shown when saving a personal rating fails."
+    },
+    "hideHomeMediaDescription": "Amagar la descripció dels mitjans a la pantalla d'inici",
+    "@hideHomeMediaDescription": {
+        "description": "Setting title to hide media description on home screen"
+    },
+    "setupTourMoreHeader": "Hi ha més esperant a Configuració",
+    "@setupTourMoreHeader": {
+        "description": "Heading of the closing setup screen block that lists features found in settings"
+    },
+    "setupTourBulletMore": "I molt més",
+    "@setupTourBulletMore": {
+        "description": "Closing bullet on the setup screen settings list"
+    },
+    "playbackTimeAboveBarRight": "Sobre la barra, a la dreta",
+    "@playbackTimeAboveBarRight": {
+        "description": "Progress bar time slot above the bar on the right"
+    },
+    "groupByDecade": "Dècada (Any)",
+    "@groupByDecade": {
+        "description": "Option to group library items by release decade"
+    },
+    "playbackTimeTotal": "Duració total",
+    "@playbackTimeTotal": {
+        "description": "Progress bar time option showing the full runtime"
+    },
+    "emulatorCoreSettingsReset": "Configuració restablida als valors per defecte.",
+    "@emulatorCoreSettingsReset": {
+        "description": "Snackbar shown after resetting a core's saved emulator settings"
+    },
+    "emulatorCoreResetSettingsFailed": "No s'ha pogut restablir la configuració. Verifiqueu la vostra connexió i torneu-ho a provar.",
+    "@emulatorCoreResetSettingsFailed": {
+        "description": "Snackbar shown when resetting a core's saved emulator settings fails"
+    },
+    "audioRowsSortOrderDescription": "Ordena les files d'àudio en ordre ascendent o descendent.",
+    "playbackTimeElapsed": "Temps transcorregut",
+    "@playbackTimeElapsed": {
+        "description": "Progress bar time option showing how far into the item playback is"
+    },
+    "playbackTimeVideoSection": "Reproductor de vídeo",
+    "@playbackTimeVideoSection": {
+        "description": "Section header above the video progress bar time slots"
+    },
+    "playbackTimeSlotDescription": "Tria què es mostra aquí, o amaga-ho.",
+    "@playbackTimeSlotDescription": {
+        "description": "Setting description for a single progress bar time slot"
+    },
+    "playbackTimeAboveBarCenter": "Sobre la barra, al centre",
+    "@playbackTimeAboveBarCenter": {
+        "description": "Progress bar time slot above the bar in the center"
+    },
+    "playbackTimeBelowBarLeft": "Sota la barra, a l'esquerra",
+    "@playbackTimeBelowBarLeft": {
+        "description": "Progress bar time slot below the bar on the left"
+    },
+    "playbackTimeBelowBarCenter": "Sota la barra, al centre",
+    "@playbackTimeBelowBarCenter": {
+        "description": "Progress bar time slot below the bar in the center"
+    },
+    "settingsMusicPlaybackTimeDescription": "Tria què es mostra al costat dret de la barra de progrés de la música.",
+    "@settingsMusicPlaybackTimeDescription": {
+        "description": "Setting description for the music progress bar time option"
+    },
+    "personalRatingStyle": "Estil de puntuació personal",
+    "@personalRatingStyle": {
+        "description": "Selects how personal ratings are displayed and entered on media details."
+    },
+    "filterUnreleased": "No publicat",
+    "@filterUnreleased": {
+        "description": "Series status filter for shows that have not started airing."
+    },
+    "filterTrailers": "Tràilers",
+    "@filterTrailers": {
+        "description": "Library filter for items that have a trailer."
+    },
+    "filterExtras": "Extres",
+    "@filterExtras": {
+        "description": "Library filter for items that have bonus features."
+    },
+    "filterThemeSongs": "Cançons temàtiques",
+    "@filterThemeSongs": {
+        "description": "Library filter for items that have a theme song."
+    },
+    "years": "Anys",
+    "@years": {
+        "description": "Heading for the release year filters in the library filter picker."
+    },
+    "seerrRuntime": "Duració",
+    "@seerrRuntime": {
+        "description": "Heading for the runtime window filter in the Seerr browse dialog."
+    },
+    "subtitleHdrSeparate": "Estil HDR separat",
+    "@subtitleHdrSeparate": {
+        "description": "Toggle for a second subtitle appearance used only while HDR is playing."
+    },
+    "subtitleHdrSeparateSubtitle": "El blanc és molt més brillant en HDR que en SDR, així que un estil més apagat aquí evita l'enlluernament",
+    "@subtitleHdrSeparateSubtitle": {
+        "description": "Explains why a separate HDR subtitle style is worth setting."
+    },
+    "scrollSensitivity": "Sensibilitat del desplaçament",
+    "@scrollSensitivity": {
+        "description": "Title of the desktop setting that scales mouse wheel scrolling."
+    },
+    "mediaDetailsAndSpoilers": "Detalls dels mitjans i spoilers",
+    "@mediaDetailsAndSpoilers": {
+        "description": "Section header for media details and spoiler settings"
+    },
+    "hideDetailsMediaDescription": "Amagar la descripció dels mitjans a la pàgina de detalls",
+    "@hideDetailsMediaDescription": {
+        "description": "Setting title to hide media description on details screen"
+    },
+    "hideDetailsMediaDescriptionSubtitle": "Amaga el text descriptiu de la pel·lícula o de l'episodi.",
+    "@hideDetailsMediaDescriptionSubtitle": {
+        "description": "Description for setting to hide media description on details page"
+    },
+    "detailUseSeriesThumbnails": "Utilitzar miniatures de la sèrie a la pàgina de detalls",
+    "@detailUseSeriesThumbnails": {
+        "description": "Setting title to replace thumbnails on Classic details page with series thumbnail"
+    },
+    "setupHomeRowsQuestion": "Quin aspecte vols per a les teves files?",
+    "@setupHomeRowsQuestion": {
+        "description": "Setup wizard question for the home row style"
+    },
+    "setupDetailQuestion": "Com hauria de ser l'aspecte d'una pel·lícula o d'una sèrie quan la obres?",
+    "@setupDetailQuestion": {
+        "description": "Setup wizard question for the detail screen style"
+    },
+    "setupStyleModern": "Modern",
+    "@setupStyleModern": {
+        "description": "Name of the newer layout, offered in the setup wizard"
+    },
+    "setupRowsClassicHint": "Compacte. Més files a la pantalla alhora.",
+    "@setupRowsClassicHint": {
+        "description": "What the classic home row style gives you"
+    },
+    "setupRowsModernHint": "Targetes més grans amb títols a sota.",
+    "@setupRowsModernHint": {
+        "description": "What the modern home row style gives you"
+    },
+    "setupDetailClassicHint": "Tot està centrat en una sola columna.",
+    "@setupDetailClassicHint": {
+        "description": "What the classic detail screen style gives you"
+    },
+    "setupDetailModernHint": "Cinemàtic, amb pestanyes per al repartiment i els extres.",
+    "@setupDetailModernHint": {
+        "description": "What the modern detail screen style gives you"
+    },
+    "setupTourBulletRequests": "Sol·licituds de Seerr",
+    "@setupTourBulletRequests": {
+        "description": "Bullet on the closing setup screen for the Seerr request feature"
+    },
+    "setupTourBulletSyncPlay": "Grups de visualització de SyncPlay",
+    "@setupTourBulletSyncPlay": {
+        "description": "Bullet on the closing setup screen for SyncPlay"
+    },
+    "setupTourBulletThemes": "Temes personalitzats",
+    "@setupTourBulletThemes": {
+        "description": "Bullet on the closing setup screen for custom themes"
+    },
+    "setupTourBulletDownloads": "Descàrregues offline",
+    "@setupTourBulletDownloads": {
+        "description": "Bullet on the closing setup screen for downloads"
+    },
+    "runSetupAgain": "Iniciar la configuració de nou",
+    "@runSetupAgain": {
+        "description": "Starts the first-run setup wizard again from settings"
+    },
+    "playbackTimeAboveBarLeft": "Sobre la barra, a l'esquerra",
+    "@playbackTimeAboveBarLeft": {
+        "description": "Progress bar time slot above the bar on the left"
+    },
+    "groupByParentalRating": "Qualificació parental",
+    "@groupByParentalRating": {
+        "description": "Option to group library items by parental rating"
+    },
+    "groupByStudio": "Estudi",
+    "@groupByStudio": {
+        "description": "Option to group library items by production studio"
+    },
+    "interfaceLayout": "Disposició de la interfície",
+    "@interfaceLayout": {
+        "description": "Setting to override which UI layout the app uses"
+    },
+    "interfaceLayoutAutomatic": "Automàtic",
+    "@interfaceLayoutAutomatic": {
+        "description": "Interface layout option: detect from the device"
+    },
+    "manual": "Manual",
+    "@manual": {
+        "description": "Option: manual"
+    },
+    "autoDetect": "Detecció automàtica",
+    "@autoDetect": {
+        "description": "Option: detect the value automatically"
+    },
+    "adminMetadataDisplayOrderDvd": "DVD",
+    "adminMetadataDisplayOrderDigital": "Digital",
+    "adminMetadataDisplayOrderStoryArc": "Arc argumental",
+    "adminMetadataDisplayOrderProduction": "Producció",
+    "adminMetadataDisplayOrderTv": "TV",
+    "adminMetadataDisplayOrderRegional": "Regional",
+    "adminMetadataDisplayOrderAlternateDvd": "DVD alternatiu",
+    "adminMetadataPersonKindUnknown": "Desconegut",
+    "adminMetadataPersonKindActor": "Actor",
+    "adminMetadataPersonKindDirector": "Director",
+    "adminMetadataPersonKindComposer": "Compositor",
+    "adminMetadataPersonKindWriter": "Escriptor",
+    "adminMetadataPersonKindProducer": "Productor",
+    "adminMetadataPersonKindMixer": "Mesclador",
+    "adminMetadataPersonKindCreator": "Creador",
+    "adminMetadataPersonKindArtist": "Artista",
+    "adminMetadataPersonKindAuthor": "Autor",
+    "adminMetadataPersonKindIllustrator": "Il·lustrador",
+    "adminMetadataPersonKindEditor": "Editor",
+    "adminMetadataPersonKindTranslator": "Traductor",
+    "adminMetadataPersonKindNarrator": "Narrador",
+    "adminMetadataLockFieldName": "Nom",
+    "adminMetadataLockFieldGenres": "Gèneres",
+    "adminMetadataLockFieldOfficialRating": "Qualificació parental",
+    "adminMetadataLockFieldBirthLocation": "Lloc de naixement",
+    "adminMetadataLockFieldRuntime": "Duració",
+    "adminMetadataLockFieldStudios": "Estudis",
+    "adminMetadataLockFieldTags": "Etiquetes",
+    "settingsMediaSegmentTypeAction": "{segment} Segments",
+    "@settingsMediaSegmentTypeAction": {
+        "description": "Setting label for what to do with one type of media segment",
+        "placeholders": {
+            "segment": {
+                "type": "String"
+            }
+        }
+    },
+    "queuedDownload": "En cua",
+    "@queuedDownload": {
+        "description": "Status label for a download waiting in the queue for a free download slot"
+    },
+    "tvOfflineDownloads": "Habilita descàrregues offline",
+    "@tvOfflineDownloads": {
+        "description": "TV-only toggle in the Offline Downloads settings: offer download actions on item pages"
+    },
+    "tvOfflineDownloadsSubtitle": "Mostra accions de descàrrega a les pàgines d'ítems",
+    "@tvOfflineDownloadsSubtitle": {
+        "description": "Subtitle for the TV-only offline downloads toggle"
+    },
+    "adminMetadataFieldCustomRating": "Puntuació personalitzada",
+    "adminMetadataDisplayOrderAbsolute": "Absolut",
+    "adminMetadataDisplayOrderOriginalAirDate": "Data d'emissió original",
+    "adminMetadataDisplayOrderAired": "Emès",
+    "adminMetadataFieldDisplayOrder": "Ordre de visualització",
+    "adminMetadataDisplayOrderAlternate": "Alternatiu",
+    "adminMetadataDisplayOrderDateModified": "Data de modificació",
+    "adminMetadataDisplayOrderSortName": "Ordenar per nom",
+    "adminMetadataDisplayOrderReleaseDate": "Data de publicació",
+    "adminMetadataSettings": "Configuració de metadades",
+    "adminMetadataDownloadLanguage": "Idioma de descàrrega preferit",
+    "adminMetadataCountryRegion": "País/Regió",
+    "adminMetadataInheritHelp": "Deixa-ho com a Predeterminat per heretar la configuració d'un element principal o de la configuració predeterminada del servidor.",
+    "adminMetadataField3DFormat": "Format 3D",
+    "adminMetadataPersonKindGuestStar": "Estrella convidada",
+    "adminMetadataPersonKindConductor": "Director d'orquestra",
+    "adminMetadataPersonKindLyricist": "Lletrista",
+    "adminMetadataPersonKindArranger": "Arranjador",
+    "adminMetadataPersonKindEngineer": "Enginyer",
+    "adminMetadataPersonKindRemixer": "Remesclador",
+    "adminMetadataPersonKindPenciller": "Dibuixant",
+    "adminMetadataPersonKindAlbumArtist": "Artista d'àlbum",
+    "adminMetadataPersonKindInker": "Entintador",
+    "adminMetadataPersonKindColorist": "Colorista",
+    "adminMetadataPersonKindLetterer": "Rotulista",
+    "adminMetadataPersonKindCoverArtist": "Artista de portada",
+    "adminMetadataAirDays": "Dies d'emissió",
+    "adminMetadataLockItem": "Bloqueja aquest element per evitar futurs canvis de metadades",
+    "adminMetadataEnabledFields": "Camps habilitats",
+    "adminMetadataEnabledFieldsHelp": "Desselecciona un camp per bloquejar-lo i evitar que les seves dades siguin modificades.",
+    "adminMetadataLockFieldOverview": "Resum",
+    "adminMetadataLockFieldCast": "Persones",
+    "adminMetadataLockFieldProductionLocations": "Ubicacions de producció",
+    "adminPluginsRestartRequired": "Cal reiniciar",
+    "@adminPluginsRestartRequired": {
+        "description": "Label for the installed-plugin filter showing changes that require a server restart"
+    },
+    "adminPluginsNoneActive": "Cap plugin actiu",
+    "@adminPluginsNoneActive": {
+        "description": "Empty state for the active installed-plugin filter"
+    },
+    "adminPluginsNoneRequireRestart": "Cap plugin requereix un reinici del servidor",
+    "@adminPluginsNoneRequireRestart": {
+        "description": "Empty state for the installed-plugin filter showing changes that require a server restart"
+    },
+    "openTrailersExternally": "Obre els tràilers en aplicació externa",
+    "@openTrailersExternally": {
+        "description": "Details screen setting that hands trailers to the system"
+    },
+    "openTrailersExternallySubtitle": "Els tràilers s'obren a l'aplicació de YouTube o al navegador en lloc del reproductor integrat",
+    "@openTrailersExternallySubtitle": {
+        "description": "Subtitle for the external trailers setting"
+    }
 }

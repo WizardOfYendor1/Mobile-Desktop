@@ -70,7 +70,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get whosWatching => 'Wähle deinen Benutzer';
+  String get whosWatching => 'Wer schaut zu ?';
 
   @override
   String get addUser => 'Benutzer hinzufügen';
@@ -205,23 +205,23 @@ class AppLocalizationsDe extends AppLocalizations {
   String get interfaceStyleMaterial => 'Material';
 
   @override
-  String get interfaceLayout => 'Interface Layout';
+  String get interfaceLayout => 'Benutzeroberflächen Layout';
 
   @override
   String get interfaceLayoutSubtitle =>
       'Override the detected layout when this device is read wrong. Restart Moonfin for changes to take effect.';
 
   @override
-  String get interfaceLayoutAutomatic => 'Automatic';
+  String get interfaceLayoutAutomatic => 'automatisch';
 
   @override
-  String get interfaceLayoutTv => 'TV';
+  String get interfaceLayoutTv => 'Fernseher';
 
   @override
   String get interfaceLayoutDesktop => 'Desktop';
 
   @override
-  String get interfaceLayoutPhone => 'Phone';
+  String get interfaceLayoutPhone => 'Telefon';
 
   @override
   String get glassQuality => 'Glass-Qualität';
@@ -269,6 +269,16 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get keyboardPreferSystemImeDescription =>
       'Nutze zur Texteingabe standardmäßig die Eingabemethode des Gerätes';
+
+  @override
+  String get controller => 'Controller';
+
+  @override
+  String get gamepadNavigation => 'Gamepad navigation';
+
+  @override
+  String get gamepadNavigationDescription =>
+      'Let a connected game controller move focus and select items';
 
   @override
   String get themeMoonfin => 'Moonfin';
@@ -1057,7 +1067,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String discNumber(int number) {
-    return 'Platte $number';
+    return 'Disk $number';
   }
 
   @override
@@ -1153,7 +1163,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String resumeFrom(String position) {
-    return 'Fortsetzen bei $position';
+    return 'Fortsetzen ab $position';
   }
 
   @override
@@ -1181,7 +1191,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get version => 'Version';
 
   @override
-  String get cast => 'Übertragen';
+  String get cast => 'Besetzung';
 
   @override
   String get castMembers => 'Besetzung';
@@ -1399,7 +1409,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get director => 'REGIE';
 
   @override
-  String get starring => 'STARRING';
+  String get starring => 'Mit';
 
   @override
   String get directors => 'REGIE';
@@ -1479,7 +1489,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get shuffle => 'Zufallswiedergabe';
 
   @override
-  String get shuffleAll => 'Shuffle All';
+  String get shuffleAll => 'Alle Zufällig wiedergeben';
 
   @override
   String get shuffleAllMusic => 'Alle Musik zufällig abspielen';
@@ -1989,7 +1999,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get unableToCreateRecording => 'Aufnahme kann nicht erstellt werden';
 
   @override
-  String get recordSeries => 'Record Series';
+  String get recordSeries => 'Alle Folgen dieser Serie aufnehmen';
 
   @override
   String get seriesSetToRecord => 'Series set to record';
@@ -1998,8 +2008,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get seriesRecordingCancelled => 'Series recording cancelled';
 
   @override
-  String get unableToCreateSeriesRecording =>
-      'Unable to create series recording';
+  String get unableToCreateSeriesRecording => 'Serienaufnhame fehlgeschlagen';
 
   @override
   String get watch => 'Ansehen';
@@ -2475,7 +2484,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get detailsBackgroundBlur => 'Detail-Hintergrundunschärfe';
 
   @override
-  String get detailsBackgroundOpacity => 'Details Background Opacity';
+  String get detailsBackgroundOpacity => 'Details-Hintergrunddeckkraft';
 
   @override
   String pixelValue(int value) {
@@ -2548,6 +2557,32 @@ class AppLocalizationsDe extends AppLocalizations {
       'Vorschaubilder beim Spulen anzeigen';
 
   @override
+  String get trickplayDisplayStyleSingle => 'Single Thumbnail';
+
+  @override
+  String get trickplayDisplayStyleStrip => 'Filmstrip';
+
+  @override
+  String get trickplayModeFull => 'Full Screen';
+
+  @override
+  String get trickplaySettingsPreviewHint =>
+      'Drag the slider to preview scrubbing';
+
+  @override
+  String get trickplayPreviewScale => 'Preview Size';
+
+  @override
+  String get trickplayVerticalOffset => 'Distance From Seekbar';
+
+  @override
+  String get trickplayFollowScrubPosition => 'Follow Scrub Position';
+
+  @override
+  String get trickplayFollowScrubPositionSubtitle =>
+      'Preview slides along the seekbar as you scrub, instead of staying centered';
+
+  @override
   String get showDescriptionOnPause => 'Beschreibung bei Pause anzeigen';
 
   @override
@@ -2562,14 +2597,14 @@ class AppLocalizationsDe extends AppLocalizations {
       'Sperrtaste anzeigen, die Touch-Eingaben blockiert, bis lange gedrückt wird';
 
   @override
-  String get playerSwipeGestures => 'Volume and Brightness Swipes';
+  String get playerSwipeGestures => 'Lautstärke und Helligkeit Wischgesten';
 
   @override
   String get playerSwipeGesturesDescription =>
       'Slide up or down on the player to change brightness on the left and volume on the right';
 
   @override
-  String get osdButtons => 'Player Buttons';
+  String get osdButtons => 'Player Knöpfe';
 
   @override
   String get osdButtonsDescription => 'Choose which buttons the player shows';
@@ -2590,10 +2625,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Play is always first and the locked buttons are always shown. Everything else is up to you, and each kind of device keeps its own list.';
 
   @override
-  String get moveUp => 'Move Up';
+  String get moveUp => 'nach oben bewegen';
 
   @override
-  String get moveDown => 'Move Down';
+  String get moveDown => 'nach unten bewegen';
 
   @override
   String get buttonOrderHint =>
@@ -2603,7 +2638,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get orientationLock => 'Orientation Lock';
 
   @override
-  String get fullscreen => 'Fullscreen';
+  String get fullscreen => 'Vollbild';
 
   @override
   String get audioBehavior => 'Audio-Verhalten';
@@ -2801,23 +2836,23 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsAudioDtsHdPassthrough => 'DTS-HD MA Passthrough';
 
   @override
-  String get settingsAudioPassthroughMode => 'Passthrough';
+  String get settingsAudioPassthroughMode => 'Durchreichen';
 
   @override
   String get settingsAudioPassthroughModeDescription =>
-      'How compressed surround sound reaches your TV or receiver.';
+      'Wie komprimierter Surround Sound ihr Gerät erreicht.';
 
   @override
   String get settingsAudioPassthroughModeDisabled =>
-      'Disabled (always decode on this device)';
+      'deaktiviert (auf diesem Gerät immer umwandeln)';
 
   @override
   String get settingsAudioPassthroughModeAuto =>
-      'Auto (match detected device support)';
+      'Auto (an erkanntes Gerät anpassen)';
 
   @override
   String get settingsAudioPassthroughModeManual =>
-      'Manual (choose formats below)';
+      'manuell (Formate unten auswählen)';
 
   @override
   String get settingsDownmixToStereoDescription =>
@@ -3181,40 +3216,40 @@ class AppLocalizationsDe extends AppLocalizations {
   String get syncToProfile => 'Zum Profil synchronisieren';
 
   @override
-  String get resetProfile => 'Reset Profile';
+  String get resetProfile => 'Profil zurücksetzen';
 
   @override
   String resetProfileTitle(String profile) {
-    return 'Reset $profile?';
+    return 'Profil $profile zurücksetzen?';
   }
 
   @override
   String resetProfileDescription(String profile) {
-    return 'This deletes the $profile profile from the server and puts every synced setting on this device back to its default.';
+    return 'Diese Aktion wird das Profil $profile vom Server entfernen und alle synchronisierten Einstellungen auf diesem Gerät auf Standard zurücksetzen.';
   }
 
   @override
   String get resetGlobalProfileDescription =>
-      'This deletes every saved profile from the server and puts every synced setting on this device back to its default.';
+      'Diese Aktion wird alle gespeicherten Profile vom Server löschen und die Einstellungen auf diesem Gerät auf Standard zurücksetzen.';
 
   @override
   String profileReset(String profile) {
-    return 'Reset $profile profile to defaults.';
+    return 'Profil $profile wird auf Standard zurückgesetzt.';
   }
 
   @override
-  String get resetRatingsTitle => 'Reset ratings?';
+  String get resetRatingsTitle => 'Bewertungen zurücksetzen ?';
 
   @override
   String get resetRatingsDescription =>
-      'This puts every ratings setting back to its default, including which sources show and the order they appear in.';
+      'Diese Aktion wird alle Bewertungen auf Standard zurücksetzen ebenso die Quellen und Reihenfolge.';
 
   @override
-  String get ratingsReset => 'Reset ratings to defaults.';
+  String get ratingsReset => 'Bewertungen auf Standard zurücksetzen.';
 
   @override
   String failedToResetProfile(String profile) {
-    return 'Failed to reset $profile profile.';
+    return 'Profil $profile zurücksetzen fehlgeschlagen.';
   }
 
   @override
@@ -3272,7 +3307,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get defaultLabel => 'Standard';
 
   @override
-  String get sdCard => 'SD card';
+  String get sdCard => 'SD Karte';
 
   @override
   String get downloadLocationLimitedByAndroid =>
@@ -3432,7 +3467,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Combine separate libraries of the same type for Recently Added and Recently Released home rows.';
 
   @override
-  String get libraryView => 'Library View';
+  String get libraryView => 'Bibliotheks Ansicht';
 
   @override
   String get enableFolderView => 'Ordneransicht aktivieren';
@@ -3521,10 +3556,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get mediaBarModeOff => 'Aus';
 
   @override
-  String get mediaBarModeBookshelf => 'Bookshelf';
+  String get mediaBarModeBookshelf => 'Bücherregal';
 
   @override
-  String get mediaBarModeGallery => 'Gallery';
+  String get mediaBarModeGallery => 'Gallerie';
 
   @override
   String get mediaBarModeBanner => 'Banner';
@@ -3543,10 +3578,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get contentType => 'Inhaltstyp';
 
   @override
-  String get mediaBarSourceType => 'Source';
+  String get mediaBarSourceType => 'Quelle';
 
   @override
-  String get mediaBarSourceRandom => 'Random';
+  String get mediaBarSourceRandom => 'Zufall';
 
   @override
   String get moviesAndTvShows => 'Filme & TV-Sendungen';
@@ -3592,11 +3627,11 @@ class AppLocalizationsDe extends AppLocalizations {
       'Ton für Trailer in der Medienleiste aktivieren';
 
   @override
-  String get trailerCaptions => 'Trailer Captions';
+  String get trailerCaptions => 'Trailer Untertitel';
 
   @override
   String get trailerCaptionsDescription =>
-      'Show captions on YouTube trailers in the media bar';
+      'Zeige Untertitel bei Youtube Trailern in der Media Leiste';
 
   @override
   String get episodePreview => 'Episodenvorschau';
@@ -3657,7 +3692,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get liveTV => 'Live-TV';
 
   @override
-  String get favoriteChannels => 'Favorite Channels';
+  String get favoriteChannels => 'Favoriten Kanäle';
 
   @override
   String get homeSections => 'Startseiten-Bereiche';
@@ -3684,15 +3719,15 @@ class AppLocalizationsDe extends AppLocalizations {
       'Beide Reihen in einen Startseitenbereich zusammenführen';
 
   @override
-  String get nextUpMaxDays => 'Max days in Next Up';
+  String get nextUpMaxDays => 'Maximale Tage in Als Nächstes';
 
   @override
   String get nextUpMaxDaysDescription =>
-      'How long a show stays in Next Up after you last watched it';
+      'Wie lange eine Sendung in Als Nächstes angezeigt wird nachdem sie angeshen wurde';
 
   @override
   String daysValue(int days) {
-    return '$days days';
+    return '$days Tage';
   }
 
   @override
@@ -3983,13 +4018,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get tags => 'Tags';
 
   @override
-  String get genresAndTags => 'Genres and Tags';
+  String get genresAndTags => 'Genres und Tags';
 
   @override
   String get seerrDiscoveryRows => 'Seerr-Entdeckungszeilen';
 
   @override
-  String get yourWatchlist => 'Your Watchlist';
+  String get yourWatchlist => 'Deine Watchlist';
 
   @override
   String get resetRowsToDefaults => 'Reihen auf Standard zurücksetzen';
@@ -4239,16 +4274,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get request => 'Anfordern';
 
   @override
-  String get request4k => 'Request 4K';
+  String get request4k => '4K Anfragen';
 
   @override
-  String get requested4k => '4K Requested';
+  String get requested4k => '4K angefragt';
 
   @override
   String get cancelRequest => 'Anfrage abbrechen';
 
   @override
-  String get cancelRequest4k => 'Cancel 4K Request';
+  String get cancelRequest4k => '4K Anfrage abbrechen';
 
   @override
   String get playInMoonfin => 'In Moonfin abspielen';
@@ -4259,13 +4294,13 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get manageRequests => 'Manage Requests';
+  String get manageRequests => 'Anfragen verwalten';
 
   @override
   String get watchlist => 'Watchlist';
 
   @override
-  String get onWatchlist => 'On Watchlist';
+  String get onWatchlist => 'auf Watchlist';
 
   @override
   String get approve => 'Genehmigen';
@@ -8969,10 +9004,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Choose which systems to install. Cores are provided by the libretro project and let games run natively instead of in a browser view.';
 
   @override
-  String get emulatorCoreDownloading => 'Downloading';
+  String get emulatorCoreDownloading => 'Herunterladen';
 
   @override
-  String get emulatorCoreUnavailable => 'Not available for this device';
+  String get emulatorCoreUnavailable => 'Auf diesem Gerät nicht verfügbar';
 
   @override
   String get emulatorCoreDownloadFailed =>
@@ -8980,18 +9015,19 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String emulatorCoreResetSettings(String system) {
-    return 'Reset $system settings to defaults';
+    return '$system Einstellungen auf Standard zurücksetzen';
   }
 
   @override
-  String get emulatorCoreSettingsReset => 'Settings reset to defaults.';
+  String get emulatorCoreSettingsReset =>
+      'Einstellungen auf Standard zurückgesetzt.';
 
   @override
   String get emulatorCoreResetSettingsFailed =>
-      'Could not reset settings. Check your connection and try again.';
+      'Einstellungen konnten nicht zurückgesetzt werden. Verbindung überprüfen.';
 
   @override
-  String get downloadedGames => 'Downloaded Games';
+  String get downloadedGames => 'Heruntergeladene Spiele';
 
   @override
   String get downloadedGamesSubtitle => 'Free up space used by game files';
@@ -9006,11 +9042,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String downloadedGamesTotal(int count, String size) {
-    return '$count games, $size';
+    return '$count Spiele, $size';
   }
 
   @override
-  String get removeAllDownloadedGames => 'Remove All';
+  String get removeAllDownloadedGames => 'Alle entfernen';
 
   @override
   String removeDownloadedGameConfirm(String title) {
@@ -9232,14 +9268,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Steuert, ob Dolby Vision-Profil 7-Enhancement-Layer-Streams direkt abgespielt werden sollen.';
 
   @override
-  String get settingsAutoAftkrtEnabled => 'Auto (AFTKRT aktiviert)';
+  String get settingsAutoAftkrtEnabled => 'Auto';
 
   @override
-  String get settingsEnabledOnThisDevice => 'Auf diesem Gerät aktiviert';
+  String get settingsEnabledOnThisDevice => 'Aktiviert';
 
   @override
-  String get settingsDisabledPreferTranscode =>
-      'Deaktiviert (Transkodierung bevorzugen)';
+  String get settingsDisabledPreferTranscode => 'Deaktiviert';
 
   @override
   String get settingsResumeRewindDescription =>
@@ -9443,7 +9478,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get mapDolbyVisionP7Title =>
-      'Ordnen Sie Dolby Vision Profil 7 HEVC zu';
+      'Dolby Vision Profil 7 immer als HRD10 abspielen';
 
   @override
   String get mapDolbyVisionP7Subtitle =>
@@ -9608,13 +9643,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Classic behält den Bildtyp und die Informationsüberlagerung pro Zeile bei. Modern verwendet Hochformat-zu-Hintergrund-Reihen.';
 
   @override
-  String get sortOrder => 'Sort Order';
+  String get sortOrder => 'Sortierreihenfolge';
 
   @override
-  String get ascending => 'Ascending';
+  String get ascending => 'Aufsteigend';
 
   @override
-  String get descending => 'Descending';
+  String get descending => 'Absteigend';
 
   @override
   String get displayFavoritesRows => 'Favoritenzeilen anzeigen';
@@ -11225,4 +11260,20 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get runSetupAgain => 'Run setup again';
+
+  @override
+  String get serverMessages => 'Messages';
+
+  @override
+  String get serverMessagesEmpty => 'No messages from your server yet';
+
+  @override
+  String get serverMessagesMarkAllRead => 'Mark all as read';
+
+  @override
+  String get serverMessagesShowButton => 'Show messages button';
+
+  @override
+  String get serverMessagesShowButtonSubtitle =>
+      'Adds a button to the menu for messages sent by your server admin';
 }

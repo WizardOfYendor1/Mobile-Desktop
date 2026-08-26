@@ -34,7 +34,21 @@ abstract class ServerWebSocketClient {
 /// The reconnect, keep alive and logging machinery both server types share.
 /// Only the handshake and what counts as a keep alive differ between them.
 abstract class _ReconnectingWebSocketClient implements ServerWebSocketClient {
-  _ReconnectingWebSocketClient(this.client, this.label);
+  _ReconnectingWebSocketClient(
+    this.client,
+    this.label, {
+    Duration? connectTimeout,
+  }) : _connectTimeout = connectTimeout ?? _defaultConnectTimeout;
+
+  /// A connect attempt has no timeout of its own, and a server can accept the
+  /// connection and then never answer the upgrade. An attempt left waiting on
+  /// that holds the connecting flag, which blocks every later attempt and
+  /// every immediate retry until the app restarts.
+  static const _defaultConnectTimeout = Duration(seconds: 15);
+
+  static const _closeTimeout = Duration(seconds: 5);
+
+  final Duration _connectTimeout;
 
   final MediaServerClient client;
 
@@ -82,31 +96,51 @@ abstract class _ReconnectingWebSocketClient implements ServerWebSocketClient {
       final uri = buildUri();
       if (uri == null) return;
 
-      channel = WebSocketChannel.connect(uri);
-      await channel!.ready;
+      final socket = WebSocketChannel.connect(uri);
+      channel = socket;
+      await socket.ready.timeout(_connectTimeout);
       _reconnectAttempt = 0;
       onConnected();
       logLifecycle('$label WebSocket connected');
       _connectionController.add(null);
 
-      _subscription = channel!.stream.listen(
+      _subscription = socket.stream.listen(
         handleMessage,
         onError: (error) {
-          _logger.e('$label WebSocket error', error: error);
-          scheduleReconnect();
+          logFailure('$label WebSocket error, reconnecting', error);
+          _dropAndReconnect();
         },
         onDone: () {
           logLifecycle('$label WebSocket closed, reconnecting');
-          keepAliveTimer?.cancel();
-          scheduleReconnect();
+          _dropAndReconnect();
         },
       );
     } catch (e) {
-      _logger.e('$label WebSocket connection failed', error: e);
-      scheduleReconnect();
+      logFailure('$label WebSocket connection failed, retrying', e);
+      _dropAndReconnect();
     } finally {
       _connecting = false;
     }
+  }
+
+  /// Clearing the channel is what lets an immediate retry through, since a
+  /// stale one left in place reads as a live connection.
+  void _dropAndReconnect() {
+    keepAliveTimer?.cancel();
+    keepAliveTimer = null;
+    final stale = channel;
+    channel = null;
+    unawaited(_closeQuietly(stale));
+    scheduleReconnect();
+  }
+
+  /// Closes without letting the close itself hang, which it can when the
+  /// other end never answered.
+  Future<void> _closeQuietly(WebSocketChannel? socket) async {
+    if (socket == null) return;
+    try {
+      await socket.sink.close().timeout(_closeTimeout);
+    } catch (_) {}
   }
 
   /// Keeps trying for as long as the session lasts. A server can be down far
@@ -137,9 +171,19 @@ abstract class _ReconnectingWebSocketClient implements ServerWebSocketClient {
 
   void logLifecycle(String message) {
     _logger.i(message);
-    if (GetIt.instance.isRegistered<LogService>()) {
-      GetIt.instance<LogService>().network(message, level: LogLevel.info);
-    }
+    _record(message, LogLevel.info);
+  }
+
+  /// Without this a report shows the socket closing and then nothing at all,
+  /// whether the retries are running or not.
+  void logFailure(String message, Object error) {
+    _logger.e(message, error: error);
+    _record(message, LogLevel.warning, error);
+  }
+
+  void _record(String message, LogLevel level, [Object? error]) {
+    if (!GetIt.instance.isRegistered<LogService>()) return;
+    GetIt.instance<LogService>().network(message, level: level, error: error);
   }
 
   void warn(String message, Object error) =>
@@ -155,10 +199,18 @@ abstract class _ReconnectingWebSocketClient implements ServerWebSocketClient {
     keepAliveTimer = null;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
-    await _subscription?.cancel();
+
+    // Cleared before the waiting below, so a teardown that drags leaves the
+    // client looking disconnected rather than half connected.
+    final subscription = _subscription;
+    final open = channel;
     _subscription = null;
-    await channel?.sink.close();
     channel = null;
+
+    try {
+      await subscription?.cancel().timeout(_closeTimeout);
+    } catch (_) {}
+    await _closeQuietly(open);
   }
 
   @override
@@ -171,8 +223,8 @@ abstract class _ReconnectingWebSocketClient implements ServerWebSocketClient {
 }
 
 class JellyfinWebSocketClient extends _ReconnectingWebSocketClient {
-  JellyfinWebSocketClient(MediaServerClient client)
-    : super(client, 'Jellyfin');
+  JellyfinWebSocketClient(MediaServerClient client, {Duration? connectTimeout})
+    : super(client, 'Jellyfin', connectTimeout: connectTimeout);
 
   static const _keepAliveIntervalSeconds = 30;
 
@@ -200,7 +252,8 @@ class JellyfinWebSocketClient extends _ReconnectingWebSocketClient {
 }
 
 class EmbyWebSocketClient extends _ReconnectingWebSocketClient {
-  EmbyWebSocketClient(MediaServerClient client) : super(client, 'Emby');
+  EmbyWebSocketClient(MediaServerClient client, {Duration? connectTimeout})
+    : super(client, 'Emby', connectTimeout: connectTimeout);
 
   @override
   Uri? buildUri() {

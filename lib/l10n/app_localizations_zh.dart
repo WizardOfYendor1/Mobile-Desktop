@@ -200,23 +200,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get interfaceStyleMaterial => 'Material';
 
   @override
-  String get interfaceLayout => 'Interface Layout';
+  String get interfaceLayout => '界面布局';
 
   @override
-  String get interfaceLayoutSubtitle =>
-      'Override the detected layout when this device is read wrong. Restart Moonfin for changes to take effect.';
+  String get interfaceLayoutSubtitle => '当此设备识别错误时覆盖检测到的布局。重启 Moonfin 使更改生效。';
 
   @override
-  String get interfaceLayoutAutomatic => 'Automatic';
+  String get interfaceLayoutAutomatic => '自动';
 
   @override
-  String get interfaceLayoutTv => 'TV';
+  String get interfaceLayoutTv => '电视';
 
   @override
-  String get interfaceLayoutDesktop => 'Desktop';
+  String get interfaceLayoutDesktop => '桌面';
 
   @override
-  String get interfaceLayoutPhone => 'Phone';
+  String get interfaceLayoutPhone => '手机';
 
   @override
   String get glassQuality => '玻璃质感';
@@ -263,6 +262,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get keyboardPreferSystemImeDescription => '文本输入默认使用设备输入法';
 
   @override
+  String get controller => 'Controller';
+
+  @override
+  String get gamepadNavigation => 'Gamepad navigation';
+
+  @override
+  String get gamepadNavigationDescription =>
+      'Let a connected game controller move focus and select items';
+
+  @override
   String get themeMoonfin => 'Moonfin';
 
   @override
@@ -281,7 +290,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeGlassSubtitle => '液态玻璃风格，带流动渐变背景、磨砂表面和 Apple 蓝强调色';
 
   @override
-  String get theme8BitHero => '8位英雄';
+  String get theme8BitHero => '8-bit 英雄';
 
   @override
   String get theme8BitHeroSubtitle => '复古像素艺术风格，具有粗犷的调色板、方块边框、强烈的阴影和像素字体';
@@ -1101,7 +1110,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get finalizingDownload => '正在整理…';
 
   @override
-  String get queuedDownload => 'Queued';
+  String get queuedDownload => '已排队';
 
   @override
   String get downloadAll => '全部下载';
@@ -1280,7 +1289,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get director => '导演';
 
   @override
-  String get starring => 'STARRING';
+  String get starring => '主演';
 
   @override
   String get directors => '导演';
@@ -1859,17 +1868,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get unableToCreateRecording => '无法创建录制';
 
   @override
-  String get recordSeries => 'Record Series';
+  String get recordSeries => '录制剧集';
 
   @override
-  String get seriesSetToRecord => 'Series set to record';
+  String get seriesSetToRecord => '已设置录制剧集';
 
   @override
-  String get seriesRecordingCancelled => 'Series recording cancelled';
+  String get seriesRecordingCancelled => '剧集录制已取消';
 
   @override
-  String get unableToCreateSeriesRecording =>
-      'Unable to create series recording';
+  String get unableToCreateSeriesRecording => '无法创建剧集录制';
 
   @override
   String get watch => '观看';
@@ -2230,7 +2238,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get always => '总是';
 
   @override
-  String get mixedRowsOnly => 'Mixed rows only';
+  String get mixedRowsOnly => '仅混合行';
 
   @override
   String get hideUnwatched => '隐藏未观看';
@@ -2381,10 +2389,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get disabled => '已禁用';
 
   @override
-  String get manual => 'Manual';
+  String get manual => '手动';
 
   @override
-  String get autoDetect => 'Auto Detect';
+  String get autoDetect => '自动检测';
 
   @override
   String get scaleOnTv => '在电视上缩放';
@@ -2399,6 +2407,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get showPreviewThumbnailsWhenSeeking => '拖动进度时显示预览缩略图';
 
   @override
+  String get trickplayDisplayStyleSingle => 'Single Thumbnail';
+
+  @override
+  String get trickplayDisplayStyleStrip => 'Filmstrip';
+
+  @override
+  String get trickplayModeFull => 'Full Screen';
+
+  @override
+  String get trickplaySettingsPreviewHint =>
+      'Drag the slider to preview scrubbing';
+
+  @override
+  String get trickplayPreviewScale => 'Preview Size';
+
+  @override
+  String get trickplayVerticalOffset => 'Distance From Seekbar';
+
+  @override
+  String get trickplayFollowScrubPosition => 'Follow Scrub Position';
+
+  @override
+  String get trickplayFollowScrubPositionSubtitle =>
+      'Preview slides along the seekbar as you scrub, instead of staying centered';
+
+  @override
   String get showDescriptionOnPause => '暂停时显示简介';
 
   @override
@@ -2411,11 +2445,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get osdLockButtonDescription => '显示锁定按钮，长按解锁前会阻止触摸输入';
 
   @override
-  String get playerSwipeGestures => 'Volume and Brightness Swipes';
+  String get playerSwipeGestures => '音量和亮度滑动';
 
   @override
-  String get playerSwipeGesturesDescription =>
-      'Slide up or down on the player to change brightness on the left and volume on the right';
+  String get playerSwipeGesturesDescription => '在播放器上上下滑动，左侧改变亮度，右侧改变音量';
 
   @override
   String get osdButtons => '播放器按钮';
@@ -3050,11 +3083,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get wifiOnlyDownloads => '仅 Wi-Fi 下载';
 
   @override
-  String get tvOfflineDownloads => 'Enable offline downloads';
+  String get tvOfflineDownloads => '启用离线下载';
 
   @override
-  String get tvOfflineDownloadsSubtitle =>
-      'Show download actions on item pages';
+  String get tvOfflineDownloadsSubtitle => '在条目页面显示下载操作';
 
   @override
   String get reportDownloadsActivity => '在服务器上显示下载';
@@ -3319,13 +3351,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mediaBarModeOff => '关';
 
   @override
-  String get mediaBarModeBookshelf => 'Bookshelf';
+  String get mediaBarModeBookshelf => '书架';
 
   @override
-  String get mediaBarModeGallery => 'Gallery';
+  String get mediaBarModeGallery => '画廊';
 
   @override
-  String get mediaBarModeBanner => 'Banner';
+  String get mediaBarModeBanner => '横幅';
 
   @override
   String get mediaBarModeAya => 'Aya';
@@ -3340,10 +3372,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get contentType => '内容类型';
 
   @override
-  String get mediaBarSourceType => 'Source';
+  String get mediaBarSourceType => '来源';
 
   @override
-  String get mediaBarSourceRandom => 'Random';
+  String get mediaBarSourceRandom => '随机';
 
   @override
   String get moviesAndTvShows => '电影和剧集';
@@ -3415,11 +3447,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get recentlyReleased => '近期发布';
 
   @override
-  String get recentlyReleasedSeriesType => 'Recently Released Series Sort By';
+  String get recentlyReleasedSeriesType => '最近发布剧集排序方式';
 
   @override
   String get recentlyReleasedSeriesTypeDescription =>
-      'Sort Recently Released Series home rows by series, latest season, or latest episode air date';
+      '按剧集、最新季或最新集播出日期对最近发布剧集首页行排序';
 
   @override
   String get myMedia => '我的媒体';
@@ -3446,7 +3478,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get liveTV => '直播电视';
 
   @override
-  String get favoriteChannels => 'Favorite Channels';
+  String get favoriteChannels => '收藏频道';
 
   @override
   String get homeSections => '首页栏目';
@@ -4747,7 +4779,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String adminRemoveDeviceConfirm(String name) {
-    return '移除设备 \"$name\"？该用户需要在此设备上重新登录。';
+    return '移除设备 \'$name\'？该用户需要在此设备上重新登录。';
   }
 
   @override
@@ -4945,7 +4977,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get adminLibEnablePhotos => '显示照片';
 
   @override
-  String get adminLibSaveLocalMetadata => '将艺术图保存到媒体文件夹';
+  String get adminLibSaveLocalMetadata => '将封面保存到媒体文件夹';
 
   @override
   String get adminLibRefreshInterval => '自动元数据刷新';
@@ -6660,7 +6692,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get adminMetadataFieldCriticRating => '影评人评分';
 
   @override
-  String get adminMetadataFieldCustomRating => 'Custom rating';
+  String get adminMetadataFieldCustomRating => '自定义分级';
 
   @override
   String get adminMetadataFieldTagline => '标语';
@@ -6669,188 +6701,184 @@ class AppLocalizationsZh extends AppLocalizations {
   String get adminMetadataFieldOverview => '简介';
 
   @override
-  String get adminMetadataFieldDisplayOrder => 'Display order';
+  String get adminMetadataFieldDisplayOrder => '显示顺序';
 
   @override
-  String get adminMetadataDisplayOrderAired => 'Aired';
+  String get adminMetadataDisplayOrderAired => '播出顺序';
 
   @override
-  String get adminMetadataDisplayOrderOriginalAirDate => 'Original air date';
+  String get adminMetadataDisplayOrderOriginalAirDate => '首播日期';
 
   @override
-  String get adminMetadataDisplayOrderAbsolute => 'Absolute';
+  String get adminMetadataDisplayOrderAbsolute => '绝对顺序';
 
   @override
   String get adminMetadataDisplayOrderDvd => 'DVD';
 
   @override
-  String get adminMetadataDisplayOrderDigital => 'Digital';
+  String get adminMetadataDisplayOrderDigital => '数字';
 
   @override
-  String get adminMetadataDisplayOrderStoryArc => 'Story arc';
+  String get adminMetadataDisplayOrderStoryArc => '剧情线';
 
   @override
-  String get adminMetadataDisplayOrderProduction => 'Production';
+  String get adminMetadataDisplayOrderProduction => '制作';
 
   @override
-  String get adminMetadataDisplayOrderTv => 'TV';
+  String get adminMetadataDisplayOrderTv => '电视';
 
   @override
-  String get adminMetadataDisplayOrderAlternate => 'Alternate';
+  String get adminMetadataDisplayOrderAlternate => '备用';
 
   @override
-  String get adminMetadataDisplayOrderRegional => 'Regional';
+  String get adminMetadataDisplayOrderRegional => '地区';
 
   @override
-  String get adminMetadataDisplayOrderAlternateDvd => 'Alternate DVD';
+  String get adminMetadataDisplayOrderAlternateDvd => '备用 DVD';
 
   @override
-  String get adminMetadataDisplayOrderDateModified => 'Date modified';
+  String get adminMetadataDisplayOrderDateModified => '修改日期';
 
   @override
-  String get adminMetadataDisplayOrderSortName => 'Sort name';
+  String get adminMetadataDisplayOrderSortName => '排序名称';
 
   @override
-  String get adminMetadataDisplayOrderReleaseDate => 'Release date';
+  String get adminMetadataDisplayOrderReleaseDate => '发布日期';
 
   @override
-  String get adminMetadataSettings => 'Metadata Settings';
+  String get adminMetadataSettings => '元数据设置';
 
   @override
-  String get adminMetadataDownloadLanguage => 'Preferred download language';
+  String get adminMetadataDownloadLanguage => '首选下载语言';
 
   @override
-  String get adminMetadataCountryRegion => 'Country/Region';
+  String get adminMetadataCountryRegion => '国家/地区';
 
   @override
-  String get adminMetadataInheritHelp =>
-      'Leave this on Default to inherit the setting from a parent item, or from the server default.';
+  String get adminMetadataInheritHelp => '保持为默认以从父条目或服务器默认值继承设置。';
 
   @override
-  String get adminMetadataField3DFormat => '3D format';
+  String get adminMetadataField3DFormat => '3D 格式';
 
   @override
-  String get adminMetadataPersonKindUnknown => 'Unknown';
+  String get adminMetadataPersonKindUnknown => '未知';
 
   @override
-  String get adminMetadataPersonKindActor => 'Actor';
+  String get adminMetadataPersonKindActor => '演员';
 
   @override
-  String get adminMetadataPersonKindDirector => 'Director';
+  String get adminMetadataPersonKindDirector => '导演';
 
   @override
-  String get adminMetadataPersonKindComposer => 'Composer';
+  String get adminMetadataPersonKindComposer => '作曲';
 
   @override
-  String get adminMetadataPersonKindWriter => 'Writer';
+  String get adminMetadataPersonKindWriter => '编剧';
 
   @override
-  String get adminMetadataPersonKindGuestStar => 'Guest star';
+  String get adminMetadataPersonKindGuestStar => '客串';
 
   @override
-  String get adminMetadataPersonKindProducer => 'Producer';
+  String get adminMetadataPersonKindProducer => '制片人';
 
   @override
-  String get adminMetadataPersonKindConductor => 'Conductor';
+  String get adminMetadataPersonKindConductor => '指挥';
 
   @override
-  String get adminMetadataPersonKindLyricist => 'Lyricist';
+  String get adminMetadataPersonKindLyricist => '作词';
 
   @override
-  String get adminMetadataPersonKindArranger => 'Arranger';
+  String get adminMetadataPersonKindArranger => '编曲';
 
   @override
-  String get adminMetadataPersonKindEngineer => 'Engineer';
+  String get adminMetadataPersonKindEngineer => '工程师';
 
   @override
-  String get adminMetadataPersonKindMixer => 'Mixer';
+  String get adminMetadataPersonKindMixer => '混音师';
 
   @override
-  String get adminMetadataPersonKindRemixer => 'Remixer';
+  String get adminMetadataPersonKindRemixer => '重混师';
 
   @override
-  String get adminMetadataPersonKindCreator => 'Creator';
+  String get adminMetadataPersonKindCreator => '创作者';
 
   @override
-  String get adminMetadataPersonKindArtist => 'Artist';
+  String get adminMetadataPersonKindArtist => '艺术家';
 
   @override
-  String get adminMetadataPersonKindAlbumArtist => 'Album artist';
+  String get adminMetadataPersonKindAlbumArtist => '专辑艺术家';
 
   @override
-  String get adminMetadataPersonKindAuthor => 'Author';
+  String get adminMetadataPersonKindAuthor => '作者';
 
   @override
-  String get adminMetadataPersonKindIllustrator => 'Illustrator';
+  String get adminMetadataPersonKindIllustrator => '插画师';
 
   @override
-  String get adminMetadataPersonKindPenciller => 'Penciller';
+  String get adminMetadataPersonKindPenciller => '线稿师';
 
   @override
-  String get adminMetadataPersonKindInker => 'Inker';
+  String get adminMetadataPersonKindInker => '描墨师';
 
   @override
-  String get adminMetadataPersonKindColorist => 'Colorist';
+  String get adminMetadataPersonKindColorist => '上色师';
 
   @override
-  String get adminMetadataPersonKindLetterer => 'Letterer';
+  String get adminMetadataPersonKindLetterer => '文字师';
 
   @override
-  String get adminMetadataPersonKindCoverArtist => 'Cover artist';
+  String get adminMetadataPersonKindCoverArtist => '封面艺术家';
 
   @override
-  String get adminMetadataPersonKindEditor => 'Editor';
+  String get adminMetadataPersonKindEditor => '编辑';
 
   @override
-  String get adminMetadataPersonKindTranslator => 'Translator';
+  String get adminMetadataPersonKindTranslator => '翻译';
 
   @override
-  String get adminMetadataPersonKindNarrator => 'Narrator';
+  String get adminMetadataPersonKindNarrator => '旁白';
 
   @override
-  String get adminMetadataAirDays => 'Air days';
+  String get adminMetadataAirDays => '播出日';
 
   @override
-  String get adminMetadataLockItem =>
-      'Lock this item to prevent future metadata changes';
+  String get adminMetadataLockItem => '锁定此条目以防止未来的元数据更改';
 
   @override
-  String get adminMetadataEnabledFields => 'Enabled Fields';
+  String get adminMetadataEnabledFields => '已启用字段';
 
   @override
-  String get adminMetadataEnabledFieldsHelp =>
-      'Uncheck a field to lock it and prevent its data from being changed.';
+  String get adminMetadataEnabledFieldsHelp => '取消勾选字段以锁定并防止其数据被更改。';
 
   @override
-  String get adminMetadataLockFieldName => 'Name';
+  String get adminMetadataLockFieldName => '名称';
 
   @override
-  String get adminMetadataLockFieldOverview => 'Overview';
+  String get adminMetadataLockFieldOverview => '概览';
 
   @override
-  String get adminMetadataLockFieldGenres => 'Genres';
+  String get adminMetadataLockFieldGenres => '类型';
 
   @override
-  String get adminMetadataLockFieldOfficialRating => 'Parental rating';
+  String get adminMetadataLockFieldOfficialRating => '家长分级';
 
   @override
-  String get adminMetadataLockFieldCast => 'People';
+  String get adminMetadataLockFieldCast => '人物';
 
   @override
-  String get adminMetadataLockFieldProductionLocations =>
-      'Production locations';
+  String get adminMetadataLockFieldProductionLocations => '制作地点';
 
   @override
-  String get adminMetadataLockFieldBirthLocation => 'Birth location';
+  String get adminMetadataLockFieldBirthLocation => '出生地';
 
   @override
-  String get adminMetadataLockFieldRuntime => 'Runtime';
+  String get adminMetadataLockFieldRuntime => '时长';
 
   @override
-  String get adminMetadataLockFieldStudios => 'Studios';
+  String get adminMetadataLockFieldStudios => '工作室';
 
   @override
-  String get adminMetadataLockFieldTags => 'Tags';
+  String get adminMetadataLockFieldTags => '标签';
 
   @override
   String get adminMetadataGenres => '类型';
@@ -6971,7 +6999,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get adminPluginsRestart => '重启';
 
   @override
-  String get adminPluginsRestartRequired => 'Restart required';
+  String get adminPluginsRestartRequired => '需要重启';
 
   @override
   String get adminPluginsNoSearchResults => '未找到符合搜索条件的插件';
@@ -6980,11 +7008,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get adminPluginsNoneInstalled => '未安装插件';
 
   @override
-  String get adminPluginsNoneActive => 'No active plugins';
+  String get adminPluginsNoneActive => '没有活动的插件';
 
   @override
-  String get adminPluginsNoneRequireRestart =>
-      'No plugins require a server restart';
+  String get adminPluginsNoneRequireRestart => '没有插件需要重启服务器';
 
   @override
   String adminPluginsUpdateAvailable(String version) {
@@ -7737,7 +7764,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get adminGeneralEnableSlowResponse => '启用慢速响应警告';
 
   @override
-  String get adminGeneralQuickConnect => '启用 Quick Connect';
+  String get adminGeneralQuickConnect => '启用快速连接';
 
   @override
   String get adminGeneralSectionServer => '服务器';
@@ -8519,15 +8546,14 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String emulatorCoreResetSettings(String system) {
-    return 'Reset $system settings to defaults';
+    return '将 $system 设置重置为默认值';
   }
 
   @override
-  String get emulatorCoreSettingsReset => 'Settings reset to defaults.';
+  String get emulatorCoreSettingsReset => '设置已重置为默认值。';
 
   @override
-  String get emulatorCoreResetSettingsFailed =>
-      'Could not reset settings. Check your connection and try again.';
+  String get emulatorCoreResetSettingsFailed => '无法重置设置。请检查连接后重试。';
 
   @override
   String get downloadedGames => '已下载游戏';
@@ -8673,7 +8699,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String settingsMediaSegmentTypeAction(String segment) {
-    return '$segment Segments';
+    return '$segment 片段';
   }
 
   @override
@@ -9955,7 +9981,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get audiobookSleepTimer => '睡眠定时';
 
   @override
-  String get audiobookSleepOff => '关';
+  String get audiobookSleepOff => '关闭';
 
   @override
   String get audiobookSleepEndOfChapter => '章节结束';
@@ -10207,10 +10233,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get impellerAuto => '自动';
 
   @override
-  String get impellerOn => '开';
+  String get impellerOn => '开启';
 
   @override
-  String get impellerOff => '关';
+  String get impellerOff => '关闭';
 
   @override
   String get impellerRestartTitle => '需要重启';
@@ -10444,7 +10470,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get personalRatingRated => '已评分';
 
   @override
-  String get personalRatingMine => 'My Rating';
+  String get personalRatingMine => '我的评分';
 
   @override
   String get personalRatingSaveFailed => '无法保存评分';
@@ -10466,169 +10492,173 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get filterInProgress => 'In Progress';
+  String get filterInProgress => '正在观看';
 
   @override
-  String get filterUnreleased => 'Unreleased';
+  String get filterUnreleased => '未发布';
 
   @override
-  String get filterTrailers => 'Trailers';
+  String get filterTrailers => '预告片';
 
   @override
-  String get filterExtras => 'Extras';
+  String get filterExtras => '花絮';
 
   @override
-  String get filterThemeSongs => 'Theme Songs';
+  String get filterThemeSongs => '主题曲';
 
   @override
-  String get filterThemeVideos => 'Theme Videos';
+  String get filterThemeVideos => '主题视频';
 
   @override
-  String get source => 'Source';
+  String get source => '来源';
 
   @override
-  String get years => 'Years';
+  String get years => '年份';
 
   @override
-  String get audioLanguage => 'Audio Language';
+  String get audioLanguage => '音轨语言';
 
   @override
-  String get subtitleLanguage => 'Subtitle Language';
+  String get subtitleLanguage => '字幕语言';
 
   @override
-  String get clearFilters => 'Clear Filters';
+  String get clearFilters => '清除筛选';
 
   @override
-  String get seerrShortcutsRow => 'Seerr Browse';
+  String get seerrShortcutsRow => 'Seerr 浏览';
 
   @override
-  String get seerrReleased => 'Released';
+  String get seerrReleased => '已发布';
 
   @override
-  String get seerrMinRating => 'Minimum Rating';
+  String get seerrMinRating => '最低评分';
 
   @override
-  String get seerrMinVotes => 'Minimum Votes';
+  String get seerrMinVotes => '最低投票数';
 
   @override
-  String get seerrOriginalLanguage => 'Original Language';
+  String get seerrOriginalLanguage => '原始语言';
 
   @override
-  String get seerrRuntime => 'Runtime';
+  String get seerrRuntime => '时长';
 
   @override
-  String get subtitleHdrSeparate => 'Separate HDR Style';
+  String get subtitleHdrSeparate => '单独 HDR 样式';
 
   @override
-  String get subtitleHdrSeparateSubtitle =>
-      'White is much brighter in HDR than in SDR, so a dimmer style here avoids the glare';
+  String get subtitleHdrSeparateSubtitle => '白色在 HDR 中比 SDR 亮得多，此处使用较暗的样式可避免刺眼';
 
   @override
-  String get scrollSensitivity => 'Scroll Sensitivity';
+  String get scrollSensitivity => '滚动灵敏度';
 
   @override
-  String get scrollSensitivitySubtitle =>
-      'How far one mouse wheel notch scrolls';
+  String get scrollSensitivitySubtitle => '鼠标滚轮一格滚动的距离';
 
   @override
-  String get mediaDetailsAndSpoilers => 'Media Details and Spoilers';
+  String get mediaDetailsAndSpoilers => '媒体详情与剧透';
 
   @override
-  String get openTrailersExternally => 'Open Trailers in External App';
+  String get openTrailersExternally => '在外部应用中打开预告片';
 
   @override
-  String get openTrailersExternallySubtitle =>
-      'Trailers open in the YouTube app or browser instead of the built-in player';
+  String get openTrailersExternallySubtitle => '预告片在 YouTube 应用或浏览器中打开，而非内置播放器';
 
   @override
-  String get hideDetailsMediaDescription =>
-      'Hide Media Description on Details Page';
+  String get hideDetailsMediaDescription => '在详情页隐藏媒体描述';
 
   @override
-  String get hideDetailsMediaDescriptionSubtitle =>
-      'Hide the movie or episode descriptive text.';
+  String get hideDetailsMediaDescriptionSubtitle => '隐藏电影或剧集的描述文字。';
 
   @override
-  String get detailUseSeriesThumbnails =>
-      'Use Series Thumbnails on Details Page';
+  String get detailUseSeriesThumbnails => '在详情页使用剧集缩略图';
 
   @override
-  String get detailUseSeriesThumbnailsSubtitle =>
-      'Replace all thumbnails on Classic details page with series thumbnail';
+  String get detailUseSeriesThumbnailsSubtitle => '将经典详情页上的所有缩略图替换为剧集缩略图';
 
   @override
-  String get hideHomeMediaDescription =>
-      'Hide Media Description on Home Screen';
+  String get hideHomeMediaDescription => '在主屏幕隐藏媒体描述';
 
   @override
-  String get hideHomeMediaDescriptionSubtitle =>
-      'Hide the movie or episode descriptive text.';
+  String get hideHomeMediaDescriptionSubtitle => '隐藏电影或剧集的描述文字。';
 
   @override
-  String get continueWatchingAndNextUpHeader => 'Continue Watching and Next Up';
+  String get continueWatchingAndNextUpHeader => '继续观看与下个播放';
 
   @override
-  String get setupSkip => 'Skip setup';
+  String get setupSkip => '跳过设置';
 
   @override
-  String get setupNavbarQuestion => 'Where should navigation go?';
+  String get setupNavbarQuestion => '导航栏应放在哪里？';
 
   @override
-  String get setupMediaBarQuestion =>
-      'How should the top of your Home screen look?';
+  String get setupMediaBarQuestion => '主屏幕顶部应是什么样？';
 
   @override
-  String get setupHomeRowsQuestion => 'How should your rows look?';
+  String get setupHomeRowsQuestion => '你的行应是什么样？';
 
   @override
-  String get setupDetailQuestion =>
-      'How should a movie or show look when you open it?';
+  String get setupDetailQuestion => '打开电影或剧集时应是什么样？';
 
   @override
-  String get setupTourQuestion => 'You\'re set. Here\'s what else is in here.';
+  String get setupTourQuestion => '设置完成。这里还有更多功能。';
 
   @override
-  String get setupStyleClassic => 'Classic';
+  String get setupStyleClassic => '经典';
 
   @override
-  String get setupStyleModern => 'Modern';
+  String get setupStyleModern => '现代';
 
   @override
-  String get setupRowsClassicHint => 'Compact. More rows on screen at once.';
+  String get setupRowsClassicHint => '紧凑。屏幕上同时显示更多行。';
 
   @override
-  String get setupRowsModernHint => 'Larger cards with titles underneath.';
+  String get setupRowsModernHint => '更大的卡片，标题在下方。';
 
   @override
-  String get setupDetailClassicHint => 'Everything centred in one stack.';
+  String get setupDetailClassicHint => '所有内容居中堆叠。';
 
   @override
-  String get setupDetailModernHint =>
-      'Cinematic, with tabs for cast and extras.';
+  String get setupDetailModernHint => '电影感，带有演职人员和花絮标签页。';
 
   @override
-  String get setupPickALook => 'Pick a look';
+  String get setupPickALook => '选择外观';
 
   @override
-  String get setupTourMoreHeader => 'There is more waiting in Settings';
+  String get setupTourMoreHeader => '设置中还有更多功能等你探索';
 
   @override
-  String get setupTourBulletRequests => 'Seerr requests';
+  String get setupTourBulletRequests => 'Seerr 请求';
 
   @override
-  String get setupTourBulletSyncPlay => 'SyncPlay watch parties';
+  String get setupTourBulletSyncPlay => 'SyncPlay 观影派对';
 
   @override
-  String get setupTourBulletThemes => 'Custom themes';
+  String get setupTourBulletThemes => '自定义主题';
 
   @override
-  String get setupTourBulletDownloads => 'Offline downloads';
+  String get setupTourBulletDownloads => '离线下载';
 
   @override
-  String get setupTourBulletMore => 'And plenty more';
+  String get setupTourBulletMore => '以及更多';
 
   @override
-  String get runSetupAgain => 'Run setup again';
+  String get runSetupAgain => '重新运行设置';
+
+  @override
+  String get serverMessages => 'Messages';
+
+  @override
+  String get serverMessagesEmpty => 'No messages from your server yet';
+
+  @override
+  String get serverMessagesMarkAllRead => 'Mark all as read';
+
+  @override
+  String get serverMessagesShowButton => 'Show messages button';
+
+  @override
+  String get serverMessagesShowButtonSubtitle =>
+      'Adds a button to the menu for messages sent by your server admin';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hant`).

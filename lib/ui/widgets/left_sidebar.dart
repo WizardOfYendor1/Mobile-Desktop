@@ -31,6 +31,9 @@ import 'settings/settings_panel.dart';
 import '../screens/syncplay/syncplay_screen.dart';
 import '../screens/settings/settings_side_panel.dart';
 import 'seerr_icons.dart';
+import 'server_messages_dialog.dart';
+import 'server_messages_nav_slot.dart';
+import 'unread_badge.dart';
 import 'shuffle_overlay.dart';
 import 'user_menu_dialog.dart';
 
@@ -78,6 +81,9 @@ class _LeftSidebarState extends State<LeftSidebar> with RouteAware {
   final _sidebarFocus = FocusScopeNode(debugLabel: 'LeftSidebar');
   final _homeFocusNode = FocusNode(debugLabel: 'LeftSidebarHome');
   final _settingsFocusNode = FocusNode(debugLabel: 'LeftSidebarSettings');
+  final _serverMessagesFocusNode = FocusNode(
+    debugLabel: 'LeftSidebarServerMessages',
+  );
   final _profileFocusNode = FocusNode(debugLabel: 'LeftSidebarProfile');
   final _musicCardFocusNode = FocusNode(debugLabel: 'SidebarMusicCard');
   late final VoidCallback _focusNavbarCallback;
@@ -218,6 +224,7 @@ class _LeftSidebarState extends State<LeftSidebar> with RouteAware {
     _librariesReloadDebounce?.cancel();
     _homeFocusNode.dispose();
     _settingsFocusNode.dispose();
+    _serverMessagesFocusNode.dispose();
     _profileFocusNode.dispose();
     _musicCardFocusNode.dispose();
     _sidebarFocus.dispose();
@@ -798,6 +805,32 @@ class _LeftSidebarState extends State<LeftSidebar> with RouteAware {
     );
   }
 
+  /// The messages row, or nothing when there is nothing to show. The nav colour
+  /// is passed in so the caller decides which palette slot it takes.
+  Widget _serverMessagesSidebarItem({
+    required Color? navColor,
+    required String label,
+  }) {
+    return ServerMessagesNavSlot(
+      builder: (context, unread) => _SidebarItem(
+        key: const ValueKey('sidebar-server-messages'),
+        icon: Icons.info_outline_rounded,
+        label: label,
+        baseColor: navColor,
+        badgeCount: unread,
+        focusNode: _serverMessagesFocusNode,
+        showLabel: _showLabels,
+        onPressed: () async {
+          _onNavigate();
+          await showServerMessagesDialog(context);
+          if (!mounted) return;
+          _markNavigationAwayFromSidebar();
+          _serverMessagesFocusNode.requestFocus();
+        },
+      ),
+    );
+  }
+
   Widget _buildContent() {
     final l10n = AppLocalizations.of(context);
     final showShuffle = _prefs.get(UserPreferences.showShuffleButton);
@@ -1065,6 +1098,13 @@ class _LeftSidebarState extends State<LeftSidebar> with RouteAware {
                         : const SizedBox.shrink(),
                   ),
                 ],
+                // The slot is taken here rather than inside the builder, so the
+                // settings row keeps its colour whether or not there are any
+                // messages to show.
+                _serverMessagesSidebarItem(
+                  navColor: nextMainSidebarColor(),
+                  label: l10n.serverMessages,
+                ),
                 _SidebarItem(
                   key: const ValueKey('sidebar-settings'),
                   icon: Icons.settings_rounded,
@@ -1278,6 +1318,9 @@ class _SidebarItem extends StatefulWidget {
   final FocusNode? focusNode;
   final Color? baseColor;
 
+  /// Unread count drawn as a small red circle on the icon. Zero draws nothing.
+  final int badgeCount;
+
   const _SidebarItem({
     super.key,
     this.icon,
@@ -1288,6 +1331,7 @@ class _SidebarItem extends StatefulWidget {
     this.trailing,
     this.focusNode,
     this.baseColor,
+    this.badgeCount = 0,
   });
 
   @override
@@ -1395,15 +1439,18 @@ class _SidebarItemState extends State<_SidebarItem> {
                 children: [
                   SizedBox(
                     width: iconSlotWidth,
-                    child:
-                        widget.iconBuilder?.call(iconSize, fgColor) ??
-                        (widget.icon != null
-                            ? AdaptiveIcon(
-                                widget.icon!,
-                                size: iconSize,
-                                color: fgColor,
-                              )
-                            : const SizedBox.shrink()),
+                    child: UnreadBadge(
+                      count: widget.badgeCount,
+                      child:
+                          widget.iconBuilder?.call(iconSize, fgColor) ??
+                          (widget.icon != null
+                              ? AdaptiveIcon(
+                                  widget.icon!,
+                                  size: iconSize,
+                                  color: fgColor,
+                                )
+                              : const SizedBox.shrink()),
+                    ),
                   ),
                   if (widget.showLabel) ...[
                     const SizedBox(width: 12),

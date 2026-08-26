@@ -11,6 +11,7 @@ import '../../data/models/aggregated_library.dart';
 import '../../data/repositories/multi_server_repository.dart';
 import '../../data/repositories/user_views_repository.dart';
 import '../../data/services/plugin_sync_service.dart';
+import '../../data/services/server_messages_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../preference/seerr_preferences.dart';
 import '../../preference/user_preferences.dart';
@@ -23,8 +24,10 @@ import '../screens/syncplay/syncplay_screen.dart';
 import 'adaptive/adaptive_glass.dart';
 import 'adaptive/sf_symbol.dart';
 import 'seerr_icons.dart';
+import 'server_messages_dialog.dart';
 import 'settings/settings_panel.dart';
 import 'shuffle_overlay.dart';
+import 'unread_badge.dart';
 import 'user_menu_dialog.dart';
 
 const double _kBarHeight = 54.0;
@@ -56,6 +59,9 @@ class _MobileBottomNavBarState extends State<MobileBottomNavBar> {
     _prefs.addListener(_onPrefsChanged);
     _viewsRepo.addListener(_onViewsChanged);
     GetIt.instance<PluginSyncService>().addListener(_onPrefsChanged);
+    GetIt.instance<ServerMessagesService>().addListener(
+      _onServerMessagesChanged,
+    );
     _userSub = _userRepo.currentUserStream.listen((_) => _loadUserImage());
     _loadUserImage();
     _loadLibraries();
@@ -65,6 +71,9 @@ class _MobileBottomNavBarState extends State<MobileBottomNavBar> {
   void dispose() {
     try {
       GetIt.instance<PluginSyncService>().removeListener(_onPrefsChanged);
+      GetIt.instance<ServerMessagesService>().removeListener(
+        _onServerMessagesChanged,
+      );
     } catch (_) {}
     _prefs.removeListener(_onPrefsChanged);
     try {
@@ -79,6 +88,11 @@ class _MobileBottomNavBarState extends State<MobileBottomNavBar> {
     if (!mounted) return;
     _scheduleLibrariesReload();
     setState(() {});
+  }
+
+  // Only the button changes, so the libraries are left alone.
+  void _onServerMessagesChanged() {
+    if (mounted) setState(() {});
   }
 
   void _onViewsChanged() {
@@ -300,6 +314,26 @@ class _MobileBottomNavBarState extends State<MobileBottomNavBar> {
     } catch (_) {
       return false;
     }
+  }
+
+  /// The messages entry, or null when the user turned it off or the server has
+  /// no messages.
+  _BottomNavAction? _serverMessagesAction(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) {
+    if (!_prefs.get(UserPreferences.showServerMessagesButton)) return null;
+
+    final service = GetIt.instance<ServerMessagesService>();
+    if (service.messages.isEmpty) return null;
+
+    return _BottomNavAction(
+      icon: Icons.info_outline_rounded,
+      label: l10n.serverMessages,
+      isActive: false,
+      badgeCount: service.unreadCount,
+      onTap: () => showServerMessagesDialog(context),
+    );
   }
 
   _BottomNavAction _settingsAction(
@@ -557,10 +591,14 @@ class _MobileBottomNavBarState extends State<MobileBottomNavBar> {
 
   Widget _icon(_BottomNavAction action, {required Color color}) {
     final icon = action.icon;
-    return action.iconBuilder?.call(_kIconSize, color) ??
-        (icon != null
-            ? AdaptiveIcon(icon, size: _kIconSize, color: color)
-            : const SizedBox.shrink());
+    return UnreadBadge(
+      count: action.badgeCount,
+      child:
+          action.iconBuilder?.call(_kIconSize, color) ??
+          (icon != null
+              ? AdaptiveIcon(icon, size: _kIconSize, color: color)
+              : const SizedBox.shrink()),
+    );
   }
 
   Widget _buildTab(BuildContext context, _BottomNavAction action,
@@ -620,8 +658,9 @@ class _MobileBottomNavBarState extends State<MobileBottomNavBar> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final content = _contentActions(context, l10n);
+    final messages = _serverMessagesAction(context, l10n);
     final settings = _settingsAction(context, l10n);
-    final actions = <_BottomNavAction>[...content, settings];
+    final actions = <_BottomNavAction>[...content, ?messages, settings];
 
     const maxInline = 5;
     final List<_BottomNavAction> tabs;
@@ -704,12 +743,16 @@ class _BottomNavAction {
   final bool isActive;
   final VoidCallback onTap;
 
+  /// Unread count drawn as a small red circle on the icon. Zero draws nothing.
+  final int badgeCount;
+
   const _BottomNavAction({
     this.icon,
     this.iconBuilder,
     required this.label,
     required this.isActive,
     required this.onTap,
+    this.badgeCount = 0,
   });
 }
 

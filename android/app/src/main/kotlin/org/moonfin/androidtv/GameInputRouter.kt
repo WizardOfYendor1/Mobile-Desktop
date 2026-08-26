@@ -21,6 +21,9 @@ internal class GameInputRouter(
 
     private var gameActive = false
     private var emulatorControlsActive = false
+    // Off until Dart says otherwise, matching the preference default, so a pad
+    // can't drive the UI in the moments before the flag arrives.
+    private var navigationEnabled = false
     // Per controller, not global.
     private class PadState {
         var hatX = 0
@@ -70,6 +73,25 @@ internal class GameInputRouter(
     fun setEmulatorControlsActive(active: Boolean) {
         emulatorControlsActive = active
     }
+
+    fun setNavigationEnabled(enabled: Boolean) {
+        navigationEnabled = enabled
+        // Stick moves go untracked while off, so the first one after turning
+        // back on has to read as a change.
+        navX = 0
+        navY = 0
+    }
+
+    /**
+     * True when this key is a pad button driving the UI while the user has
+     * turned that off. Only the codes Android reserves for pad buttons count,
+     * so a remote can't be caught by it whatever it reports itself as, and a
+     * pad's d-pad keeps working like any other d-pad. Only outside a game: a
+     * running game owns its pad, and what it lets fall through still has to
+     * reach Android.
+     */
+    fun blocksNavigation(event: KeyEvent): Boolean =
+        !gameActive && !navigationEnabled && KeyEvent.isGamepadButton(event.keyCode)
 
     fun gamepadDevices(): List<Map<String, String>> =
         InputDevice.getDeviceIds()
@@ -130,9 +152,10 @@ internal class GameInputRouter(
             return true
         }
 
-        // Outside a game the left stick drives UI focus. Ignore the HAT: it's
-        // already exposed as keys, and double delivery can conflict.
-        if (!gameActive && isJoystickMove(event)) {
+        // Outside a game the left stick drives UI focus. Ignore the HAT here:
+        // Android already exposes its d-pad as keys, and double delivery can
+        // cause one path to release the other's held direction.
+        if (!gameActive && navigationEnabled && isJoystickMove(event)) {
             updateNavigation("h", stickDirection(event, MotionEvent.AXIS_X), navX) { navX = it }
             updateNavigation("v", stickDirection(event, MotionEvent.AXIS_Y), navY) { navY = it }
         }

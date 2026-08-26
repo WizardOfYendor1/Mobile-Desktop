@@ -70,7 +70,7 @@
             }
         }
     },
-    "whosWatching": "Wähle deinen Benutzer",
+    "whosWatching": "Wer schaut zu ?",
     "@whosWatching": {
         "description": "Server user selection heading"
     },
@@ -991,7 +991,7 @@
     "@tracklist": {
         "description": "Section header for album track listing"
     },
-    "discNumber": "Platte {number}",
+    "discNumber": "Disk {number}",
     "@discNumber": {
         "description": "Label for an album disc section in a multi-disc track list",
         "placeholders": {
@@ -1067,7 +1067,7 @@
     "@read": {
         "description": "Action button label to start reading a book"
     },
-    "resumeFrom": "Fortsetzen bei {position}",
+    "resumeFrom": "Fortsetzen ab {position}",
     "@resumeFrom": {
         "description": "Action button label showing resume position",
         "placeholders": {
@@ -1108,7 +1108,7 @@
     "@version": {
         "description": "Action button label for version/media source selection"
     },
-    "cast": "Übertragen",
+    "cast": "Besetzung",
     "@cast": {
         "description": "Action button label for casting to a device"
     },
@@ -6618,9 +6618,9 @@
     "settingsPreferServerTranscode": "Bevorzugen Sie die Servertranskodierung",
     "settingsDolbyVisionProfile7DirectPlay": "Dolby Vision Profil 7 Direktes Spielen",
     "settingsDolbyVisionProfile7DirectPlayDescription": "Steuert, ob Dolby Vision-Profil 7-Enhancement-Layer-Streams direkt abgespielt werden sollen.",
-    "settingsAutoAftkrtEnabled": "Auto (AFTKRT aktiviert)",
-    "settingsEnabledOnThisDevice": "Auf diesem Gerät aktiviert",
-    "settingsDisabledPreferTranscode": "Deaktiviert (Transkodierung bevorzugen)",
+    "settingsAutoAftkrtEnabled": "Auto",
+    "settingsEnabledOnThisDevice": "Aktiviert",
+    "settingsDisabledPreferTranscode": "Deaktiviert",
     "settingsResumeRewindDescription": "Wie viele Sekunden sollten zurückgespult werden, wenn die Wiedergabe fortgesetzt wird (von „Weiter ansehen“ oder einer Medienelementseite)?",
     "settingsUnpauseRewindDescription": "Wie viele Sekunden soll beim Fortsetzen der Wiedergabe nach Drücken der Pause-Taste zurückgespult werden?",
     "settingsSkipBackLengthDescription": "Wie viele Sekunden soll nach dem Drücken der Rückspultaste zurückgesprungen werden?",
@@ -6974,7 +6974,7 @@
     "@disableTunnelingSubtitle": {
         "description": "Setting subtitle for disable tunneling"
     },
-    "mapDolbyVisionP7Title": "Ordnen Sie Dolby Vision Profil 7 HEVC zu",
+    "mapDolbyVisionP7Title": "Dolby Vision Profil 7 immer als HRD10 abspielen",
     "@mapDolbyVisionP7Title": {
         "description": "Setting title: play DV P7 as HDR10 HEVC on non-DV devices"
     },
@@ -9055,5 +9055,268 @@
     "finalizingDownload": "Fertigstellung…",
     "@finalizingDownload": {
         "description": "Status label shown while a finished download is being moved to its final location and validated"
-    }
+    },
+    "resetRatingsTitle": "Bewertungen zurücksetzen ?",
+    "@resetRatingsTitle": {
+        "description": "Title of the dialog confirming a ratings reset"
+    },
+    "yourWatchlist": "Deine Watchlist",
+    "@yourWatchlist": {
+        "description": "Seerr row: watchlist"
+    },
+    "cancelRequest4k": "4K Anfrage abbrechen",
+    "@cancelRequest4k": {
+        "description": "Button/dialog title to cancel a 4K media request"
+    },
+    "interfaceLayoutPhone": "Telefon",
+    "@interfaceLayoutPhone": {
+        "description": "Interface layout option: phone layout"
+    },
+    "osdButtons": "Player Knöpfe",
+    "@osdButtons": {
+        "description": "Settings screen for choosing which buttons the player shows"
+    },
+    "interfaceLayoutDesktop": "Desktop",
+    "@interfaceLayoutDesktop": {
+        "description": "Interface layout option: desktop layout"
+    },
+    "recordSeries": "Alle Folgen dieser Serie aufnehmen",
+    "@recordSeries": {
+        "description": "Button label to record every showing of a live TV series"
+    },
+    "detailsBackgroundOpacity": "Details-Hintergrunddeckkraft",
+    "@detailsBackgroundOpacity": {
+        "description": "Setting for details background opacity on modern screens"
+    },
+    "playerSwipeGestures": "Lautstärke und Helligkeit Wischgesten",
+    "@playerSwipeGestures": {
+        "description": "Setting for player swipe gestures"
+    },
+    "moveDown": "nach unten bewegen",
+    "@moveDown": {
+        "description": "Moves a button one place later in its row"
+    },
+    "settingsAudioPassthroughMode": "Durchreichen",
+    "@settingsAudioPassthroughMode": {
+        "description": "Title of the audio passthrough mode selector"
+    },
+    "settingsAudioPassthroughModeDisabled": "deaktiviert (auf diesem Gerät immer umwandeln)",
+    "settingsAudioPassthroughModeAuto": "Auto (an erkanntes Gerät anpassen)",
+    "settingsAudioPassthroughModeManual": "manuell (Formate unten auswählen)",
+    "resetProfile": "Profil zurücksetzen",
+    "@resetProfile": {
+        "description": "Button to reset a profile to defaults"
+    },
+    "resetProfileTitle": "Profil {profile} zurücksetzen?",
+    "@resetProfileTitle": {
+        "description": "Title of the dialog confirming a profile reset",
+        "placeholders": {
+            "profile": {
+                "type": "String"
+            }
+        }
+    },
+    "resetProfileDescription": "Diese Aktion wird das Profil {profile} vom Server entfernen und alle synchronisierten Einstellungen auf diesem Gerät auf Standard zurücksetzen.",
+    "@resetProfileDescription": {
+        "description": "Body of the dialog confirming a device profile reset",
+        "placeholders": {
+            "profile": {
+                "type": "String"
+            }
+        }
+    },
+    "resetGlobalProfileDescription": "Diese Aktion wird alle gespeicherten Profile vom Server löschen und die Einstellungen auf diesem Gerät auf Standard zurücksetzen.",
+    "@resetGlobalProfileDescription": {
+        "description": "Body of the dialog confirming a global profile reset"
+    },
+    "profileReset": "Profil {profile} wird auf Standard zurückgesetzt.",
+    "@profileReset": {
+        "description": "Message after a profile was reset",
+        "placeholders": {
+            "profile": {
+                "type": "String"
+            }
+        }
+    },
+    "resetRatingsDescription": "Diese Aktion wird alle Bewertungen auf Standard zurücksetzen ebenso die Quellen und Reihenfolge.",
+    "@resetRatingsDescription": {
+        "description": "Body of the dialog confirming a ratings reset"
+    },
+    "mediaBarModeGallery": "Gallerie",
+    "@mediaBarModeGallery": {
+        "description": "Media bar style option: Gallery"
+    },
+    "mediaBarModeBanner": "Banner",
+    "@mediaBarModeBanner": {
+        "description": "Media bar style option: Banner"
+    },
+    "mediaBarModeAya": "Aya",
+    "@mediaBarModeAya": {
+        "description": "Media bar style option: Aya"
+    },
+    "mediaBarSourceRandom": "Zufall",
+    "@mediaBarSourceRandom": {
+        "description": "Media bar source: any eligible title"
+    },
+    "trailerCaptions": "Trailer Untertitel",
+    "@trailerCaptions": {
+        "description": "Setting for YouTube trailer captions"
+    },
+    "trailerCaptionsDescription": "Zeige Untertitel bei Youtube Trailern in der Media Leiste",
+    "@trailerCaptionsDescription": {
+        "description": "Description for YouTube trailer captions"
+    },
+    "nextUpMaxDays": "Maximale Tage in Als Nächstes",
+    "@nextUpMaxDays": {
+        "description": "Setting for how far back the Next Up row reaches"
+    },
+    "nextUpMaxDaysDescription": "Wie lange eine Sendung in Als Nächstes angezeigt wird nachdem sie angeshen wurde",
+    "@nextUpMaxDaysDescription": {
+        "description": "Description for the Next Up window setting"
+    },
+    "daysValue": "{days} Tage",
+    "@daysValue": {
+        "description": "A number of days",
+        "placeholders": {
+            "days": {
+                "type": "int"
+            }
+        }
+    },
+    "request4k": "4K Anfragen",
+    "@request4k": {
+        "description": "Button to submit a 4K media request, shown next to the non-4K Request button"
+    },
+    "requested4k": "4K angefragt",
+    "@requested4k": {
+        "description": "Disabled label shown when a 4K request already exists and the user cannot cancel it"
+    },
+    "watchlist": "Watchlist",
+    "@watchlist": {
+        "description": "Details screen button adding the title to the Seerr watchlist"
+    },
+    "emulatorCoreSettingsReset": "Einstellungen auf Standard zurückgesetzt.",
+    "@emulatorCoreSettingsReset": {
+        "description": "Snackbar shown after resetting a core's saved emulator settings"
+    },
+    "downloadedGamesTotal": "{count} Spiele, {size}",
+    "@downloadedGamesTotal": {
+        "description": "Summary of how many games are stored and how much space they take, where size is a formatted amount such as 1.4 GB",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            },
+            "size": {
+                "type": "String"
+            }
+        }
+    },
+    "descending": "Absteigend",
+    "starring": "Mit",
+    "@starring": {
+        "description": "Metadata label for the leading cast"
+    },
+    "shuffleAll": "Alle Zufällig wiedergeben",
+    "@shuffleAll": {
+        "description": "Action button label for shuffling all tracks of an artist"
+    },
+    "interfaceLayout": "Benutzeroberflächen Layout",
+    "@interfaceLayout": {
+        "description": "Setting to override which UI layout the app uses"
+    },
+    "interfaceLayoutAutomatic": "automatisch",
+    "@interfaceLayoutAutomatic": {
+        "description": "Interface layout option: detect from the device"
+    },
+    "ratingsReset": "Bewertungen auf Standard zurücksetzen.",
+    "@ratingsReset": {
+        "description": "Message after the ratings settings were reset"
+    },
+    "failedToResetProfile": "Profil {profile} zurücksetzen fehlgeschlagen.",
+    "@failedToResetProfile": {
+        "description": "Message when a profile reset failed",
+        "placeholders": {
+            "profile": {
+                "type": "String"
+            }
+        }
+    },
+    "libraryView": "Bibliotheks Ansicht",
+    "@libraryView": {
+        "description": "Section title for library view settings"
+    },
+    "ascending": "Aufsteigend",
+    "emulatorCoreDownloading": "Herunterladen",
+    "emulatorCoreResetSettings": "{system} Einstellungen auf Standard zurücksetzen",
+    "@emulatorCoreResetSettings": {
+        "description": "Semantic label for the button that resets one core's saved emulator settings",
+        "placeholders": {
+            "system": {
+                "type": "String"
+            }
+        }
+    },
+    "emulatorCoreResetSettingsFailed": "Einstellungen konnten nicht zurückgesetzt werden. Verbindung überprüfen.",
+    "@emulatorCoreResetSettingsFailed": {
+        "description": "Snackbar shown when resetting a core's saved emulator settings fails"
+    },
+    "removeAllDownloadedGames": "Alle entfernen",
+    "@removeAllDownloadedGames": {
+        "description": "Button that deletes every downloaded game from the device"
+    },
+    "fullscreen": "Vollbild",
+    "@fullscreen": {
+        "description": "Player button that toggles fullscreen"
+    },
+    "moveUp": "nach oben bewegen",
+    "@moveUp": {
+        "description": "Moves a button one place earlier in its row"
+    },
+    "settingsAudioPassthroughModeDescription": "Wie komprimierter Surround Sound ihr Gerät erreicht.",
+    "manageRequests": "Anfragen verwalten",
+    "@manageRequests": {
+        "description": "Details screen button opening the pending requests to approve or decline"
+    },
+    "downloadedGames": "Heruntergeladene Spiele",
+    "@downloadedGames": {
+        "description": "Settings screen title for managing game files stored on the device"
+    },
+    "interfaceLayoutTv": "Fernseher",
+    "@interfaceLayoutTv": {
+        "description": "Interface layout option: 10-foot TV layout"
+    },
+    "unableToCreateSeriesRecording": "Serienaufnhame fehlgeschlagen",
+    "@unableToCreateSeriesRecording": {
+        "description": "Error when creating a live TV series recording fails"
+    },
+    "sdCard": "SD Karte",
+    "@sdCard": {
+        "description": "Download location option for a removable storage volume"
+    },
+    "mediaBarModeBookshelf": "Bücherregal",
+    "@mediaBarModeBookshelf": {
+        "description": "Media bar style option: Bookshelf"
+    },
+    "mediaBarSourceType": "Quelle",
+    "@mediaBarSourceType": {
+        "description": "Setting for which titles the media bar draws from"
+    },
+    "favoriteChannels": "Favoriten Kanäle",
+    "@favoriteChannels": {
+        "description": "Home row: favourited live TV channels"
+    },
+    "tags": "Tags",
+    "@tags": {
+        "description": "Heading for the keyword tags a title is filed under"
+    },
+    "genresAndTags": "Genres und Tags",
+    "@genresAndTags": {
+        "description": "Button and dialog title for browsing a title's genres, networks and tags"
+    },
+    "onWatchlist": "auf Watchlist",
+    "@onWatchlist": {
+        "description": "Details screen button label when the title is already on the Seerr watchlist"
+    },
+    "emulatorCoreUnavailable": "Auf diesem Gerät nicht verfügbar",
+    "sortOrder": "Sortierreihenfolge"
 }

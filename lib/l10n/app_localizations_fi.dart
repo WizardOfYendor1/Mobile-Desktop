@@ -61,12 +61,12 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String quickConnectUnavailable(String detail) {
-    return 'Pikayhteys ei käytettävissä: $detail';
+    return 'Pikayhdistys ei käytettävissä: $detail';
   }
 
   @override
   String quickConnectUnavailableWithStatus(String status, String detail) {
-    return 'Pikayhteys ei käytettävissä ($status): $detail';
+    return 'Pikayhdistys ei käytettävissä ($status): $detail';
   }
 
   @override
@@ -143,7 +143,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get settingsAppearanceTheme => 'Sovelluksen teema';
 
   @override
-  String get detailScreenStyle => 'Tietonäkymän tyyli';
+  String get detailScreenStyle => 'Tietonäkymän Tyyli';
 
   @override
   String get detailScreenStyleSubtitle =>
@@ -207,23 +207,23 @@ class AppLocalizationsFi extends AppLocalizations {
   String get interfaceStyleMaterial => 'Material';
 
   @override
-  String get interfaceLayout => 'Interface Layout';
+  String get interfaceLayout => 'Käyttöliittymän ulkoasu';
 
   @override
   String get interfaceLayoutSubtitle =>
-      'Override the detected layout when this device is read wrong. Restart Moonfin for changes to take effect.';
+      'Ohita havaittu asettelu, jos laitteen tiedot on luettu virheellisesti. Käynnistä Moonfin uudelleen, jotta muutokset astuvat voimaan.';
 
   @override
-  String get interfaceLayoutAutomatic => 'Automatic';
+  String get interfaceLayoutAutomatic => 'Automaattinen';
 
   @override
   String get interfaceLayoutTv => 'TV';
 
   @override
-  String get interfaceLayoutDesktop => 'Desktop';
+  String get interfaceLayoutDesktop => 'Työpöytä';
 
   @override
-  String get interfaceLayoutPhone => 'Phone';
+  String get interfaceLayoutPhone => 'Puhelin';
 
   @override
   String get glassQuality => 'Lasin laatu';
@@ -271,6 +271,16 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get keyboardPreferSystemImeDescription =>
       'Käytä oletusarvoisesti laitteesi syöttötapaa tekstin syöttämiseen';
+
+  @override
+  String get controller => 'Controller';
+
+  @override
+  String get gamepadNavigation => 'Gamepad navigation';
+
+  @override
+  String get gamepadNavigationDescription =>
+      'Let a connected game controller move focus and select items';
 
   @override
   String get themeMoonfin => 'Moonfin';
@@ -334,7 +344,7 @@ class AppLocalizationsFi extends AppLocalizations {
       'Verkkovirhe otettaessa yhteyttä Emby Connectiin tai valittuun palvelimeen';
 
   @override
-  String get loadingLinkedServers => 'Ladataan linkitettyjä palvelimia…';
+  String get loadingLinkedServers => 'Ladataan linkitettyjä palvelimia...';
 
   @override
   String get connectingToServerEllipsis => 'Yhdistetään palvelimeen…';
@@ -1089,7 +1099,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String resumeFrom(String position) {
-    return 'Jatka osoitteesta $position';
+    return 'Jatka kohdasta $position';
   }
 
   @override
@@ -1144,7 +1154,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get finalizingDownload => 'Viimeistellään…';
 
   @override
-  String get queuedDownload => 'Queued';
+  String get queuedDownload => 'Jonossa';
 
   @override
   String get downloadAll => 'Lataa kaikki';
@@ -1327,7 +1337,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get director => 'JOHTAJA';
 
   @override
-  String get starring => 'STARRING';
+  String get starring => 'PÄÄOSASSA';
 
   @override
   String get directors => 'OHJAUS';
@@ -1914,17 +1924,16 @@ class AppLocalizationsFi extends AppLocalizations {
   String get unableToCreateRecording => 'Tallennusta ei voi luoda';
 
   @override
-  String get recordSeries => 'Record Series';
+  String get recordSeries => 'Tallenna Sarja';
 
   @override
-  String get seriesSetToRecord => 'Series set to record';
+  String get seriesSetToRecord => 'Sarja on valmis tallennettavaksi';
 
   @override
-  String get seriesRecordingCancelled => 'Series recording cancelled';
+  String get seriesRecordingCancelled => 'Sarjan tallennus peruutettu';
 
   @override
-  String get unableToCreateSeriesRecording =>
-      'Unable to create series recording';
+  String get unableToCreateSeriesRecording => 'Sarjatallennusta ei voitu luoda';
 
   @override
   String get watch => 'Katso';
@@ -2251,7 +2260,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get signInAndSecurity => 'Sisäänkirjautuminen ja suojaus';
 
   @override
-  String get administration => 'Hallinto';
+  String get administration => 'Hallinta';
 
   @override
   String get serverSettingsUsersLibraries =>
@@ -2294,7 +2303,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get always => 'Aina';
 
   @override
-  String get mixedRowsOnly => 'Mixed rows only';
+  String get mixedRowsOnly => 'Vain sekarivit';
 
   @override
   String get hideUnwatched => 'Piilota katsomattomat';
@@ -2453,10 +2462,10 @@ class AppLocalizationsFi extends AppLocalizations {
   String get disabled => 'Ei käytössä';
 
   @override
-  String get manual => 'Manual';
+  String get manual => 'Käyttöopas';
 
   @override
-  String get autoDetect => 'Auto Detect';
+  String get autoDetect => 'Automaattinen tunnistus';
 
   @override
   String get scaleOnTv => 'Asteikko televisiossa';
@@ -2470,6 +2479,32 @@ class AppLocalizationsFi extends AppLocalizations {
   @override
   String get showPreviewThumbnailsWhenSeeking =>
       'Näytä esikatselupikkukuvat etsiessäsi';
+
+  @override
+  String get trickplayDisplayStyleSingle => 'Single Thumbnail';
+
+  @override
+  String get trickplayDisplayStyleStrip => 'Filmstrip';
+
+  @override
+  String get trickplayModeFull => 'Full Screen';
+
+  @override
+  String get trickplaySettingsPreviewHint =>
+      'Drag the slider to preview scrubbing';
+
+  @override
+  String get trickplayPreviewScale => 'Preview Size';
+
+  @override
+  String get trickplayVerticalOffset => 'Distance From Seekbar';
+
+  @override
+  String get trickplayFollowScrubPosition => 'Follow Scrub Position';
+
+  @override
+  String get trickplayFollowScrubPositionSubtitle =>
+      'Preview slides along the seekbar as you scrub, instead of staying centered';
 
   @override
   String get showDescriptionOnPause => 'Näytä kuvaus tauolla';
@@ -2486,11 +2521,12 @@ class AppLocalizationsFi extends AppLocalizations {
       'Näytä lukituspainike, joka estää kosketussyötön, kunnes sitä painetaan pitkään';
 
   @override
-  String get playerSwipeGestures => 'Volume and Brightness Swipes';
+  String get playerSwipeGestures =>
+      'Äänenvoimakkuuden ja kirkkauden pyyhkäisyt';
 
   @override
   String get playerSwipeGesturesDescription =>
-      'Slide up or down on the player to change brightness on the left and volume on the right';
+      'Liu’uta soittimen ylä- tai alaosaa säätääksesi kirkkautta vasemmalla ja äänenvoimakkuutta oikealla';
 
   @override
   String get osdButtons => 'Soittimen painikkeet';
@@ -3163,11 +3199,11 @@ class AppLocalizationsFi extends AppLocalizations {
   String get wifiOnlyDownloads => 'Vain WiFi-lataukset';
 
   @override
-  String get tvOfflineDownloads => 'Enable offline downloads';
+  String get tvOfflineDownloads => 'Ota offline-lataukset käyttöön';
 
   @override
   String get tvOfflineDownloadsSubtitle =>
-      'Show download actions on item pages';
+      'Näytä lataustoiminnot kohteiden sivuilla';
 
   @override
   String get reportDownloadsActivity => 'Näytä lataukset palvelimella';
@@ -3448,13 +3484,13 @@ class AppLocalizationsFi extends AppLocalizations {
   String get mediaBarModeOff => 'Pois';
 
   @override
-  String get mediaBarModeBookshelf => 'Bookshelf';
+  String get mediaBarModeBookshelf => 'Kirjahylly';
 
   @override
-  String get mediaBarModeGallery => 'Gallery';
+  String get mediaBarModeGallery => 'Galleria';
 
   @override
-  String get mediaBarModeBanner => 'Banner';
+  String get mediaBarModeBanner => 'Banneri';
 
   @override
   String get mediaBarModeAya => 'Aya';
@@ -3470,10 +3506,10 @@ class AppLocalizationsFi extends AppLocalizations {
   String get contentType => 'Sisältötyyppi';
 
   @override
-  String get mediaBarSourceType => 'Source';
+  String get mediaBarSourceType => 'Lähde';
 
   @override
-  String get mediaBarSourceRandom => 'Random';
+  String get mediaBarSourceRandom => 'Satunnainen';
 
   @override
   String get moviesAndTvShows => 'Elokuvat ja TV-ohjelmat';
@@ -3549,11 +3585,12 @@ class AppLocalizationsFi extends AppLocalizations {
   String get recentlyReleased => 'Äskettäin julkaistu';
 
   @override
-  String get recentlyReleasedSeriesType => 'Recently Released Series Sort By';
+  String get recentlyReleasedSeriesType =>
+      'Äskettäin julkaistut sarjat, lajittele';
 
   @override
   String get recentlyReleasedSeriesTypeDescription =>
-      'Sort Recently Released Series home rows by series, latest season, or latest episode air date';
+      'Lajittele äskettäin julkaistujen sarjojen kotirivit sarjan, uusimman kauden tai uusimman jakson esityspäivän mukaan';
 
   @override
   String get myMedia => 'Oma Media';
@@ -3580,7 +3617,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get liveTV => 'Live-TV';
 
   @override
-  String get favoriteChannels => 'Favorite Channels';
+  String get favoriteChannels => 'Suosikkikanavat';
 
   @override
   String get homeSections => 'Kotisivut';
@@ -4633,7 +4670,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get branding => 'Brändäys';
 
   @override
-  String get adminDrawerDashboard => 'Kojelauta';
+  String get adminDrawerDashboard => 'Hallintapaneeli';
 
   @override
   String get adminDrawerAnalytics => 'Analytiikka';
@@ -5846,7 +5883,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String adminSavedTo(String path) {
-    return 'Tallennettu osoitteeseen $path';
+    return 'Tallennettu kohteeseen $path';
   }
 
   @override
@@ -6924,7 +6961,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get adminMetadataFieldCriticRating => 'Kriitikoiden luokitus';
 
   @override
-  String get adminMetadataFieldCustomRating => 'Custom rating';
+  String get adminMetadataFieldCustomRating => 'Mukautettu arviointi';
 
   @override
   String get adminMetadataFieldTagline => 'Tunnuslause';
@@ -6933,119 +6970,119 @@ class AppLocalizationsFi extends AppLocalizations {
   String get adminMetadataFieldOverview => 'Yleiskatsaus';
 
   @override
-  String get adminMetadataFieldDisplayOrder => 'Display order';
+  String get adminMetadataFieldDisplayOrder => 'Näyttöjärjestys';
 
   @override
-  String get adminMetadataDisplayOrderAired => 'Aired';
+  String get adminMetadataDisplayOrderAired => 'Esitetty';
 
   @override
-  String get adminMetadataDisplayOrderOriginalAirDate => 'Original air date';
+  String get adminMetadataDisplayOrderOriginalAirDate => 'Ensiesityspäivä';
 
   @override
-  String get adminMetadataDisplayOrderAbsolute => 'Absolute';
+  String get adminMetadataDisplayOrderAbsolute => 'Absoluuttinen';
 
   @override
   String get adminMetadataDisplayOrderDvd => 'DVD';
 
   @override
-  String get adminMetadataDisplayOrderDigital => 'Digital';
+  String get adminMetadataDisplayOrderDigital => 'Digitaalinen';
 
   @override
-  String get adminMetadataDisplayOrderStoryArc => 'Story arc';
+  String get adminMetadataDisplayOrderStoryArc => 'Juonikaari';
 
   @override
-  String get adminMetadataDisplayOrderProduction => 'Production';
+  String get adminMetadataDisplayOrderProduction => 'Tuotanto';
 
   @override
   String get adminMetadataDisplayOrderTv => 'TV';
 
   @override
-  String get adminMetadataDisplayOrderAlternate => 'Alternate';
+  String get adminMetadataDisplayOrderAlternate => 'Vaihtoehtoinen';
 
   @override
-  String get adminMetadataDisplayOrderRegional => 'Regional';
+  String get adminMetadataDisplayOrderRegional => 'Alueellinen';
 
   @override
-  String get adminMetadataDisplayOrderAlternateDvd => 'Alternate DVD';
+  String get adminMetadataDisplayOrderAlternateDvd => 'Vaihtoehtoinen DVD';
 
   @override
-  String get adminMetadataDisplayOrderDateModified => 'Date modified';
+  String get adminMetadataDisplayOrderDateModified => 'Muokkauspäivämäärä';
 
   @override
-  String get adminMetadataDisplayOrderSortName => 'Sort name';
+  String get adminMetadataDisplayOrderSortName => 'Lajittele nimen mukaan';
 
   @override
-  String get adminMetadataDisplayOrderReleaseDate => 'Release date';
+  String get adminMetadataDisplayOrderReleaseDate => 'Julkaisupäivä';
 
   @override
-  String get adminMetadataSettings => 'Metadata Settings';
+  String get adminMetadataSettings => 'Metatietojen asetukset';
 
   @override
-  String get adminMetadataDownloadLanguage => 'Preferred download language';
+  String get adminMetadataDownloadLanguage => 'Haluttu latauskieli';
 
   @override
-  String get adminMetadataCountryRegion => 'Country/Region';
+  String get adminMetadataCountryRegion => 'Maa/alue';
 
   @override
   String get adminMetadataInheritHelp =>
-      'Leave this on Default to inherit the setting from a parent item, or from the server default.';
+      'Jätä tämä oletusasetukseksi, jolloin asetus periytyy yläkohteesta tai palvelimen oletusasetuksesta.';
 
   @override
-  String get adminMetadataField3DFormat => '3D format';
+  String get adminMetadataField3DFormat => '3D-muoto';
 
   @override
-  String get adminMetadataPersonKindUnknown => 'Unknown';
+  String get adminMetadataPersonKindUnknown => 'Tuntematon';
 
   @override
-  String get adminMetadataPersonKindActor => 'Actor';
+  String get adminMetadataPersonKindActor => 'Näyttelijä';
 
   @override
-  String get adminMetadataPersonKindDirector => 'Director';
+  String get adminMetadataPersonKindDirector => 'Ohjaaja';
 
   @override
-  String get adminMetadataPersonKindComposer => 'Composer';
+  String get adminMetadataPersonKindComposer => 'Säveltäjä';
 
   @override
-  String get adminMetadataPersonKindWriter => 'Writer';
+  String get adminMetadataPersonKindWriter => 'Kirjailija';
 
   @override
-  String get adminMetadataPersonKindGuestStar => 'Guest star';
+  String get adminMetadataPersonKindGuestStar => 'Vierailija';
 
   @override
-  String get adminMetadataPersonKindProducer => 'Producer';
+  String get adminMetadataPersonKindProducer => 'Tuottaja';
 
   @override
-  String get adminMetadataPersonKindConductor => 'Conductor';
+  String get adminMetadataPersonKindConductor => 'Kapellimestari';
 
   @override
-  String get adminMetadataPersonKindLyricist => 'Lyricist';
+  String get adminMetadataPersonKindLyricist => 'Sanoittaja';
 
   @override
-  String get adminMetadataPersonKindArranger => 'Arranger';
+  String get adminMetadataPersonKindArranger => 'Järjestä';
 
   @override
   String get adminMetadataPersonKindEngineer => 'Engineer';
 
   @override
-  String get adminMetadataPersonKindMixer => 'Mixer';
+  String get adminMetadataPersonKindMixer => 'Sekoita';
 
   @override
   String get adminMetadataPersonKindRemixer => 'Remixer';
 
   @override
-  String get adminMetadataPersonKindCreator => 'Creator';
+  String get adminMetadataPersonKindCreator => 'Luoja';
 
   @override
-  String get adminMetadataPersonKindArtist => 'Artist';
+  String get adminMetadataPersonKindArtist => 'Artisti';
 
   @override
-  String get adminMetadataPersonKindAlbumArtist => 'Album artist';
+  String get adminMetadataPersonKindAlbumArtist => 'Albumin artisti';
 
   @override
-  String get adminMetadataPersonKindAuthor => 'Author';
+  String get adminMetadataPersonKindAuthor => 'Luoja';
 
   @override
-  String get adminMetadataPersonKindIllustrator => 'Illustrator';
+  String get adminMetadataPersonKindIllustrator => 'Kuvittaja';
 
   @override
   String get adminMetadataPersonKindPenciller => 'Penciller';
@@ -7066,10 +7103,10 @@ class AppLocalizationsFi extends AppLocalizations {
   String get adminMetadataPersonKindEditor => 'Editor';
 
   @override
-  String get adminMetadataPersonKindTranslator => 'Translator';
+  String get adminMetadataPersonKindTranslator => 'Kääntäjä';
 
   @override
-  String get adminMetadataPersonKindNarrator => 'Narrator';
+  String get adminMetadataPersonKindNarrator => 'Kertoja';
 
   @override
   String get adminMetadataAirDays => 'Air days';
@@ -7789,7 +7826,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String adminTaskTriggerDaily(String time) {
-    return 'Päivittäin osoitteessa $time';
+    return 'Päivittäin klo $time';
   }
 
   @override
@@ -11102,4 +11139,20 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get runSetupAgain => 'Run setup again';
+
+  @override
+  String get serverMessages => 'Messages';
+
+  @override
+  String get serverMessagesEmpty => 'No messages from your server yet';
+
+  @override
+  String get serverMessagesMarkAllRead => 'Mark all as read';
+
+  @override
+  String get serverMessagesShowButton => 'Show messages button';
+
+  @override
+  String get serverMessagesShowButtonSubtitle =>
+      'Adds a button to the menu for messages sent by your server admin';
 }

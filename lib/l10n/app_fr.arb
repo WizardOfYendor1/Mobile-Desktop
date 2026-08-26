@@ -9950,5 +9950,132 @@
     "runSetupAgain": "Relancer la configuration",
     "@runSetupAgain": {
         "description": "Starts the first-run setup wizard again from settings"
+    },
+    "queuedDownload": "En file d'attente",
+    "@queuedDownload": {
+        "description": "Status label for a download waiting in the queue for a free download slot"
+    },
+    "manual": "Manuel",
+    "@manual": {
+        "description": "Option: manual"
+    },
+    "autoDetect": "Détection automatique",
+    "@autoDetect": {
+        "description": "Option: detect the value automatically"
+    },
+    "tvOfflineDownloads": "Activer les téléchargements hors ligne",
+    "@tvOfflineDownloads": {
+        "description": "TV-only toggle in the Offline Downloads settings: offer download actions on item pages"
+    },
+    "tvOfflineDownloadsSubtitle": "Afficher les actions de téléchargement sur les pages des médias",
+    "@tvOfflineDownloadsSubtitle": {
+        "description": "Subtitle for the TV-only offline downloads toggle"
+    },
+    "adminMetadataFieldDisplayOrder": "Ordre d'affichage",
+    "adminMetadataDisplayOrderAired": "Diffusion",
+    "adminMetadataDisplayOrderOriginalAirDate": "Date de diffusion originale",
+    "adminMetadataDisplayOrderAbsolute": "Absolu",
+    "adminMetadataFieldCustomRating": "Classification personnalisée",
+    "adminMetadataDisplayOrderDvd": "DVD",
+    "adminMetadataDisplayOrderDigital": "Numérique",
+    "adminMetadataDisplayOrderStoryArc": "Arc narratif",
+    "adminMetadataDisplayOrderProduction": "Production",
+    "adminMetadataDisplayOrderTv": "TV",
+    "adminMetadataDisplayOrderAlternate": "Alternatif",
+    "adminMetadataDisplayOrderRegional": "Régional",
+    "adminMetadataDisplayOrderAlternateDvd": "DVD alternatif",
+    "adminMetadataDisplayOrderDateModified": "Date de modification",
+    "adminMetadataDisplayOrderSortName": "Nom de tri",
+    "adminMetadataDisplayOrderReleaseDate": "Date de sortie",
+    "adminMetadataSettings": "Paramètres des métadonnées",
+    "adminMetadataDownloadLanguage": "Langue de téléchargement préférée",
+    "adminMetadataCountryRegion": "Pays/Région",
+    "adminMetadataInheritHelp": "Laissez sur « Par défaut » pour hériter du réglage de l'élément parent ou de la valeur par défaut du serveur.",
+    "adminMetadataField3DFormat": "Format 3D",
+    "adminMetadataPersonKindUnknown": "Inconnu",
+    "adminMetadataPersonKindActor": "Acteur",
+    "adminMetadataPersonKindDirector": "Réalisateur",
+    "adminMetadataPersonKindComposer": "Compositeur",
+    "adminMetadataPersonKindWriter": "Scénariste",
+    "adminMetadataPersonKindGuestStar": "Guest star",
+    "adminMetadataPersonKindProducer": "Producteur",
+    "adminMetadataPersonKindConductor": "Chef d'orchestre",
+    "adminMetadataPersonKindLyricist": "Parolier",
+    "adminMetadataPersonKindArranger": "Arrangeur",
+    "adminMetadataPersonKindEngineer": "Ingénieur du son",
+    "adminMetadataPersonKindMixer": "Mixeur",
+    "adminMetadataPersonKindRemixer": "Remixeur",
+    "adminMetadataPersonKindCreator": "Créateur",
+    "adminMetadataPersonKindArtist": "Artiste",
+    "adminMetadataPersonKindAlbumArtist": "Artiste de l'album",
+    "adminMetadataPersonKindAuthor": "Auteur",
+    "adminMetadataPersonKindIllustrator": "Illustrateur",
+    "adminMetadataPersonKindPenciller": "Dessinateur",
+    "adminMetadataPersonKindInker": "Encreur",
+    "adminMetadataPersonKindColorist": "Coloriste",
+    "adminMetadataPersonKindLetterer": "Lettreur",
+    "adminMetadataPersonKindCoverArtist": "Illustrateur de couverture",
+    "adminMetadataPersonKindEditor": "Monteur",
+    "adminMetadataPersonKindTranslator": "Traducteur",
+    "adminMetadataPersonKindNarrator": "Narrateur",
+    "adminMetadataAirDays": "Jours de diffusion",
+    "adminMetadataLockItem": "Verrouiller cet élément pour empêcher toute modification future des métadonnées",
+    "adminMetadataEnabledFields": "Champs activés",
+    "adminMetadataEnabledFieldsHelp": "Décochez un champ pour le verrouiller et empêcher la modification de ses données.",
+    "adminMetadataLockFieldName": "Nom",
+    "adminMetadataLockFieldOverview": "Résumé",
+    "adminMetadataLockFieldGenres": "Genres",
+    "adminMetadataLockFieldOfficialRating": "Classification parentale",
+    "adminMetadataLockFieldCast": "Personnes",
+    "adminMetadataLockFieldProductionLocations": "Lieux de production",
+    "adminMetadataLockFieldBirthLocation": "Lieu de naissance",
+    "adminMetadataLockFieldRuntime": "Durée",
+    "adminMetadataLockFieldStudios": "Studios",
+    "adminMetadataLockFieldTags": "Tags",
+    "adminPluginsRestartRequired": "Redémarrage requis",
+    "@adminPluginsRestartRequired": {
+        "description": "Label for the installed-plugin filter showing changes that require a server restart"
+    },
+    "adminPluginsNoneActive": "Aucun plugin actif",
+    "@adminPluginsNoneActive": {
+        "description": "Empty state for the active installed-plugin filter"
+    },
+    "adminPluginsNoneRequireRestart": "Aucun plugin ne nécessite de redémarrage du serveur",
+    "@adminPluginsNoneRequireRestart": {
+        "description": "Empty state for the installed-plugin filter showing changes that require a server restart"
+    },
+    "emulatorCoreResetSettings": "Réinitialiser les réglages {system} aux valeurs par défaut",
+    "@emulatorCoreResetSettings": {
+        "description": "Semantic label for the button that resets one core's saved emulator settings",
+        "placeholders": {
+            "system": {
+                "type": "String"
+            }
+        }
+    },
+    "emulatorCoreSettingsReset": "Réglages réinitialisés aux valeurs par défaut.",
+    "@emulatorCoreSettingsReset": {
+        "description": "Snackbar shown after resetting a core's saved emulator settings"
+    },
+    "emulatorCoreResetSettingsFailed": "Impossible de réinitialiser les réglages. Vérifiez votre connexion et réessayez.",
+    "@emulatorCoreResetSettingsFailed": {
+        "description": "Snackbar shown when resetting a core's saved emulator settings fails"
+    },
+    "settingsMediaSegmentTypeAction": "Segments {segment}",
+    "@settingsMediaSegmentTypeAction": {
+        "description": "Setting label for what to do with one type of media segment",
+        "placeholders": {
+            "segment": {
+                "type": "String"
+            }
+        }
+    },
+    "openTrailersExternally": "Ouvrir les bandes-annonces dans une app externe",
+    "@openTrailersExternally": {
+        "description": "Details screen setting that hands trailers to the system"
+    },
+    "openTrailersExternallySubtitle": "Les bandes-annonces s'ouvrent dans l'app YouTube ou le navigateur au lieu du lecteur intégré",
+    "@openTrailersExternallySubtitle": {
+        "description": "Subtitle for the external trailers setting"
     }
 }

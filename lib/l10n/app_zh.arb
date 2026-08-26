@@ -7837,7 +7837,7 @@
     },
     "adminDrawerDisplay": "显示",
     "adminDrawerMetadata": "元数据",
-    "adminRemoveDeviceConfirm": "移除设备 \"{name}\"？该用户需要在此设备上重新登录。",
+    "adminRemoveDeviceConfirm": "移除设备 '{name}'？该用户需要在此设备上重新登录。",
     "@adminRemoveDeviceConfirm": {
         "placeholders": {
             "name": {
@@ -7880,7 +7880,7 @@
     "adminLibrarySectionMovies": "电影",
     "adminLibRealtimeMonitor": "启用实时监控",
     "adminLibRealtimeMonitorHint": "检测文件更改并自动处理。",
-    "adminLibSaveLocalMetadata": "将艺术图保存到媒体文件夹",
+    "adminLibSaveLocalMetadata": "将封面保存到媒体文件夹",
     "adminLibRefreshInterval": "自动元数据刷新",
     "adminLibDisplayTitle": "显示",
     "adminLibDisplaySection": "媒体库显示",
@@ -7979,7 +7979,7 @@
     "adminRunningTasks": "正在运行的任务",
     "adminNetworkingPublicHttpPort": "公共 HTTP 端口",
     "adminNetworkingRequireHttpsHint": "将所有远程请求重定向到 HTTPS。如果服务器没有有效证书则无效。",
-    "adminGeneralQuickConnect": "启用 Quick Connect",
+    "adminGeneralQuickConnect": "启用快速连接",
     "adminGeneralSectionPaths": "路径",
     "adminGeneralSectionPerformance": "性能",
     "settingsConnectionSection": "连接",
@@ -8193,7 +8193,7 @@
     "adminLibChapterImageExtraction": "提取章节图片",
     "adminLibChapterImagesDuringScan": "在媒体库扫描期间提取章节图片",
     "impellerAuto": "自动",
-    "impellerOn": "开",
+    "impellerOn": "开启",
     "impellerRestartTitle": "需要重启",
     "@impellerRestartTitle": {
         "description": "Title of the dialog shown after changing the rendering engine."
@@ -8291,7 +8291,7 @@
     },
     "adminLibraryTabOptions": "选项",
     "audiobookSleepTimer": "睡眠定时",
-    "audiobookSleepOff": "关",
+    "audiobookSleepOff": "关闭",
     "audiobookNoNotes": "还没有笔记",
     "adminLibRefreshNever": "从不",
     "adminAddSchedule": "添加时间表",
@@ -8390,11 +8390,11 @@
     "@interviews": {
         "description": "Tab label for interviews special features"
     },
-    "impellerOff": "关",
+    "impellerOff": "关闭",
     "externalLists": "外部榜单",
     "forced": "强制",
     "transcodeVideoResolutionNotSupported": "视频分辨率不受此设备支持。",
-    "theme8BitHero": "8位英雄",
+    "theme8BitHero": "8-bit 英雄",
     "@theme8BitHero": {
         "description": "Display name for the 8-bit Hero theme"
     },
@@ -9456,5 +9456,424 @@
     "@like": {
         "description": "Personal rating action for a positive rating."
     },
-    "descending": "降序"
+    "descending": "降序",
+    "interfaceLayout": "界面布局",
+    "@interfaceLayout": {
+        "description": "Setting to override which UI layout the app uses"
+    },
+    "interfaceLayoutSubtitle": "当此设备识别错误时覆盖检测到的布局。重启 Moonfin 使更改生效。",
+    "@interfaceLayoutSubtitle": {
+        "description": "Subtitle for the interface layout setting"
+    },
+    "interfaceLayoutAutomatic": "自动",
+    "@interfaceLayoutAutomatic": {
+        "description": "Interface layout option: detect from the device"
+    },
+    "interfaceLayoutTv": "电视",
+    "@interfaceLayoutTv": {
+        "description": "Interface layout option: 10-foot TV layout"
+    },
+    "interfaceLayoutDesktop": "桌面",
+    "@interfaceLayoutDesktop": {
+        "description": "Interface layout option: desktop layout"
+    },
+    "interfaceLayoutPhone": "手机",
+    "@interfaceLayoutPhone": {
+        "description": "Interface layout option: phone layout"
+    },
+    "queuedDownload": "已排队",
+    "@queuedDownload": {
+        "description": "Status label for a download waiting in the queue for a free download slot"
+    },
+    "starring": "主演",
+    "@starring": {
+        "description": "Metadata label for the leading cast"
+    },
+    "recordSeries": "录制剧集",
+    "@recordSeries": {
+        "description": "Button label to record every showing of a live TV series"
+    },
+    "seriesSetToRecord": "已设置录制剧集",
+    "@seriesSetToRecord": {
+        "description": "Snackbar confirmation after scheduling a live TV series recording"
+    },
+    "seriesRecordingCancelled": "剧集录制已取消",
+    "@seriesRecordingCancelled": {
+        "description": "Snackbar confirmation after cancelling a live TV series recording"
+    },
+    "unableToCreateSeriesRecording": "无法创建剧集录制",
+    "@unableToCreateSeriesRecording": {
+        "description": "Error when creating a live TV series recording fails"
+    },
+    "mixedRowsOnly": "仅混合行",
+    "@mixedRowsOnly": {
+        "description": "Option: only show the label on rows holding both movies and series"
+    },
+    "manual": "手动",
+    "@manual": {
+        "description": "Option: manual"
+    },
+    "autoDetect": "自动检测",
+    "@autoDetect": {
+        "description": "Option: detect the value automatically"
+    },
+    "playerSwipeGestures": "音量和亮度滑动",
+    "@playerSwipeGestures": {
+        "description": "Setting for player swipe gestures"
+    },
+    "playerSwipeGesturesDescription": "在播放器上上下滑动，左侧改变亮度，右侧改变音量",
+    "@playerSwipeGesturesDescription": {
+        "description": "Description for player swipe gestures"
+    },
+    "tvOfflineDownloads": "启用离线下载",
+    "@tvOfflineDownloads": {
+        "description": "TV-only toggle in the Offline Downloads settings: offer download actions on item pages"
+    },
+    "tvOfflineDownloadsSubtitle": "在条目页面显示下载操作",
+    "@tvOfflineDownloadsSubtitle": {
+        "description": "Subtitle for the TV-only offline downloads toggle"
+    },
+    "mediaBarModeBookshelf": "书架",
+    "@mediaBarModeBookshelf": {
+        "description": "Media bar style option: Bookshelf"
+    },
+    "mediaBarModeGallery": "画廊",
+    "@mediaBarModeGallery": {
+        "description": "Media bar style option: Gallery"
+    },
+    "mediaBarModeBanner": "横幅",
+    "@mediaBarModeBanner": {
+        "description": "Media bar style option: Banner"
+    },
+    "mediaBarModeAya": "Aya",
+    "@mediaBarModeAya": {
+        "description": "Media bar style option: Aya"
+    },
+    "mediaBarSourceType": "来源",
+    "@mediaBarSourceType": {
+        "description": "Setting for which titles the media bar draws from"
+    },
+    "mediaBarSourceRandom": "随机",
+    "@mediaBarSourceRandom": {
+        "description": "Media bar source: any eligible title"
+    },
+    "recentlyReleasedSeriesType": "最近发布剧集排序方式",
+    "@recentlyReleasedSeriesType": {
+        "description": "Setting for sorting series in recently released series row"
+    },
+    "recentlyReleasedSeriesTypeDescription": "按剧集、最新季或最新集播出日期对最近发布剧集首页行排序",
+    "@recentlyReleasedSeriesTypeDescription": {
+        "description": "Description for recently released series type setting"
+    },
+    "favoriteChannels": "收藏频道",
+    "@favoriteChannels": {
+        "description": "Home row: favourited live TV channels"
+    },
+    "adminMetadataFieldCustomRating": "自定义分级",
+    "adminMetadataFieldDisplayOrder": "显示顺序",
+    "adminMetadataDisplayOrderAired": "播出顺序",
+    "adminMetadataDisplayOrderOriginalAirDate": "首播日期",
+    "adminMetadataDisplayOrderAbsolute": "绝对顺序",
+    "adminMetadataDisplayOrderDvd": "DVD",
+    "adminMetadataDisplayOrderDigital": "数字",
+    "adminMetadataDisplayOrderStoryArc": "剧情线",
+    "adminMetadataDisplayOrderProduction": "制作",
+    "adminMetadataDisplayOrderTv": "电视",
+    "adminMetadataDisplayOrderAlternate": "备用",
+    "adminMetadataDisplayOrderRegional": "地区",
+    "adminMetadataDisplayOrderAlternateDvd": "备用 DVD",
+    "adminMetadataDisplayOrderDateModified": "修改日期",
+    "adminMetadataDisplayOrderSortName": "排序名称",
+    "adminMetadataDisplayOrderReleaseDate": "发布日期",
+    "adminMetadataSettings": "元数据设置",
+    "adminMetadataDownloadLanguage": "首选下载语言",
+    "adminMetadataCountryRegion": "国家/地区",
+    "adminMetadataInheritHelp": "保持为默认以从父条目或服务器默认值继承设置。",
+    "adminMetadataField3DFormat": "3D 格式",
+    "adminMetadataPersonKindUnknown": "未知",
+    "adminMetadataPersonKindActor": "演员",
+    "adminMetadataPersonKindDirector": "导演",
+    "adminMetadataPersonKindComposer": "作曲",
+    "adminMetadataPersonKindWriter": "编剧",
+    "adminMetadataPersonKindGuestStar": "客串",
+    "adminMetadataPersonKindProducer": "制片人",
+    "adminMetadataPersonKindConductor": "指挥",
+    "adminMetadataPersonKindLyricist": "作词",
+    "adminMetadataPersonKindArranger": "编曲",
+    "adminMetadataPersonKindEngineer": "工程师",
+    "adminMetadataPersonKindMixer": "混音师",
+    "adminMetadataPersonKindRemixer": "重混师",
+    "adminMetadataPersonKindCreator": "创作者",
+    "adminMetadataPersonKindArtist": "艺术家",
+    "adminMetadataPersonKindAlbumArtist": "专辑艺术家",
+    "adminMetadataPersonKindAuthor": "作者",
+    "adminMetadataPersonKindIllustrator": "插画师",
+    "adminMetadataPersonKindPenciller": "线稿师",
+    "adminMetadataPersonKindInker": "描墨师",
+    "adminMetadataPersonKindColorist": "上色师",
+    "adminMetadataPersonKindLetterer": "文字师",
+    "adminMetadataPersonKindCoverArtist": "封面艺术家",
+    "adminMetadataPersonKindEditor": "编辑",
+    "adminMetadataPersonKindTranslator": "翻译",
+    "adminMetadataPersonKindNarrator": "旁白",
+    "adminMetadataAirDays": "播出日",
+    "adminMetadataLockItem": "锁定此条目以防止未来的元数据更改",
+    "adminMetadataEnabledFields": "已启用字段",
+    "adminMetadataEnabledFieldsHelp": "取消勾选字段以锁定并防止其数据被更改。",
+    "adminMetadataLockFieldName": "名称",
+    "adminMetadataLockFieldOverview": "概览",
+    "adminMetadataLockFieldGenres": "类型",
+    "adminMetadataLockFieldOfficialRating": "家长分级",
+    "adminMetadataLockFieldCast": "人物",
+    "adminMetadataLockFieldProductionLocations": "制作地点",
+    "adminMetadataLockFieldBirthLocation": "出生地",
+    "adminMetadataLockFieldRuntime": "时长",
+    "adminMetadataLockFieldStudios": "工作室",
+    "adminMetadataLockFieldTags": "标签",
+    "adminPluginsRestartRequired": "需要重启",
+    "@adminPluginsRestartRequired": {
+        "description": "Label for the installed-plugin filter showing changes that require a server restart"
+    },
+    "adminPluginsNoneActive": "没有活动的插件",
+    "@adminPluginsNoneActive": {
+        "description": "Empty state for the active installed-plugin filter"
+    },
+    "adminPluginsNoneRequireRestart": "没有插件需要重启服务器",
+    "@adminPluginsNoneRequireRestart": {
+        "description": "Empty state for the installed-plugin filter showing changes that require a server restart"
+    },
+    "emulatorCoreResetSettings": "将 {system} 设置重置为默认值",
+    "@emulatorCoreResetSettings": {
+        "description": "Semantic label for the button that resets one core's saved emulator settings",
+        "placeholders": {
+            "system": {
+                "type": "String"
+            }
+        }
+    },
+    "emulatorCoreSettingsReset": "设置已重置为默认值。",
+    "@emulatorCoreSettingsReset": {
+        "description": "Snackbar shown after resetting a core's saved emulator settings"
+    },
+    "emulatorCoreResetSettingsFailed": "无法重置设置。请检查连接后重试。",
+    "@emulatorCoreResetSettingsFailed": {
+        "description": "Snackbar shown when resetting a core's saved emulator settings fails"
+    },
+    "settingsMediaSegmentTypeAction": "{segment} 片段",
+    "@settingsMediaSegmentTypeAction": {
+        "description": "Setting label for what to do with one type of media segment",
+        "placeholders": {
+            "segment": {
+                "type": "String"
+            }
+        }
+    },
+    "personalRatingMine": "我的评分",
+    "@personalRatingMine": {
+        "description": "Label under the viewer's own rating in the ratings row."
+    },
+    "filterInProgress": "正在观看",
+    "@filterInProgress": {
+        "description": "Library filter for items the viewer has started but not finished."
+    },
+    "filterUnreleased": "未发布",
+    "@filterUnreleased": {
+        "description": "Series status filter for shows that have not started airing."
+    },
+    "filterTrailers": "预告片",
+    "@filterTrailers": {
+        "description": "Library filter for items that have a trailer."
+    },
+    "filterExtras": "花絮",
+    "@filterExtras": {
+        "description": "Library filter for items that have bonus features."
+    },
+    "filterThemeSongs": "主题曲",
+    "@filterThemeSongs": {
+        "description": "Library filter for items that have a theme song."
+    },
+    "filterThemeVideos": "主题视频",
+    "@filterThemeVideos": {
+        "description": "Library filter for items that have a theme video."
+    },
+    "source": "来源",
+    "@source": {
+        "description": "Heading for the disc source filters in the library filter picker."
+    },
+    "years": "年份",
+    "@years": {
+        "description": "Heading for the release year filters in the library filter picker."
+    },
+    "audioLanguage": "音轨语言",
+    "@audioLanguage": {
+        "description": "Heading for the audio language filters in the library filter picker."
+    },
+    "subtitleLanguage": "字幕语言",
+    "@subtitleLanguage": {
+        "description": "Heading for the subtitle language filters in the library filter picker."
+    },
+    "clearFilters": "清除筛选",
+    "@clearFilters": {
+        "description": "Action that turns every library filter back off."
+    },
+    "seerrShortcutsRow": "Seerr 浏览",
+    "@seerrShortcutsRow": {
+        "description": "Title of the Seerr shortcuts row that jumps to Discover, Movies, Series, Requests and Issues."
+    },
+    "seerrReleased": "已发布",
+    "@seerrReleased": {
+        "description": "Heading for the release window filter in the Seerr browse dialog."
+    },
+    "seerrMinRating": "最低评分",
+    "@seerrMinRating": {
+        "description": "Heading for the TMDB score floor filter in the Seerr browse dialog."
+    },
+    "seerrMinVotes": "最低投票数",
+    "@seerrMinVotes": {
+        "description": "Heading for the TMDB vote count floor filter in the Seerr browse dialog."
+    },
+    "seerrOriginalLanguage": "原始语言",
+    "@seerrOriginalLanguage": {
+        "description": "Heading for the original language filter in the Seerr browse dialog."
+    },
+    "seerrRuntime": "时长",
+    "@seerrRuntime": {
+        "description": "Heading for the runtime window filter in the Seerr browse dialog."
+    },
+    "subtitleHdrSeparate": "单独 HDR 样式",
+    "@subtitleHdrSeparate": {
+        "description": "Toggle for a second subtitle appearance used only while HDR is playing."
+    },
+    "subtitleHdrSeparateSubtitle": "白色在 HDR 中比 SDR 亮得多，此处使用较暗的样式可避免刺眼",
+    "@subtitleHdrSeparateSubtitle": {
+        "description": "Explains why a separate HDR subtitle style is worth setting."
+    },
+    "scrollSensitivity": "滚动灵敏度",
+    "@scrollSensitivity": {
+        "description": "Title of the desktop setting that scales mouse wheel scrolling."
+    },
+    "scrollSensitivitySubtitle": "鼠标滚轮一格滚动的距离",
+    "@scrollSensitivitySubtitle": {
+        "description": "Explains the desktop scroll sensitivity slider."
+    },
+    "mediaDetailsAndSpoilers": "媒体详情与剧透",
+    "@mediaDetailsAndSpoilers": {
+        "description": "Section header for media details and spoiler settings"
+    },
+    "openTrailersExternally": "在外部应用中打开预告片",
+    "@openTrailersExternally": {
+        "description": "Details screen setting that hands trailers to the system"
+    },
+    "openTrailersExternallySubtitle": "预告片在 YouTube 应用或浏览器中打开，而非内置播放器",
+    "@openTrailersExternallySubtitle": {
+        "description": "Subtitle for the external trailers setting"
+    },
+    "hideDetailsMediaDescription": "在详情页隐藏媒体描述",
+    "@hideDetailsMediaDescription": {
+        "description": "Setting title to hide media description on details screen"
+    },
+    "hideDetailsMediaDescriptionSubtitle": "隐藏电影或剧集的描述文字。",
+    "@hideDetailsMediaDescriptionSubtitle": {
+        "description": "Description for setting to hide media description on details page"
+    },
+    "detailUseSeriesThumbnails": "在详情页使用剧集缩略图",
+    "@detailUseSeriesThumbnails": {
+        "description": "Setting title to replace thumbnails on Classic details page with series thumbnail"
+    },
+    "detailUseSeriesThumbnailsSubtitle": "将经典详情页上的所有缩略图替换为剧集缩略图",
+    "@detailUseSeriesThumbnailsSubtitle": {
+        "description": "Description for setting to use series thumbnails on Classic details page"
+    },
+    "hideHomeMediaDescription": "在主屏幕隐藏媒体描述",
+    "@hideHomeMediaDescription": {
+        "description": "Setting title to hide media description on home screen"
+    },
+    "hideHomeMediaDescriptionSubtitle": "隐藏电影或剧集的描述文字。",
+    "@hideHomeMediaDescriptionSubtitle": {
+        "description": "Description for setting to hide media description on home screen"
+    },
+    "continueWatchingAndNextUpHeader": "继续观看与下个播放",
+    "@continueWatchingAndNextUpHeader": {
+        "description": "Header for settings section containing Continue Watching and Next Up options"
+    },
+    "setupSkip": "跳过设置",
+    "@setupSkip": {
+        "description": "Leaves the first-run setup wizard without answering anything"
+    },
+    "setupNavbarQuestion": "导航栏应放在哪里？",
+    "@setupNavbarQuestion": {
+        "description": "Setup question asking where the navigation bar should sit"
+    },
+    "setupMediaBarQuestion": "主屏幕顶部应是什么样？",
+    "@setupMediaBarQuestion": {
+        "description": "Setup wizard question for the media bar style"
+    },
+    "setupHomeRowsQuestion": "你的行应是什么样？",
+    "@setupHomeRowsQuestion": {
+        "description": "Setup wizard question for the home row style"
+    },
+    "setupDetailQuestion": "打开电影或剧集时应是什么样？",
+    "@setupDetailQuestion": {
+        "description": "Setup wizard question for the detail screen style"
+    },
+    "setupTourQuestion": "设置完成。这里还有更多功能。",
+    "@setupTourQuestion": {
+        "description": "Heading of the final setup wizard screen"
+    },
+    "setupStyleClassic": "经典",
+    "@setupStyleClassic": {
+        "description": "Name of the original layout, offered in the setup wizard"
+    },
+    "setupStyleModern": "现代",
+    "@setupStyleModern": {
+        "description": "Name of the newer layout, offered in the setup wizard"
+    },
+    "setupRowsClassicHint": "紧凑。屏幕上同时显示更多行。",
+    "@setupRowsClassicHint": {
+        "description": "What the classic home row style gives you"
+    },
+    "setupRowsModernHint": "更大的卡片，标题在下方。",
+    "@setupRowsModernHint": {
+        "description": "What the modern home row style gives you"
+    },
+    "setupDetailClassicHint": "所有内容居中堆叠。",
+    "@setupDetailClassicHint": {
+        "description": "What the classic detail screen style gives you"
+    },
+    "setupDetailModernHint": "电影感，带有演职人员和花絮标签页。",
+    "@setupDetailModernHint": {
+        "description": "What the modern detail screen style gives you"
+    },
+    "setupPickALook": "选择外观",
+    "@setupPickALook": {
+        "description": "Label above the theme swatches on the final setup screen"
+    },
+    "setupTourMoreHeader": "设置中还有更多功能等你探索",
+    "@setupTourMoreHeader": {
+        "description": "Heading of the closing setup screen block that lists features found in settings"
+    },
+    "setupTourBulletRequests": "Seerr 请求",
+    "@setupTourBulletRequests": {
+        "description": "Bullet on the closing setup screen for the Seerr request feature"
+    },
+    "setupTourBulletSyncPlay": "SyncPlay 观影派对",
+    "@setupTourBulletSyncPlay": {
+        "description": "Bullet on the closing setup screen for SyncPlay"
+    },
+    "setupTourBulletThemes": "自定义主题",
+    "@setupTourBulletThemes": {
+        "description": "Bullet on the closing setup screen for custom themes"
+    },
+    "setupTourBulletDownloads": "离线下载",
+    "@setupTourBulletDownloads": {
+        "description": "Bullet on the closing setup screen for downloads"
+    },
+    "setupTourBulletMore": "以及更多",
+    "@setupTourBulletMore": {
+        "description": "Closing bullet on the setup screen settings list"
+    },
+    "runSetupAgain": "重新运行设置",
+    "@runSetupAgain": {
+        "description": "Starts the first-run setup wizard again from settings"
+    }
 }
