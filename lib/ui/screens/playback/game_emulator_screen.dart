@@ -127,6 +127,7 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
   // True only while Android is driving EmulatorJS's own control-mapping dialog.
   bool _emulatorControlsOpen = false;
   Timer? _controlsCloseWatch;
+  bool _controlsCloseQueryInFlight = false;
   bool _confirmingExit = false;
 
   // Open-overlay gesture: hold Start+Select for 5 seconds.
@@ -852,11 +853,17 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
     _controlsCloseWatch = Timer.periodic(const Duration(milliseconds: 400), (
       _,
     ) async {
+      // Timer.periodic does not await this callback, and the non-web fallback
+      // is a real platform-channel round trip. Without this a stalled call
+      // would let ticks pile up on the channel that also carries controller
+      // input; a skipped tick costs at most another 400ms.
+      if (_controlsCloseQueryInFlight) return;
       if (!mounted || !_emulatorControlsOpen) {
         _controlsCloseWatch?.cancel();
         _controlsCloseWatch = null;
         return;
       }
+      _controlsCloseQueryInFlight = true;
       final controller = _controller;
       Object? open;
       try {
@@ -869,6 +876,8 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
         });
       } catch (_) {
         return;
+      } finally {
+        _controlsCloseQueryInFlight = false;
       }
       // Anything but a definite false means "still open": never resume on a
       // reading we could not trust.

@@ -263,7 +263,11 @@ class MainActivity : AudioServiceActivity(), GamepadsCompatibleActivity {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        val bridge = LibretroBridge(flutterEngine) { active -> nativePad?.setActive(active) }
+        val bridge = LibretroBridge(
+            flutterEngine,
+            onActiveChanged = { active -> nativePad?.setActive(active) },
+            onBeforeResume = { nativePad?.releaseHeldInput() },
+        )
         libretroBridge = bridge
         nativePad = NativePadInput(
             bridge,

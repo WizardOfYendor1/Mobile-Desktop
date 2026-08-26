@@ -27,6 +27,9 @@ class LibretroBridge(
   // Lets NativePadInput learn when a session starts/stops without this class
   // needing to know it exists. Invoked after isActive flips.
   private val onActiveChanged: (Boolean) -> Unit = {},
+  // Same shape: lets the input layer drop held buttons immediately before the
+  // core starts running again. See the "resume" branch below.
+  private val onBeforeResume: () -> Unit = {},
 ) {
   private val control = MethodChannel(
     flutterEngine.dartExecutor.binaryMessenger, "moonfin/native_game_control")
@@ -105,7 +108,15 @@ class LibretroBridge(
         else result.error("start_failed", "The render thread could not be started.", null)
       }
       "pause" -> { userPaused = true; nativePause(); result.success(null) }
-      "resume" -> { userPaused = false; nativeResume(); result.success(null) }
+      "resume" -> {
+        // Physical masks reach the core even while the overlay is up
+        // so whatever dismissed the menu is still held here. Dropping it BEFORE
+        // nativeResume means the core never runs a frame seeing it.
+        onBeforeResume()
+        userPaused = false
+        nativeResume()
+        result.success(null)
+      }
       "restart" -> {
         if (nativeReset()) {
           // A restart re-runs core init, which re-sends both controller

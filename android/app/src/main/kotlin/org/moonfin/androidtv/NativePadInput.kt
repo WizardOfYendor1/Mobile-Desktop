@@ -182,6 +182,24 @@ internal class NativePadInput(
         }
     }
 
+    /**
+     * Drops every held button, keeping each pad registered.
+     *
+     * Called immediately before the core resumes. The press that dismissed the
+     * pause menu is still physically down at that moment and is already in the
+     * core's mask, so without this the game acts on it.
+     *
+     * Unlike clearPadStates this does not empty padStates: the pads keep their
+     * ports, profiles and tables, only their input goes.
+     */
+    fun releaseHeldInput() {
+        for (index in 0 until padStates.size()) {
+            clearPadState(padStates.valueAt(index), publish = active)
+        }
+        clearPadState(keyboardState, publish = active)
+        bridge.resetPadMasks()
+    }
+
     /** Available before gameplay so Dart can load all profile mappings first. */
     fun nativeGamepadDevices(): List<Map<String, Any?>> {
         if (!active) refreshInactiveSnapshot()

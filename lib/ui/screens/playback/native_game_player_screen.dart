@@ -622,16 +622,21 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
   ) {
     final mapping = _controllerMappings[desktopControllerDeviceId(gamepadId)];
     final bit = desktopBoundBit(mapping, trigger) ?? fallbackBit;
-    final previous = _triggerBits[trigger];
+    // Keyed by pad as well as trigger: two controllers resolve the same
+    // trigger to different bits, and a shared key let one pad's event clear
+    // the bit the other was still holding.
+    final key = (gamepadId, trigger);
+    final previous = _triggerBits[key];
     if (previous != null && previous != bit) _stickMask &= ~previous;
-    _triggerBits[trigger] = bit;
+    _triggerBits[key] = bit;
     _stickMask = value >= _gamepadDeadzone
         ? _stickMask | bit
         : _stickMask & ~bit;
   }
 
-  /// The bit each analog trigger currently drives; see [_setTriggerBit].
-  final Map<GamepadButton, int> _triggerBits = <GamepadButton, int>{};
+  /// The bit each pad's analog trigger currently drives; see [_setTriggerBit].
+  final Map<(String, GamepadButton), int> _triggerBits =
+      <(String, GamepadButton), int>{};
 
   /// The RetroPad index [NativeControllerMappingScreen.handleButton] expects
   /// for a physical button. Deliberately the raw button rather than the
@@ -2019,12 +2024,9 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
   ) async {
     final games = _client.gamesApi;
     if (games == null) return;
-    if (!_canPersistMapping(deviceId)) {
-      // Refusing is the safe half of the trade: the edit applies for this
-      // session, but is not persisted over a mapping we failed to load.
-      _showTransientMessage(_unreadableMappingMessage);
-      return;
-    }
+    // Applied to the session FIRST, so the panel's own display and what the
+    // core actually receives agree. Only the write is refused: returning
+    // before this left the user looking at a binding gameplay never got.
     setState(() {
       _controllerMappings = Map.unmodifiable({
         ..._controllerMappings,
@@ -2032,6 +2034,12 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
       });
     });
     await _syncControllerMappings();
+    if (!_canPersistMapping(deviceId)) {
+      // Refusing is the safe half of the trade: the edit applies for this
+      // session, but is not persisted over a mapping we failed to load.
+      _showTransientMessage(_unreadableMappingMessage);
+      return;
+    }
     try {
       await saveControllerMapping(games, deviceId, mapping);
     } catch (_) {
