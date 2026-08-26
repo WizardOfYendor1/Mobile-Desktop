@@ -345,7 +345,15 @@ internal class NativePadInput(
         }
         if (event.action != KeyEvent.ACTION_DOWN && event.action != KeyEvent.ACTION_UP) return true
 
-        val table = if (state === keyboardState) navigationTable(connection) else state.table
+        // Menus always run on the default layout, for every device and not just
+        // the shared keyboard state. Bindings are 1:1 now, so a remap can leave
+        // a key unbound -- and a user who unbinds B must still be able to hold
+        // B to leave the controller test panel.
+        val table = if (state === keyboardState || bridge.overlayOpen) {
+            navigationTable(connection)
+        } else {
+            state.table
+        }
         val index = indexFor(table, keyCode)
         when (index) {
             NONE -> return false
@@ -1106,6 +1114,7 @@ internal object NativeMappingTables {
     fun custom(overrides: Map<Int, Int>?): IntArray {
         if (overrides == null) return DEFAULT
         val table = DEFAULT.copyOf()
+        val bound = HashMap<Int, Int>()
         for ((rawKeyCode, index) in overrides) {
             // Trigger bindings were briefly written under synthetic codes; they
             // live under the real trigger keycodes now.
@@ -1114,8 +1123,18 @@ internal object NativeMappingTables {
                 SYNTHETIC_KEYCODE_R2 -> KeyEvent.KEYCODE_BUTTON_R2
                 else -> rawKeyCode
             }
-            if (keyCode in 0 until TABLE_SIZE && index in 0..15) table[keyCode] = index
+            if (keyCode in 0 until TABLE_SIZE && index in 0..15) bound[keyCode] = index
         }
+        // Bindings are 1:1. A RetroPad button the user has bound has exactly one
+        // source, so the defaults it displaces are unbound rather than left to
+        // fire alongside it. RETRO_A is the only index with several defaults
+        // (BUTTON_A, DPAD_CENTER, ENTER); all of them go. NONE and SWALLOW are
+        // negative, so they never collide with a claimed 0..15 index.
+        val claimed = bound.values.toHashSet()
+        for (keyCode in 0 until TABLE_SIZE) {
+            if (table[keyCode] in claimed && keyCode !in bound) table[keyCode] = NONE
+        }
+        for ((keyCode, index) in bound) table[keyCode] = index
         return table
     }
 

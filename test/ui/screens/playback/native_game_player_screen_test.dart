@@ -439,6 +439,28 @@ void main() {
     expect(desktopBoundBit(mapping, GamepadButton.rightTrigger), isNot(1 << 13));
   });
 
+  test('a default stops firing once another key is bound to its button', () {
+    // Bindings are 1:1: binding the left trigger to RetroPad A must stop the
+    // physical A from firing A as well.
+    final mapping = NativeControllerMapping(const {1006: RetroPadButton.a});
+    const aBit = 1 << 0;
+    expect(
+      desktopBitForButton(mapping, GamepadButton.leftTrigger, 1 << 12),
+      aBit,
+    );
+    expect(desktopBitForButton(mapping, GamepadButton.a, aBit), isNull);
+    // An unrelated button keeps its default.
+    expect(desktopBitForButton(mapping, GamepadButton.b, 1 << 8), 1 << 8);
+  });
+
+  test('with no bindings every default is left alone', () {
+    expect(desktopBitForButton(null, GamepadButton.a, 1 << 0), 1 << 0);
+    expect(
+      desktopBitForButton(NativeControllerMapping.empty, GamepadButton.a, 1 << 0),
+      1 << 0,
+    );
+  });
+
   test('a rebound face button still resolves, and one binding does not move another', () {
     final mapping = NativeControllerMapping(const {1000: RetroPadButton.y});
 

@@ -103,7 +103,7 @@ class ControllerTestPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           const Divider(color: Colors.white24, height: 1),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -112,7 +112,7 @@ class ControllerTestPanel extends StatelessWidget {
               Expanded(child: _StickField(label: 'Right stick', stick: right)),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           _DpadRow(hat: hat),
           const SizedBox(height: 6),
           Row(
@@ -122,17 +122,27 @@ class ControllerTestPanel extends StatelessWidget {
               Expanded(child: _TriggerMeter(label: 'R2', trigger: r2)),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           const Text(
             'Last button',
             style: TextStyle(color: _bright, fontSize: 16),
           ),
           const SizedBox(height: 4),
-          _LastButton(button: _lastPressed),
+          // Two lines' worth, always: a press turns the placeholder into a raw
+          // code plus a button name, and the panel must not grow to fit it.
+          SizedBox(
+            height: 44,
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: _LastButton(button: _lastPressed),
+            ),
+          ),
           const SizedBox(height: 12),
           const Divider(color: Colors.white24, height: 1),
           const SizedBox(height: 6),
-          Row(
+          SizedBox(
+            height: 18,
+            child: Row(
             children: [
               // The ring only appears while B is actually held, so the footer
               // stays quiet during normal testing.
@@ -158,6 +168,7 @@ class ControllerTestPanel extends StatelessWidget {
                   style: TextStyle(color: _dim, fontSize: 12),
                 ),
             ],
+            ),
           ),
         ],
       ),
@@ -188,8 +199,8 @@ class _StickField extends StatelessWidget {
         ),
         const SizedBox(height: 4),
         SizedBox(
-          width: 52,
-          height: 52,
+          width: 46,
+          height: 46,
           child: DecoratedBox(
             decoration: BoxDecoration(
               border: Border.all(color: Colors.white24),
@@ -287,6 +298,7 @@ class _DpadRow extends StatelessWidget {
     ].join(' ');
     return Row(
       children: [
+        // There might be a better graphical display option here but this works.
         const Text('D-pad', style: TextStyle(color: Colors.white70, fontSize: 14)),
         const SizedBox(width: 12),
         Text(
@@ -308,7 +320,7 @@ class _DpadRow extends StatelessWidget {
 }
 
 /// An analog trigger rendered as a text bar meter, matching the design's
-/// ASCII sketch (`L2 ###..... `).
+/// ASCII (`L2 ###..... `).
 class _TriggerMeter extends StatelessWidget {
   const _TriggerMeter({required this.label, required this.trigger});
 
@@ -371,7 +383,7 @@ class _LastButton extends StatelessWidget {
       ];
       lines.add(parts.join(' '));
     }
-    // The user's phrasing: the button they know, and what the game calls it.
+    // The user's POV: the button they know, and what the core/game calls it.
     // The raw code stays on the line above, since that is what diagnoses a pad
     // reporting something unexpected.
     if (b.retroPad != null) {

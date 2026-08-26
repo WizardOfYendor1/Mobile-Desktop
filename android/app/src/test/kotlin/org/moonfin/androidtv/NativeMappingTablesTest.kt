@@ -104,4 +104,36 @@ class NativeMappingTablesTest {
         assertEquals(NativeMappingTables.RETRO_A, table[KeyEvent.KEYCODE_BUTTON_L2])
         assertEquals(NativeMappingTables.RETRO_B, table[KeyEvent.KEYCODE_BUTTON_R2])
     }
+
+    @Test
+    fun `binding a key to a button unbinds the default that used to drive it`() {
+        val table = NativeMappingTables.custom(
+            mapOf(KeyEvent.KEYCODE_BUTTON_L2 to NativeMappingTables.RETRO_A),
+        )
+        assertEquals(NativeMappingTables.RETRO_A, table[KeyEvent.KEYCODE_BUTTON_L2])
+        // RETRO_A is the only index with several defaults; every one of them goes,
+        // or the old key would keep firing alongside the new one.
+        assertEquals(NativeMappingTables.NONE, table[KeyEvent.KEYCODE_BUTTON_A])
+        assertEquals(NativeMappingTables.NONE, table[KeyEvent.KEYCODE_DPAD_CENTER])
+        assertEquals(NativeMappingTables.NONE, table[KeyEvent.KEYCODE_ENTER])
+        // Untouched buttons keep their defaults.
+        assertEquals(NativeMappingTables.RETRO_B, table[KeyEvent.KEYCODE_BUTTON_B])
+    }
+
+    @Test
+    fun `a key bound to a new button keeps its own entry and frees the old one`() {
+        val table = NativeMappingTables.custom(
+            mapOf(KeyEvent.KEYCODE_BUTTON_A to NativeMappingTables.RETRO_Y),
+        )
+        assertEquals(NativeMappingTables.RETRO_Y, table[KeyEvent.KEYCODE_BUTTON_A])
+        assertEquals(NativeMappingTables.NONE, table[KeyEvent.KEYCODE_BUTTON_Y])
+    }
+
+    @Test
+    fun `an unbound layout is unaffected by the exclusivity pass`() {
+        assertEquals(NativeMappingTables.RETRO_A, NativeMappingTables.custom(null)[KeyEvent.KEYCODE_BUTTON_A])
+        val table = NativeMappingTables.custom(emptyMap())
+        assertEquals(NativeMappingTables.RETRO_A, table[KeyEvent.KEYCODE_DPAD_CENTER])
+        assertEquals(NativeMappingTables.RETRO_L2, table[KeyEvent.KEYCODE_BUTTON_L2])
+    }
 }

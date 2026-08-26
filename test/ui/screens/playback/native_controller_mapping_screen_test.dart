@@ -492,12 +492,15 @@ void main() {
     );
     await tester.pump();
 
-    // The core's word is the primary text; the RetroPad name moves into the
-    // subtitle beside the binding.
+    // The core's word is the primary text and the subtitle answers only "what
+    // do I press" -- naming the RetroPad button there read as a contradiction
+    // ("A - Button B") and traded one piece of jargon for another.
     expect(find.text('Fire'), findsOneWidget);
-    expect(find.text('A · Default layout'), findsOneWidget);
     expect(find.text('Insert Coin'), findsOneWidget);
-    expect(find.text('X · Default layout'), findsOneWidget);
+    // Both rows are unbound, so both subtitles are the same bare binding.
+    expect(find.text('Default layout'), findsWidgets);
+    expect(find.text('A · Default layout'), findsNothing);
+    expect(find.text('X · Default layout'), findsNothing);
 
     // A description is core-supplied text, so it is italicised.
     final fire = tester.widget<Text>(find.text('Fire'));

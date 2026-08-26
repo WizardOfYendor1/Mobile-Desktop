@@ -162,7 +162,7 @@ class NativeControllerMappingScreenState
   /// Long enough that it cannot be hit by accident while testing the B button,
   /// which is the whole point of the gesture. The panel shows a countdown ring
   /// so the wait is visible rather than a guess.
-  static const Duration _testExitHold = Duration(seconds: 5);
+  static const Duration _testExitHold = Duration(seconds: 4);
   static const Duration _testExitTick = Duration(milliseconds: 50);
 
   NativeControllerDevice? get _device =>
@@ -869,17 +869,18 @@ class NativeControllerMappingScreenState
     return description;
   }
 
-  /// What the button does in-game takes the title; the RetroPad name moves to
-  /// the subtitle.
+  /// What the button does in-game takes the title, and the key that does it
+  /// takes the subtitle. Where the core offers no word for a button, its
+  /// RetroPad letter is the best title available and becomes the title itself.
   String _buttonTitle(RetroPadButton button) =>
       _buttonDescription(button) ?? button.label;
 
-  String _buttonSubtitle(RetroPadButton button, int? keycode) {
-    final binding = _bindingLabel(keycode);
-    return _buttonDescription(button) == null
-        ? binding
-        : '${button.label} · $binding';
-  }
+  /// Just the key that triggers this row. "A · Button B" read as a
+  /// contradiction, and naming the RetroPad button traded one piece of jargon
+  /// for another: what the row does is the title, so the subtitle only has to
+  /// answer "what do I press".
+  String _buttonSubtitle(RetroPadButton button, int? keycode) =>
+      _bindingLabel(keycode);
 
   String _squashed(String value) =>
       value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
@@ -915,14 +916,22 @@ class NativeControllerMappingScreenState
 
     if (_testingController) {
       final device = _device;
+      // Scaled to fit rather than scrolled: the panel's height varies with what
+      // the pad reports (a snap line, a two-line last button, the exit ring),
+      // and nothing in it is focusable, so on a remote there is no way to
+      // scroll to anything that overflows.
       return Flexible(
-        child: SingleChildScrollView(
-          controller: _scroll,
-          child: ControllerTestPanel(
-            snapshot: _diagnosticsSnapshot,
-            deviceName: device?.name ?? 'Controller',
-            port: device?.port,
-            exitHoldProgress: _testExitProgress,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: 520,
+            child: ControllerTestPanel(
+              snapshot: _diagnosticsSnapshot,
+              deviceName: device?.name ?? 'Controller',
+              port: device?.port,
+              exitHoldProgress: _testExitProgress,
+            ),
           ),
         ),
       );

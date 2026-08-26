@@ -65,6 +65,26 @@ PlayerOneWarning? playerOneWarningFor(
       : PlayerOneWarning.gamepadNotAssigned;
 }
 
+/// The bit [button] drives: its binding, else [fallback] unless something else
+/// has claimed that bit.
+///
+/// Bindings are 1:1, so a default stops firing once another key is bound to the
+/// same RetroPad button -- otherwise both would fire it.
+@visibleForTesting
+int? desktopBitForButton(
+  NativeControllerMapping? mapping,
+  GamepadButton button,
+  int? fallback,
+) {
+  final bound = desktopBoundBit(mapping, button);
+  if (bound != null) return bound;
+  if (fallback == null || mapping == null) return fallback;
+  final claimed = mapping.keycodeToButton.values
+      .map((b) => 1 << b.retroPadIndex)
+      .contains(fallback);
+  return claimed ? null : fallback;
+}
+
 /// The RetroPad bit a saved binding gives [button], or null when it is unbound.
 ///
 /// Split out so the desktop trigger path is testable: the gamepad stream is a
@@ -582,14 +602,12 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
   /// mapping saved for the controller that produced it.
   ///
   /// A button the user has not rebound keeps [_gamepadButtonToBit]'s default,
-  /// which matches how Android treats a partial mapping. That does mean a
-  /// custom binding can double up with a default one -- bind Y to RetroPad A
-  /// and the physical A still sends A as well -- but the alternative, silently
-  /// unbinding buttons the user never touched, makes a half-finished remap feel
-  /// like the pad has broken.
+  /// unless something else is now bound to that RetroPad button: bindings are
+  /// 1:1, so bind Y to RetroPad A and the physical A stops sending A. Matches
+  /// Android's table and EmulatorJS, which clears duplicates the same way.
   int? _bitForGamepadButton(String gamepadId, GamepadButton button) {
     final mapping = _controllerMappings[desktopControllerDeviceId(gamepadId)];
-    return desktopBoundBit(mapping, button) ?? _gamepadButtonToBit[button];
+    return desktopBitForButton(mapping, button, _gamepadButtonToBit[button]);
   }
 
   // Negative stick values map to the first bit, positive to the second. The Y
