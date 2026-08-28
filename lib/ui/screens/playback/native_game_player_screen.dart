@@ -928,6 +928,12 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
         // managed to read is not, so writes stay disabled for this session.
         _coreOptionsReadable = false;
       }
+      // App-chosen defaults go UNDERNEATH whatever the user has stored, so an
+      // explicit setting always wins. This is also what a settings reset falls
+      // back to: clearing the document leaves these rather than the core's own
+      // defaults, which for N64 ship a texture-cache size that OOM-kills the
+      // app on TV hardware. See coreOptionDefaults.
+      settingsJson = withCoreOptionDefaults(coreId, settingsJson);
       // Last check before starting the one-per-process native session: if the
       // screen was unmounted while settings were loading, starting it now
       // would leave a session running with nothing left to tear it down.
@@ -1141,7 +1147,10 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
   ) async {
     final own = await _readSettings(games, _gameOptionsSaveId(coreId));
     if (own != null) return own;
-    final perGame = await _readSettings(games, _legacyGameOptionsSaveId(coreId));
+    final perGame = await _readSettings(
+      games,
+      _legacyGameOptionsSaveId(coreId),
+    );
     if (perGame != null) return perGame;
     return _readSettings(games, _legacyCoreOptionsSaveId(coreId));
   }
@@ -2165,8 +2174,8 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
                   _controllerMappings[target.id]?.controllerTypesByCore ??
                   const {},
               // Snap is per game and per controller; keep the target's own.
-              snapByGame: _controllerMappings[target.id]?.snapByGame ??
-                  const {},
+              snapByGame:
+                  _controllerMappings[target.id]?.snapByGame ?? const {},
             ).withControllerType(
               coreId,
               target.port != null &&

@@ -576,8 +576,8 @@ class NativeControllerMappingScreenState
         _cancelTestExitHold();
         return;
       }
-      final progress = _testExitElapsed.elapsedMilliseconds /
-          _testExitHold.inMilliseconds;
+      final progress =
+          _testExitElapsed.elapsedMilliseconds / _testExitHold.inMilliseconds;
       if (progress >= 1) {
         _closeTestPanel();
         return;
@@ -641,9 +641,11 @@ class NativeControllerMappingScreenState
   /// and Player 1 navigation rather than becoming idle.
   List<int?> get _playerChoices => [
     null,
-    for (var player = 1;
-        player <= NativeControllerPlayerAssignments.maxPlayers;
-        player++)
+    for (
+      var player = 1;
+      player <= NativeControllerPlayerAssignments.maxPlayers;
+      player++
+    )
       player,
   ];
 
@@ -1227,10 +1229,7 @@ class NativeControllerMappingScreenState
                       labelSpan,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                      ),
+                      style: const TextStyle(color: Colors.white, fontSize: 18),
                     ),
                   if (subtitle != null)
                     Text(

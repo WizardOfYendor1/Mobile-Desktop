@@ -81,36 +81,32 @@ void main() {
       expect(calls, 1);
     });
 
-    test('retries a dropped connection and returns the later success',
-        () async {
-      var calls = 0;
-      final waited = <Duration>[];
+    test(
+      'retries a dropped connection and returns the later success',
+      () async {
+        var calls = 0;
+        final waited = <Duration>[];
 
-      final result = await retryOnTransientFailure(
-        () async {
+        final result = await retryOnTransientFailure(() async {
           calls++;
           if (calls < 3) throw _dio(DioExceptionType.connectionError);
           return 'saved';
-        },
-        delay: (duration) async => waited.add(duration),
-      );
+        }, delay: (duration) async => waited.add(duration));
 
-      expect(result, 'saved');
-      expect(calls, 3);
-      expect(waited, defaultSettingsSaveBackoff.take(2));
-    });
+        expect(result, 'saved');
+        expect(calls, 3);
+        expect(waited, defaultSettingsSaveBackoff.take(2));
+      },
+    );
 
     test('gives up after the backoff is exhausted and rethrows', () async {
       var calls = 0;
 
       await expectLater(
-        retryOnTransientFailure(
-          () async {
-            calls++;
-            throw _dio(DioExceptionType.connectionError);
-          },
-          delay: (_) async {},
-        ),
+        retryOnTransientFailure(() async {
+          calls++;
+          throw _dio(DioExceptionType.connectionError);
+        }, delay: (_) async {}),
         throwsA(isA<DioException>()),
       );
 
@@ -123,13 +119,10 @@ void main() {
       var calls = 0;
 
       await expectLater(
-        retryOnTransientFailure(
-          () async {
-            calls++;
-            throw _dio(DioExceptionType.badResponse, status: 401);
-          },
-          delay: (_) async {},
-        ),
+        retryOnTransientFailure(() async {
+          calls++;
+          throw _dio(DioExceptionType.badResponse, status: 401);
+        }, delay: (_) async {}),
         throwsA(isA<DioException>()),
       );
 

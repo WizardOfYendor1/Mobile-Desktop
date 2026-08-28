@@ -1227,6 +1227,12 @@ class AppLocalizationsYue extends AppLocalizations {
   String get downloadSubtitles => '下載字幕';
 
   @override
+  String get searchingSubtitles => 'Searching for subtitles…';
+
+  @override
+  String get downloadingSubtitle => 'Downloading subtitle…';
+
+  @override
   String get selectedSubtitleInvalid => '所選的字幕無效。';
 
   @override
@@ -1396,6 +1402,20 @@ class AppLocalizationsYue extends AppLocalizations {
 
   @override
   String get perfectMatch => '完美搭配';
+
+  @override
+  String get aiTranslated => 'AI Translated';
+
+  @override
+  String get machineTranslated => 'Machine Translated';
+
+  @override
+  String get hearingImpaired => 'SDH';
+
+  @override
+  String framerateFps(String rate) {
+    return '$rate fps';
+  }
 
   @override
   String channelsCount(int count) {
@@ -4011,6 +4031,24 @@ class AppLocalizationsYue extends AppLocalizations {
 
   @override
   String get seerrRequestedStatus => '已請求';
+
+  @override
+  String get seerrDownloading => 'Downloading';
+
+  @override
+  String seerrDownloadingSize(String done, String total) {
+    return 'Downloading · $done / $total';
+  }
+
+  @override
+  String seerrDownloadedOfTotal(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String seerrPercentValue(int percent) {
+    return '$percent%';
+  }
 
   @override
   String seerrDownloadingPercent(int percent) {

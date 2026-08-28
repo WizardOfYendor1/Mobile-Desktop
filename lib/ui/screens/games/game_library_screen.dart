@@ -142,7 +142,13 @@ class _GameLibraryScreenState extends State<GameLibraryScreen>
     final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: AppColorScheme.background,
-      appBar: AppBar(title: Text(widget.title ?? l10n.games)),
+      appBar: AppBar(
+        // Web opens a library with go so the address bar stays right, which
+        // leaves nothing to pop and takes the back button the bar infers with
+        // it. Asking for home instead gives every platform a way out.
+        leading: BackButton(onPressed: () => context.popOrHome()),
+        title: Text(widget.title ?? l10n.games),
+      ),
       body: _buildBody(),
     );
   }

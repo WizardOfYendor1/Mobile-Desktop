@@ -926,7 +926,9 @@ class RowDataSource {
     String serverId, [
     HomeRowType rowType = HomeRowType.libraryTiles,
   ]) async {
-    final response = await loadVisibleUserViews(_client);
+    final response = GetIt.instance.isRegistered<UserViewsRepository>()
+        ? await GetIt.instance<UserViewsRepository>().getVisibleViewsResponse()
+        : await loadVisibleUserViews(_client);
 
     return _buildRow(
       id: rowType == HomeRowType.libraryTilesSmall

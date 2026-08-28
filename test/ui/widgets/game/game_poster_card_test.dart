@@ -238,68 +238,70 @@ void main() {
     await mouse.moveTo(tester.getCenter(find.byType(GamePosterCard).last));
     await tester.pumpAndSettle();
 
-    expect(frames(), [false, true], reason: 'the hovered card highlights on TV');
+    expect(frames(), [
+      false,
+      true,
+    ], reason: 'the hovered card highlights on TV');
   });
 
-  testWidgets('a resting pointer stops highlighting once the d-pad moves focus', (
-    tester,
-  ) async {
-    final restingNode = FocusNode(debugLabel: 'resting');
-    final movedNode = FocusNode(debugLabel: 'moved');
-    addTearDown(restingNode.dispose);
-    addTearDown(movedNode.dispose);
+  testWidgets(
+    'a resting pointer stops highlighting once the d-pad moves focus',
+    (tester) async {
+      final restingNode = FocusNode(debugLabel: 'resting');
+      final movedNode = FocusNode(debugLabel: 'moved');
+      addTearDown(restingNode.dispose);
+      addTearDown(movedNode.dispose);
 
-    await tester.pumpWidget(
-      _TestApp(
-        child: InputModeTracker(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              GamePosterCard(
-                focusNode: restingNode,
-                title: 'Gauntlet',
-                fileName: 'gauntlet.zip',
-                seed: 'gauntlet',
-                autoScroll: false,
-                onTap: () {},
-              ),
-              GamePosterCard(
-                focusNode: movedNode,
-                title: 'Giga Wing',
-                fileName: 'gigawing.zip',
-                seed: 'gigawing',
-                autoScroll: false,
-                onTap: () {},
-              ),
-            ],
+      await tester.pumpWidget(
+        _TestApp(
+          child: InputModeTracker(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GamePosterCard(
+                  focusNode: restingNode,
+                  title: 'Gauntlet',
+                  fileName: 'gauntlet.zip',
+                  seed: 'gauntlet',
+                  autoScroll: false,
+                  onTap: () {},
+                ),
+                GamePosterCard(
+                  focusNode: movedNode,
+                  title: 'Giga Wing',
+                  fileName: 'gigawing.zip',
+                  seed: 'gigawing',
+                  autoScroll: false,
+                  onTap: () {},
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
 
-    List<bool> frames() => tester
-        .widgetList<GameCardFocusFrame>(find.byType(GameCardFocusFrame))
-        .map((frame) => frame.active)
-        .toList(growable: false);
+      List<bool> frames() => tester
+          .widgetList<GameCardFocusFrame>(find.byType(GameCardFocusFrame))
+          .map((frame) => frame.active)
+          .toList(growable: false);
 
-    // A cursor comes to rest on the first card and never moves again.
-    final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-    addTearDown(() => mouse.removePointer());
-    await mouse.addPointer(location: Offset.zero);
-    await mouse.moveTo(
-      tester.getCenter(find.byType(GamePosterCard).first),
-    );
-    await tester.pumpAndSettle();
-    expect(frames(), [true, false], reason: 'the pointer owns the highlight');
+      // A cursor comes to rest on the first card and never moves again.
+      final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      addTearDown(() => mouse.removePointer());
+      await mouse.addPointer(location: Offset.zero);
+      await mouse.moveTo(tester.getCenter(find.byType(GamePosterCard).first));
+      await tester.pumpAndSettle();
+      expect(frames(), [true, false], reason: 'the pointer owns the highlight');
 
-    // The user picks up the remote and moves focus to the second card.
-    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
-    movedNode.requestFocus();
-    await tester.pumpAndSettle();
+      // The user picks up the remote and moves focus to the second card.
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      movedNode.requestFocus();
+      await tester.pumpAndSettle();
 
-    // The stationary pointer must not leave a second border behind.
-    expect(frames(), [false, true]);
-  });
+      // The stationary pointer must not leave a second border behind.
+      expect(frames(), [false, true]);
+    },
+  );
 }
 
 class _TestApp extends StatelessWidget {

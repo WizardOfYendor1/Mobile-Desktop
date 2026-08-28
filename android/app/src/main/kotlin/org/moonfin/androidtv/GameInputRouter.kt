@@ -175,14 +175,14 @@ internal class GameInputRouter(
             }
         }
         deviceCache.remove(descriptor)
-        NativeInputDeviceClassifier.invalidate()
+        NativeInputDeviceClassifier.invalidate(deviceId)
     }
 
     /** Capabilities and identity may both have changed. */
     fun onDeviceChanged(deviceId: Int) {
         val descriptor = descriptorsByDeviceId[deviceId] ?: return
         deviceCache.remove(descriptor)
-        NativeInputDeviceClassifier.invalidate()
+        NativeInputDeviceClassifier.invalidate(deviceId)
     }
 
     private fun resetSessionState() {

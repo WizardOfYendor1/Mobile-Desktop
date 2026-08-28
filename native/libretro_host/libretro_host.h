@@ -69,6 +69,170 @@ typedef struct {
   void (*fatal_error)(void *user, const char *message);
 } lh_callbacks;
 
+// ---------------------------------------------------------------------------
+// Hardware rendering: the platform-supplied graphics backend.
+//
+// The second interface a platform supplies, alongside lh_callbacks. A backend
+// stands up a graphics context and a render target that the CORE draws into,
+// which inverts the software path: there, the core hands back a CPU
+// framebuffer the host converts and the platform blits. Here no CPU frame ever
+// exists - the core renders on the GPU and video_refresh only says "done".
+//
+// DELIBERATELY CONTEXT-AGNOSTIC. No EGL, GL, Vulkan, Metal or CoreVideo type
+// appears anywhere below, exactly as ANativeWindow already stays in the
+// Android layer rather than in this header. Every platform's frame sink is a
+// Flutter external texture - Android hands over a Surface/BufferQueue while
+// the other four hand over a pixel buffer - so an interface shaped around any
+// one platform's context API would not fit the other four.
+//
+// Registering a backend does NOT by itself enable hardware rendering. The
+// core has to ask for it (RETRO_ENVIRONMENT_SET_HW_RENDER) and the backend has
+// to agree (supports). Until both happen, lh_hw_active stays 0 and the entire
+// software path runs exactly as it does with no backend registered at all.
+
+// Bumped whenever lh_hw_backend gains or changes a field. A backend stamps the
+// version it was compiled against; lh_set_hw_backend refuses anything it does
+// not recognise, rather than reading past the end of an older struct.
+//
+// This is the seam a Vulkan backend arrives through. Vulkan's model is not a
+// variation on GL's - the core receives a device from the frontend and hands
+// back an image, so there is no framebuffer name anywhere in it. Version 2
+// would append the negotiation and image-handoff entry points; a version-1
+// GL backend keeps working untouched, because nothing it already declares
+// moves or changes meaning.
+#define LH_HW_BACKEND_VERSION 1
+
+// Graphics APIs a core can ask for and a backend can provide. These mirror
+// retro_hw_context_type without dragging libretro.h into this header, so the
+// platform layer never has to include it.
+typedef enum {
+  LH_HW_API_NONE = 0,
+  // RETRO_HW_CONTEXT_OPENGLES2. Not legacy trivia: PPSSPP's Android build asks
+  // for exactly this, so a GLES3-only backend cannot serve it.
+  LH_HW_API_GLES2 = 1,
+  // RETRO_HW_CONTEXT_OPENGLES3 and RETRO_HW_CONTEXT_OPENGLES_VERSION, with the
+  // requested level in version_major/version_minor (3.0, 3.1, 3.2).
+  LH_HW_API_GLES = 2,
+  // RETRO_HW_CONTEXT_OPENGL: desktop compatibility-profile GL.
+  LH_HW_API_GL = 3,
+  // RETRO_HW_CONTEXT_OPENGL_CORE, with the level in version_major/minor.
+  LH_HW_API_GL_CORE = 4,
+  // Reserved. No backend implements this and the host refuses
+  // RETRO_HW_CONTEXT_VULKAN; the value exists so the enum does not have to
+  // change shape later. See LH_HW_BACKEND_VERSION.
+  LH_HW_API_VULKAN = 5,
+} lh_hw_api;
+
+// What a core asked for, normalised for the backend.
+typedef struct {
+  lh_hw_api api;
+  // Only meaningful for LH_HW_API_GL_CORE and for the OPENGLES_VERSION form of
+  // LH_HW_API_GLES; zero otherwise.
+  int version_major;
+  int version_minor;
+  // Depth/stencil attachments the core requested. libretro's rule, which the
+  // backend must follow: depth alone means a plain depth buffer, depth and
+  // stencil together mean one packed 24/8 buffer, and stencil WITHOUT depth is
+  // invalid and must be ignored rather than honoured.
+  int depth;
+  int stencil;
+  // Non-zero when the core draws with GL's bottom-left origin. The host's
+  // texture path is top-left, so the backend flips in present.
+  int bottom_left_origin;
+  // The core asked for a debug context. Advisory: a backend may ignore it.
+  int debug_context;
+  // The largest frame the core can ever produce, from retro_get_system_av_info.
+  //
+  // SIZE THE RENDER TARGET TO THIS, ONCE, AND NEVER RESIZE IT. A later
+  // geometry change moves the viewport and the sub-rect present samples; it
+  // must not reallocate the target. Cores built on libretro's GLSM helper -
+  // which includes both cores this work targets - cache the target handle a
+  // single time and rebind that cached value every frame, so a reallocated
+  // target hands them a name that no longer exists and they render into
+  // nothing. See current_target.
+  int max_width;
+  int max_height;
+} lh_hw_request;
+
+// The render target the core draws into, as an opaque tagged handle rather
+// than a graphics-API type. A GL backend reports a framebuffer object name; a
+// future Vulkan backend reports an image through the same struct without
+// changing this signature or the struct's size.
+#define LH_HW_TARGET_NONE 0
+#define LH_HW_TARGET_GL_FBO 1
+typedef struct {
+  // One of the LH_HW_TARGET_* values above.
+  uint32_t kind;
+  union {
+    // LH_HW_TARGET_GL_FBO. A GLuint widened to 64 bits so this header needs no
+    // GL types; the backend narrows it back on its own side.
+    uint64_t gl_fbo_name;
+    void *opaque;
+  } u;
+} lh_hw_target;
+
+// The backend itself. Every entry point is REQUIRED - lh_set_hw_backend
+// rejects a partially filled table rather than null-checking on the hot path.
+//
+// THREADING: supports may be called from any thread. Everything else runs on
+// the emulation thread with the context current, because that is where the
+// core runs and a graphics context belongs to one thread at a time. The
+// platform's own lifecycle events arrive on the platform thread, so they must
+// hand work across rather than touching the context directly.
+typedef struct {
+  // LH_HW_BACKEND_VERSION at compile time.
+  uint32_t struct_version;
+
+  // Can this platform actually provide [req]? Returns non-zero if so.
+  //
+  // This has to be a real attempt - creating a throwaway context at the
+  // requested version and seeing whether it succeeds. It must not be answered
+  // from an OS version, a GPU name, or a parsed version string: no Android
+  // release mandates GLES 3.0, and devices above the app's minimum ship
+  // without it. A wrong "yes" here turns today's clean, actionable "this game
+  // cannot be played with the native core" into a black screen.
+  int (*supports)(void *user, const lh_hw_request *req);
+
+  // Create the context and the render target sized per [req]. Returns 0 on
+  // success. Called once per load, AFTER the core's retro_load_game returns
+  // and before the host issues the core's context_reset.
+  int (*context_create)(void *user, const lh_hw_request *req);
+
+  // Tear the context down. The host calls this while the context is still
+  // current and before the core is unloaded.
+  void (*context_destroy)(void *user);
+
+  // Bind/unbind the context on the calling (emulation) thread. Returns 0 on
+  // success. The host makes the context current before the core's
+  // context_reset and before every frame.
+  int (*make_current)(void *user);
+  void (*release_current)(void *user);
+
+  // The target the core should render into this frame.
+  //
+  // MUST BE STABLE FOR THE WHOLE SESSION. libretro permits a frontend to
+  // rotate this per frame, and RetroArch does, but we must not: see the
+  // max_width note on lh_hw_request for why a changing handle breaks GLSM
+  // cores.
+  lh_hw_target (*current_target)(void *user);
+
+  // Resolve a graphics entry point by name, for the core's own loader.
+  void *(*get_proc_address)(void *user, const char *sym);
+
+  // Present the frame the core just drew, applying the vertical flip implied
+  // by bottom_left_origin and [rotation]. Returns 0 on success.
+  //
+  // [width]/[height] are the core's CURRENT output size, which is the sub-rect
+  // of the (larger, fixed) render target that actually holds this frame.
+  // [rotation] is 0, 1, 2, 3 for 0, 90, 180, 270 degrees counter-clockwise,
+  // per RETRO_ENVIRONMENT_SET_ROTATION.
+  //
+  // On the software path the host bakes rotation into the converted frame. On
+  // this path there is no conversion step to bake it into, so the backend owns
+  // it. A backend that ignores [rotation] silently ships sideways games.
+  int (*present)(void *user, int width, int height, int rotation);
+} lh_hw_backend;
+
 // Bounds for the option snapshot below. The host only speaks the legacy
 // SET_VARIABLES form ("Label; a|b|c" - GET_CORE_OPTIONS_VERSION is answered
 // with 0), where ids, labels, and values are all short, so these caps are
@@ -179,9 +343,58 @@ void lh_set_fast_forward(lh_host *host, int factor);
 void lh_stop(lh_host *host);
 void lh_destroy(lh_host *host);
 
+// Registers the platform's graphics backend, or clears it with a NULL
+// [backend]. Call before lh_load: a core asks for a hardware context during
+// retro_load_game, and a backend registered after that is too late to matter.
+//
+// [backend] is COPIED, so the caller may keep it on the stack; [user] is
+// retained and must outlive the host. Returns 0 on success, -1 for a NULL
+// host, an unrecognised struct_version, or a table with any entry point left
+// NULL - all of which are programming errors, not runtime conditions.
+//
+// Registering a backend on its own changes NOTHING about how frames flow. It
+// only makes the host able to say yes when a core asks for a context.
+int lh_set_hw_backend(lh_host *host, const lh_hw_backend *backend, void *user);
+
+// The size the core will render at on the hardware path, so the platform can
+// size its presentation surface to match instead of to the core's much smaller
+// base geometry. Returns 1 and fills [width]/[height] when a hardware context
+// was negotiated, 0 otherwise (and leaves the out-params alone).
+//
+// Valid as soon as lh_load returns - the core asks for its context during
+// retro_load_game, so the size is known before the run loop ever starts. That
+// matters: it lets the platform get the surface right BEFORE first use, rather
+// than resizing it mid-session and forcing a surface swap.
+//
+// This is the render target's size, i.e. the largest frame the core can
+// produce. Its aspect ratio is the core's own, so a platform scaling it to fit
+// a display must scale BOTH axes by the same factor or it will distort the
+// picture.
+int lh_hw_render_size(lh_host *host, int *width, int *height);
+
+// Whether the CURRENT load is rendering through the backend. 0 means the
+// software path, including whenever no core is loaded.
+//
+// The platform must branch on this rather than infer the path, and must not
+// call lh_get_frame while it is non-zero - on the hardware path there is no
+// converted frame to get, because the pixels never touched the CPU.
+int lh_hw_active(lh_host *host);
+
+// Tells the host the graphics context died outside its control - a lost
+// device, a driver reset, a surface torn away by the OS.
+//
+// The host re-issues the core's context_reset before the next frame WITHOUT
+// calling context_destroy first, which is what libretro requires: after an
+// uncontrolled loss the core must treat its old resources as already gone and
+// must not try to free them. Safe to call from any thread, with or without a
+// core loaded or a backend registered.
+void lh_notify_hw_context_lost(lh_host *host);
+
 // Copies the latest frame under the host's lock. Returns 1 and fills the out
 // params when a frame exists, 0 otherwise. The pointer stays valid until the
 // next lh_get_frame call.
+//
+// Software path only. See lh_hw_active.
 int lh_get_frame(lh_host *host, const void **data, int *width, int *height,
                  int *stride);
 

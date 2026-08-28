@@ -13,7 +13,7 @@ import '../../util/platform_detection.dart';
 import 'sync_service.dart';
 
 class ConnectivityService extends ChangeNotifier {
-  final Connectivity _connectivity = Connectivity();
+  final Connectivity _connectivity;
   final Dio _pingDio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 5),
@@ -21,6 +21,19 @@ class ConnectivityService extends ChangeNotifier {
   ));
   StreamSubscription<List<ConnectivityResult>>? _subscription;
   Timer? _recheckDebounce;
+
+  /// Startup, a network flip and the retry below can all ask at once, and two
+  /// probes would each open a connection and each read the verdict from before
+  /// either answered.
+  Future<void>? _inFlightProbe;
+
+  /// An unreachable verdict sends every browse call to the downloads catalog,
+  /// and nothing else asks again until the network flips, so the verdict is
+  /// re-checked on a growing delay for as long as it stands.
+  Timer? _retryTimer;
+  int _retryAttempt = 0;
+  final Duration _retryBase;
+  static const _retryCap = Duration(seconds: 30);
 
   bool _isOnline = true;
   bool get isOnline => _isOnline;
@@ -38,7 +51,11 @@ class ConnectivityService extends ChangeNotifier {
   /// Set when a sync was skipped because the app was backgrounded.
   bool _pendingSync = false;
 
-  ConnectivityService() {
+  ConnectivityService({
+    @visibleForTesting Connectivity? connectivity,
+    @visibleForTesting Duration retryBase = const Duration(seconds: 5),
+  }) : _connectivity = connectivity ?? Connectivity(),
+       _retryBase = retryBase {
     configureServerDio(_pingDio);
     _pingDio.interceptors.add(redirectInterceptor(_pingDio));
   }
@@ -84,6 +101,7 @@ class ConnectivityService extends ChangeNotifier {
     _isOnline = results.any((r) => r != ConnectivityResult.none);
 
     if (!_isOnline) {
+      _retryTimer?.cancel();
       if (wasOnline) {
         _serverReachable = false;
         notifyListeners();
@@ -167,16 +185,48 @@ class ConnectivityService extends ChangeNotifier {
         getIt<PlaybackManager>().state.isPlaying;
   }
 
-  Future<void> _checkServerReachability() async {
+  Future<void> _checkServerReachability() => _inFlightProbe ??= _probeServer()
+      .whenComplete(() => _inFlightProbe = null);
+
+  Future<void> _probeServer() async {
     if (!GetIt.instance.isRegistered<MediaServerClient>()) return;
     final client = GetIt.instance<MediaServerClient>();
+    final wasReachable = _serverReachable;
     try {
       await _pingDio.get('${client.baseUrl}/System/Ping');
       _serverReachable = true;
-    } catch (_) {
+    } catch (e) {
       _serverReachable = false;
+      if (wasReachable) {
+        ServerLog.network(
+          'Server marked unreachable, the probe failed',
+          level: ServerLogLevel.warning,
+          error: e,
+        );
+      }
+    }
+    if (_serverReachable) {
+      if (!wasReachable) ServerLog.network('Server reachable again');
+      _retryAttempt = 0;
+      _retryTimer?.cancel();
+      _retryTimer = null;
+    } else if (_isOnline) {
+      _scheduleRetry();
     }
     notifyListeners();
+  }
+
+  void _scheduleRetry() {
+    _retryTimer?.cancel();
+    final delay = _retryBase * (1 << _retryAttempt);
+    _retryTimer = Timer(delay < _retryCap ? delay : _retryCap, () {
+      _retryTimer = null;
+      if (!_isOnline || _serverReachable) return;
+      if (_retryAttempt < 6) _retryAttempt++;
+      _checkServerReachability().then((_) {
+        if (_serverReachable) _triggerSync();
+      });
+    });
   }
 
   /// Resolves true as soon as the device reports online, or false after
@@ -207,6 +257,7 @@ class ConnectivityService extends ChangeNotifier {
     if (_isOnline) {
       await _checkServerReachability();
     } else {
+      _retryTimer?.cancel();
       _serverReachable = false;
       notifyListeners();
     }
@@ -216,6 +267,7 @@ class ConnectivityService extends ChangeNotifier {
   void dispose() {
     _subscription?.cancel();
     _recheckDebounce?.cancel();
+    _retryTimer?.cancel();
     super.dispose();
   }
 }

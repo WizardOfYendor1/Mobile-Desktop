@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
 import 'package:server_core/server_core.dart';
 import 'package:test/test.dart';
 
@@ -79,34 +78,85 @@ void main() {
     });
   });
 
-  // The socket used to outlive the request that wanted it, holding one of the
-  // fifteen per host slots long after Dio had given up, so a stalled server
-  // filled the pool and every retry refilled it.
-  group('configureServerDio socket timeout', () {
-    Duration socketTimeoutFor(Duration? dioTimeout) {
-      final dio = Dio(BaseOptions(connectTimeout: dioTimeout));
-      configureServerDio(dio);
-      final adapter = dio.httpClientAdapter as IOHttpClientAdapter;
-      return adapter.createHttpClient!().connectionTimeout!;
-    }
+  // A screen that asks for more at once than the slots hold has to queue, and
+  // none of that wait may count against the connect timeout.
+  group('slot limited requests', () {
+    late HttpServer server;
+    const slowResponse = Duration(milliseconds: 300);
+    const moreRequestsThanSlots = 60;
+    var inFlight = 0;
+    var mostInFlight = 0;
+    var failEveryRequest = false;
 
-    test('outlives the caller timeout by a small margin', () {
-      expect(
-        socketTimeoutFor(const Duration(seconds: 8)),
-        const Duration(seconds: 10),
-      );
-      expect(
-        socketTimeoutFor(const Duration(seconds: 30)),
-        const Duration(seconds: 32),
-      );
-      expect(
-        socketTimeoutFor(const Duration(seconds: 15)),
-        const Duration(seconds: 17),
-      );
+    setUp(() async {
+      inFlight = 0;
+      mostInFlight = 0;
+      failEveryRequest = false;
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      server.listen((request) async {
+        inFlight++;
+        if (inFlight > mostInFlight) mostInFlight = inFlight;
+        await Future<void>.delayed(slowResponse);
+        inFlight--;
+        request.response.statusCode = failEveryRequest
+            ? HttpStatus.internalServerError
+            : HttpStatus.ok;
+        await request.response.close();
+      });
     });
 
-    test('a caller with no timeout of its own still gets a bound', () {
-      expect(socketTimeoutFor(null), const Duration(seconds: 32));
+    tearDown(() => server.close(force: true));
+
+    Dio dioWith(Duration connectTimeout) {
+      final dio = Dio(
+        BaseOptions(
+          baseUrl: 'http://${server.address.address}:${server.port}',
+          connectTimeout: connectTimeout,
+        ),
+      );
+      configureServerDio(dio);
+      return dio;
+    }
+
+    Future<List<Object?>> fireConcurrently(Dio dio) => Future.wait(
+      List.generate(
+        moreRequestsThanSlots,
+        (i) => dio
+            .get<void>('/$i')
+            .then<Object?>((r) => r)
+            .catchError((Object e) => e),
+      ),
+    );
+
+    test('queueing is never billed to the connect timeout', () async {
+      final results = await fireConcurrently(
+        dioWith(const Duration(milliseconds: 400)),
+      );
+      expect(results.whereType<DioException>(), isEmpty);
+    });
+
+    test('holds the rest back once the slots are taken', () async {
+      await fireConcurrently(dioWith(const Duration(seconds: 30)));
+      // A browser allows itself six per host without multiplexing, and going
+      // past that is what a proxy reads as a flood.
+      expect(mostInFlight, lessThanOrEqualTo(6));
+      expect(mostInFlight, greaterThan(1));
+    });
+
+    test('hands a slot back when the request fails', () async {
+      final dio = dioWith(const Duration(seconds: 30));
+      failEveryRequest = true;
+      final failed = await fireConcurrently(dio);
+      expect(
+        failed.whereType<DioException>(),
+        hasLength(moreRequestsThanSlots),
+      );
+
+      failEveryRequest = false;
+      final response = await dio
+          .get<void>('/after')
+          .timeout(const Duration(seconds: 5));
+      expect(response.statusCode, HttpStatus.ok);
     });
   });
 }

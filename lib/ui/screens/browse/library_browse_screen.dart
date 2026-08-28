@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import '../../widgets/bounded_network_image.dart';
 import '../../widgets/offline_aware_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -502,15 +503,22 @@ class _LibraryBrowseScreenState extends State<LibraryBrowseScreen>
     return tags[imageType] as String?;
   }
 
-  String? _imageUrl(AggregatedItem item) {
+  /// Width to ask the server for, covering [cellWidth] at this display's
+  /// density. Rounded up in coarse steps so the server keeps serving the sizes
+  /// it has already encoded rather than a new one per device.
+  int _requestWidthFor(double cellWidth, int step) {
+    final pixels = BoundedNetworkImage.physicalPixels(
+      cellWidth,
+      MediaQuery.devicePixelRatioOf(context),
+    );
+    return (pixels / step).ceil() * step;
+  }
+
+  String? _imageUrl(AggregatedItem item, {double? cellWidth}) {
     final api = _vm.imageApi;
-    final baseCardWidth = _cardWidth();
-    final posterMaxW = baseCardWidth < 260
-        ? 420
-        : (baseCardWidth < 340 ? 560 : 700);
-    final landscapeMaxW = baseCardWidth < 260
-        ? 720
-        : (baseCardWidth < 340 ? 960 : 1200);
+    final width = cellWidth ?? _cardWidth();
+    final posterMaxW = _requestWidthFor(width, 140);
+    final landscapeMaxW = _requestWidthFor(width, 240);
 
     final itemThumbTag = _tagForType(item, 'Thumb');
     final itemBannerTag = _tagForType(item, 'Banner');
@@ -1356,7 +1364,7 @@ class _LibraryBrowseScreenState extends State<LibraryBrowseScreen>
       return MediaCard(
         title: item.name,
         subtitle: _cardSubtitle(item),
-        imageUrl: _imageUrl(item),
+        imageUrl: _imageUrl(item, cellWidth: cellWidth),
         width: double.infinity,
         aspectRatio: itemAspectRatio,
         isBanner: _vm.imageType == ImageType.banner,
@@ -1600,7 +1608,7 @@ class _LibraryBrowseScreenState extends State<LibraryBrowseScreen>
                       return MediaCard(
                         title: item.name,
                         subtitle: _cardSubtitle(item),
-                        imageUrl: _imageUrl(item),
+                        imageUrl: _imageUrl(item, cellWidth: actualCellWidth),
                         width: double.infinity,
                         aspectRatio: _itemAspectRatio(item),
                         focusColor: focusColor,

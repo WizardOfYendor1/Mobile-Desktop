@@ -13,6 +13,7 @@ import 'api/emby_live_tv_api.dart';
 import 'api/emby_instant_mix_api.dart';
 import 'api/emby_display_preferences_api.dart';
 import 'api/emby_users_api.dart';
+import 'api/emby_trickplay_api.dart';
 
 class EmbyMediaServerClient extends MediaServerClient {
   final Dio _dio;
@@ -26,11 +27,8 @@ class EmbyMediaServerClient extends MediaServerClient {
   }) : _dio = Dio(BaseOptions(
          baseUrl: baseUrl,
          followRedirects: false,
-         // Connecting is just the handshake, which a reachable server clears
-         // in well under a second. Thirty seconds meant every request to an
-         // unreachable LAN address held the app that long off network. The
-         // reachability probe judges the server at five, so anything it
-         // passes clears this too.
+         // Only the connect. Waiting for a free slot happens before this
+         // starts, so it can stay short enough to give up on a hung host.
          connectTimeout: const Duration(seconds: 8),
          receiveTimeout: const Duration(minutes: 3),
        )) {
@@ -100,6 +98,10 @@ class EmbyMediaServerClient extends MediaServerClient {
   @override
   late final ImageApi imageApi =
       EmbyImageApi(() => _baseUrl, () => _accessToken);
+
+  @override
+  late final TrickplayApi trickplayApi =
+      EmbyTrickplayApi(_dio, () => _baseUrl, () => _accessToken);
 
   @override
   late final SessionApi sessionApi = EmbySessionApi(_dio);

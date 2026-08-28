@@ -1274,6 +1274,12 @@ class AppLocalizationsSq extends AppLocalizations {
   String get downloadSubtitles => 'Shkarko titrat';
 
   @override
+  String get searchingSubtitles => 'Searching for subtitles…';
+
+  @override
+  String get downloadingSubtitle => 'Downloading subtitle…';
+
+  @override
   String get selectedSubtitleInvalid => 'Titra e zgjedhur është e pavlefshme.';
 
   @override
@@ -1443,6 +1449,20 @@ class AppLocalizationsSq extends AppLocalizations {
 
   @override
   String get perfectMatch => 'Ndeshje perfekte';
+
+  @override
+  String get aiTranslated => 'AI Translated';
+
+  @override
+  String get machineTranslated => 'Machine Translated';
+
+  @override
+  String get hearingImpaired => 'SDH';
+
+  @override
+  String framerateFps(String rate) {
+    return '$rate fps';
+  }
 
   @override
   String channelsCount(int count) {
@@ -4179,6 +4199,24 @@ class AppLocalizationsSq extends AppLocalizations {
 
   @override
   String get seerrRequestedStatus => 'Kërkuar';
+
+  @override
+  String get seerrDownloading => 'Downloading';
+
+  @override
+  String seerrDownloadingSize(String done, String total) {
+    return 'Downloading · $done / $total';
+  }
+
+  @override
+  String seerrDownloadedOfTotal(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String seerrPercentValue(int percent) {
+    return '$percent%';
+  }
 
   @override
   String seerrDownloadingPercent(int percent) {

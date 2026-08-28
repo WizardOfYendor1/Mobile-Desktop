@@ -1701,6 +1701,14 @@
     "description": "Subtitle for the download subtitles option"
   },
   "downloadSubtitles": "Download Subtitles",
+  "searchingSubtitles": "Searching for subtitles\u2026",
+  "@searchingSubtitles": {
+    "description": "Shown while a remote subtitle search is running"
+  },
+  "downloadingSubtitle": "Downloading subtitle\u2026",
+  "@downloadingSubtitle": {
+    "description": "Shown while a chosen subtitle is downloaded and the server is picking it up"
+  },
   "@downloadSubtitles": {
     "description": "Dialog title for downloading remote subtitles"
   },
@@ -1957,6 +1965,27 @@
   "perfectMatch": "Perfect match",
   "@perfectMatch": {
     "description": "Label for a subtitle that is a hash match"
+  },
+  "aiTranslated": "AI Translated",
+  "@aiTranslated": {
+    "description": "Label for a remote subtitle the provider marked as AI translated"
+  },
+  "machineTranslated": "Machine Translated",
+  "@machineTranslated": {
+    "description": "Label for a remote subtitle the provider marked as machine translated"
+  },
+  "hearingImpaired": "SDH",
+  "@hearingImpaired": {
+    "description": "Label for a remote subtitle marked as hearing impaired"
+  },
+  "framerateFps": "{rate} fps",
+  "@framerateFps": {
+    "description": "Framerate of a remote subtitle, shown in its detail line",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
   },
   "channelsCount": "{count}ch",
   "@channelsCount": {
@@ -5601,6 +5630,43 @@
   "seerrRequestedStatus": "Requested",
   "@seerrRequestedStatus": {
     "description": "Seerr media status when item has been requested"
+  },
+  "seerrDownloading": "Downloading",
+  "@seerrDownloading": {
+    "description": "Seerr download bar label when the server reports no usable file sizes"
+  },
+  "seerrDownloadingSize": "Downloading · {done} / {total}",
+  "@seerrDownloadingSize": {
+    "description": "Label above the Seerr download progress bar when byte counts are known",
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "seerrDownloadedOfTotal": "{done} / {total}",
+  "@seerrDownloadedOfTotal": {
+    "description": "Short form of the Seerr download label, used when the card is too narrow for the verb",
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "seerrPercentValue": "{percent}%",
+  "@seerrPercentValue": {
+    "description": "Standalone percentage shown at the end of the Seerr download bar label",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
   },
   "seerrDownloadingPercent": "Downloading · {percent}%",
   "@seerrDownloadingPercent": {

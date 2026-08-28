@@ -69,4 +69,27 @@ void main() {
     verify(() => gamesApi.getSystems('retro')).called(1);
     verifyNever(() => gamesApi.getGames(any(), system: any(named: 'system')));
   });
+
+  // Web opens a library with go, so nothing is left to pop and the bar drops
+  // the back button it infers. Pumping as home puts the screen in that state.
+  testWidgets('offers a way back even with nothing to pop', (tester) async {
+    when(() => gamesApi.getSystems('retro')).thenAnswer((_) async => const []);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.buildTheme(ThemeRegistry.active),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const GameLibraryScreen(libraryId: 'retro'),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      Navigator.of(tester.element(find.byType(GameLibraryScreen))).canPop(),
+      isFalse,
+    );
+    expect(find.byType(BackButton), findsOneWidget);
+  });
 }

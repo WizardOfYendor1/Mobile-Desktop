@@ -228,6 +228,7 @@ class _FakeNativeGamePlayer implements NativeGamePlayer {
   Future<void> resume() async {
     resumeCount++;
   }
+
   @override
   Future<void> restart() async {}
   @override
@@ -249,6 +250,7 @@ class _FakeNativeGamePlayer implements NativeGamePlayer {
   Future<List<GameCoreOption>> getOptions() async => const [];
   @override
   Future<void> setOption(String id, String value) async {}
+
   /// What the loaded game currently has set. Cores publish per-game options
   /// (FBNeo's dipswitches are per driver), so this is deliberately NOT every
   /// option stored for the core.
@@ -370,7 +372,10 @@ void main() {
 
     test('a keyboard deliberately pinned to Player 1 is silent', () {
       expect(playerOneWarningFor([keyboardOnPlayerOne]), isNull);
-      expect(playerOneWarningFor([keyboardOnPlayerOne, playerTwoGamepad]), isNull);
+      expect(
+        playerOneWarningFor([keyboardOnPlayerOne, playerTwoGamepad]),
+        isNull,
+      );
     });
 
     test('a remote with no gamepad to suggest is silent', () {
@@ -378,25 +383,28 @@ void main() {
       expect(playerOneWarningFor(const []), isNull);
     });
 
-    test('gamepads pinned past Player 1 warn, even with a remote connected', () {
-      // The reported bug: pinning pads to Players 2-4 left port 0 without a
-      // gamepad, and the connected remote silently satisfied the old check.
-      expect(
-        playerOneWarningFor([playerTwoGamepad, remote]),
-        PlayerOneWarning.gamepadNotAssigned,
-      );
-      expect(
-        playerOneWarningFor([playerTwoGamepad]),
-        PlayerOneWarning.gamepadNotAssigned,
-      );
-    });
+    test(
+      'gamepads pinned past Player 1 warn, even with a remote connected',
+      () {
+        // The reported bug: pinning pads to Players 2-4 left port 0 without a
+        // gamepad, and the connected remote silently satisfied the old check.
+        expect(
+          playerOneWarningFor([playerTwoGamepad, remote]),
+          PlayerOneWarning.gamepadNotAssigned,
+        );
+        expect(
+          playerOneWarningFor([playerTwoGamepad]),
+          PlayerOneWarning.gamepadNotAssigned,
+        );
+      },
+    );
 
     test("Player 1's pinned pad missing while another is connected warns", () {
       expect(
-        playerOneWarningFor(
-          [playerTwoGamepad, remote],
-          pinnedPlayerOneProfileId: 'gone',
-        ),
+        playerOneWarningFor([
+          playerTwoGamepad,
+          remote,
+        ], pinnedPlayerOneProfileId: 'gone'),
         PlayerOneWarning.assignedControllerMissing,
       );
     });
@@ -413,12 +421,15 @@ void main() {
   // while the mapping stores them as BUTTONS (codes 1006/1007). These cover the
   // resolution both paths share, which is what stopped an analog trigger on
   // desktop from ever honouring its binding.
-  test('an unbound trigger resolves to no binding, so the caller keeps L2/R2', () {
-    const empty = NativeControllerMapping.empty;
-    expect(desktopBoundBit(empty, GamepadButton.leftTrigger), isNull);
-    expect(desktopBoundBit(empty, GamepadButton.rightTrigger), isNull);
-    expect(desktopBoundBit(null, GamepadButton.leftTrigger), isNull);
-  });
+  test(
+    'an unbound trigger resolves to no binding, so the caller keeps L2/R2',
+    () {
+      const empty = NativeControllerMapping.empty;
+      expect(desktopBoundBit(empty, GamepadButton.leftTrigger), isNull);
+      expect(desktopBoundBit(empty, GamepadButton.rightTrigger), isNull);
+      expect(desktopBoundBit(null, GamepadButton.leftTrigger), isNull);
+    },
+  );
 
   test('a rebound trigger resolves to the button it was bound to', () {
     final mapping = NativeControllerMapping(const {
@@ -436,7 +447,10 @@ void main() {
     );
     // Not the hardwired L2/R2 bits the axis path used to send regardless.
     expect(desktopBoundBit(mapping, GamepadButton.leftTrigger), isNot(1 << 12));
-    expect(desktopBoundBit(mapping, GamepadButton.rightTrigger), isNot(1 << 13));
+    expect(
+      desktopBoundBit(mapping, GamepadButton.rightTrigger),
+      isNot(1 << 13),
+    );
   });
 
   test('a default stops firing once another key is bound to its button', () {
@@ -456,21 +470,28 @@ void main() {
   test('with no bindings every default is left alone', () {
     expect(desktopBitForButton(null, GamepadButton.a, 1 << 0), 1 << 0);
     expect(
-      desktopBitForButton(NativeControllerMapping.empty, GamepadButton.a, 1 << 0),
+      desktopBitForButton(
+        NativeControllerMapping.empty,
+        GamepadButton.a,
+        1 << 0,
+      ),
       1 << 0,
     );
   });
 
-  test('a rebound face button still resolves, and one binding does not move another', () {
-    final mapping = NativeControllerMapping(const {1000: RetroPadButton.y});
+  test(
+    'a rebound face button still resolves, and one binding does not move another',
+    () {
+      final mapping = NativeControllerMapping(const {1000: RetroPadButton.y});
 
-    expect(
-      desktopBoundBit(mapping, GamepadButton.a),
-      1 << RetroPadButton.y.retroPadIndex,
-    );
-    expect(desktopBoundBit(mapping, GamepadButton.b), isNull);
-    expect(desktopBoundBit(mapping, GamepadButton.leftTrigger), isNull);
-  });
+      expect(
+        desktopBoundBit(mapping, GamepadButton.a),
+        1 << RetroPadButton.y.retroPadIndex,
+      );
+      expect(desktopBoundBit(mapping, GamepadButton.b), isNull);
+      expect(desktopBoundBit(mapping, GamepadButton.leftTrigger), isNull);
+    },
+  );
 
   testWidgets(
     'back button escapes the error screen after a mid-game fatal error',
@@ -562,109 +583,105 @@ void main() {
     },
   );
 
-  testWidgets(
-    'Save & exit keeps the game running when the save fails',
-    (tester) async {
-      // macOS bundles its cores, so _prepare() skips the download-manager/ABI
-      // path entirely and goes straight from a resolved GamesApi through to
-      // _player.load() -- the shortest real route to a live texture. Reset in
-      // a finally block rather than addTearDown/tearDown: the binding's
-      // "foundation debug var" invariant check runs directly after this test
-      // body returns, before any package:test tearDown hook fires.
-      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
-      try {
-        final observer = _PopCountingObserver();
-        final router = GoRouter(
-          initialLocation: '/home',
-          observers: [observer],
-          routes: [
-            GoRoute(
-              path: '/home',
-              builder: (context, state) => const Scaffold(body: Text('home')),
-            ),
-            GoRoute(
-              path: '/game',
-              builder: (context, state) => NativeGamePlayerScreen(
-                libraryId: 'lib1',
-                gameId: 'game1',
-                core: 'snes',
-                startFresh: true,
-                player: player,
-              ),
-            ),
-          ],
-        );
-
-        await tester.pumpWidget(
-          MaterialApp.router(
-            routerConfig: router,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
+  testWidgets('Save & exit keeps the game running when the save fails', (
+    tester,
+  ) async {
+    // macOS bundles its cores, so _prepare() skips the download-manager/ABI
+    // path entirely and goes straight from a resolved GamesApi through to
+    // _player.load() -- the shortest real route to a live texture. Reset in
+    // a finally block rather than addTearDown/tearDown: the binding's
+    // "foundation debug var" invariant check runs directly after this test
+    // body returns, before any package:test tearDown hook fires.
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    try {
+      final observer = _PopCountingObserver();
+      final router = GoRouter(
+        initialLocation: '/home',
+        observers: [observer],
+        routes: [
+          GoRoute(
+            path: '/home',
+            builder: (context, state) => const Scaffold(body: Text('home')),
           ),
+          GoRoute(
+            path: '/game',
+            builder: (context, state) => NativeGamePlayerScreen(
+              libraryId: 'lib1',
+              gameId: 'game1',
+              core: 'snes',
+              startFresh: true,
+              player: player,
+            ),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      router.push('/game');
+      await tester.pump();
+      // Not pumpAndSettle(): the loading screen's CircularProgressIndicator
+      // animates indefinitely, so it never "settles" on its own. _prepare()
+      // also does real (temp-dir-backed) file IO, which completes on the
+      // real event loop rather than flutter_test's fake clock -- runAsync()
+      // lets it actually progress between pumps that pick up the resulting
+      // setState calls, and the explicit duration on pump() lets the
+      // Cupertino-style route transition (macOS) finish too.
+      for (var i = 0; i < 60 && find.byType(Texture).evaluate().isEmpty; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
         );
-        await tester.pumpAndSettle();
-
-        router.push('/game');
-        await tester.pump();
-        // Not pumpAndSettle(): the loading screen's CircularProgressIndicator
-        // animates indefinitely, so it never "settles" on its own. _prepare()
-        // also does real (temp-dir-backed) file IO, which completes on the
-        // real event loop rather than flutter_test's fake clock -- runAsync()
-        // lets it actually progress between pumps that pick up the resulting
-        // setState calls, and the explicit duration on pump() lets the
-        // Cupertino-style route transition (macOS) finish too.
-        for (
-          var i = 0;
-          i < 60 && find.byType(Texture).evaluate().isEmpty;
-          i++
-        ) {
-          await tester.runAsync(
-            () => Future<void>.delayed(const Duration(milliseconds: 20)),
-          );
-          await tester.pump(const Duration(milliseconds: 20));
-        }
-        expect(find.byType(NativeGamePlayerScreen), findsOneWidget);
-
-        // Reached a live-texture state through the real _prepare() flow
-        // (backed by the fake GamesApi/player above). Now fail the session
-        // the way a core crash does.
-        expect(find.byType(Texture), findsOneWidget);
-
-        // Open the in-game overlay the way the Menu button does.
-        player.emitMenuPressed();
-        await tester.pumpAndSettle();
-
-        // Exit sits below the fold in the action list at the test window size.
-        await tester.scrollUntilVisible(
-          find.text('Exit'),
-          200,
-          scrollable: find.byType(Scrollable).last,
-        );
-        await tester.pumpAndSettle();
-        expect(find.text('Exit'), findsOneWidget);
-
-        await tester.tap(find.text('Exit'));
-        await tester.pumpAndSettle();
-        expect(find.text('Keep playing'), findsOneWidget);
-        expect(find.text('Save & exit'), findsOneWidget);
-
-        // The fake player's saveState() returns null, i.e. nothing was
-        // captured, so the save cannot have landed.
-        await tester.tap(find.text('Save & exit'));
-        await tester.pumpAndSettle();
-
-        expect(
-          observer.pops,
-          0,
-          reason: 'a failed save must not exit and discard the progress the '
-              'warning is about',
-        );
-        expect(find.byType(NativeGamePlayerScreen), findsOneWidget);
-      } finally {
-        debugDefaultTargetPlatformOverride = null;
+        await tester.pump(const Duration(milliseconds: 20));
       }
-    },
-  );
+      expect(find.byType(NativeGamePlayerScreen), findsOneWidget);
+
+      // Reached a live-texture state through the real _prepare() flow
+      // (backed by the fake GamesApi/player above). Now fail the session
+      // the way a core crash does.
+      expect(find.byType(Texture), findsOneWidget);
+
+      // Open the in-game overlay the way the Menu button does.
+      player.emitMenuPressed();
+      await tester.pumpAndSettle();
+
+      // Exit sits below the fold in the action list at the test window size.
+      await tester.scrollUntilVisible(
+        find.text('Exit'),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Exit'), findsOneWidget);
+
+      await tester.tap(find.text('Exit'));
+      await tester.pumpAndSettle();
+      expect(find.text('Keep playing'), findsOneWidget);
+      expect(find.text('Save & exit'), findsOneWidget);
+
+      // The fake player's saveState() returns null, i.e. nothing was
+      // captured, so the save cannot have landed.
+      await tester.tap(find.text('Save & exit'));
+      await tester.pumpAndSettle();
+
+      expect(
+        observer.pops,
+        0,
+        reason:
+            'a failed save must not exit and discard the progress the '
+            'warning is about',
+      );
+      expect(find.byType(NativeGamePlayerScreen), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
+  });
 
   testWidgets(
     'exiting one game keeps another game\'s options for the same core',
@@ -770,7 +787,8 @@ void main() {
     try {
       final coreId = libretroCoreId('snes')!;
       gamesApi.saves['moonfin-native-$coreId'] = 'lives=3'.codeUnits;
-      gamesApi.saves['moonfin-native-$coreId-game1-device-1'] = 'lives=5'.codeUnits;
+      gamesApi.saves['moonfin-native-$coreId-game1-device-1'] =
+          'lives=5'.codeUnits;
 
       final router = GoRouter(
         initialLocation: '/game',
@@ -1070,121 +1088,116 @@ void main() {
     },
   );
 
-  testWidgets(
-    'a press while confirming the controller-mapping exit drives the '
-    'confirmation instead of vanishing into the unmounted mapping screen',
-    (tester) async {
-      // The Player 1-vacant confirmation only exists on Android:
-      // _requestControllerMappingClose gates it behind PlatformDetection
-      // .isAndroid and reads live device state through AndroidGamepadChannel.
-      debugDefaultTargetPlatformOverride = TargetPlatform.android;
-      const gamepadChannel = MethodChannel('org.moonfin.androidtv/gamepad');
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-          .setMockMethodCallHandler(gamepadChannel, (call) async {
-        if (call.method == 'getNativeGamepadDevices') {
-          // One connected pad, but not on port 0: nothing satisfies
-          // hasConnectedPlayerOneInput, so closing the mapping screen must
-          // ask for confirmation instead of leaving silently.
-          return [
-            {'id': 'pad-1', 'name': 'Pad', 'supported': false},
-          ];
-        }
-        return null;
-      });
-      try {
-        final coreId = libretroCoreId('snes')!;
-        final coresDir = await coresDirectory();
-        final coreFile = File('${coresDir.path}/${coreFileName(coreId)}');
-        // Real filesystem work has to leave the fake-async zone: its
-        // completion is delivered by the real event loop, which the zone
-        // never runs, so awaiting it here directly hangs for ever.
-        await tester.runAsync(() async {
-          await coreFile.parent.create(recursive: true);
-          await coreFile.writeAsBytes([0]);
+  testWidgets('a press while confirming the controller-mapping exit drives the '
+      'confirmation instead of vanishing into the unmounted mapping screen', (
+    tester,
+  ) async {
+    // The Player 1-vacant confirmation only exists on Android:
+    // _requestControllerMappingClose gates it behind PlatformDetection
+    // .isAndroid and reads live device state through AndroidGamepadChannel.
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    const gamepadChannel = MethodChannel('org.moonfin.androidtv/gamepad');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(gamepadChannel, (call) async {
+          if (call.method == 'getNativeGamepadDevices') {
+            // One connected pad, but not on port 0: nothing satisfies
+            // hasConnectedPlayerOneInput, so closing the mapping screen must
+            // ask for confirmation instead of leaving silently.
+            return [
+              {'id': 'pad-1', 'name': 'Pad', 'supported': false},
+            ];
+          }
+          return null;
         });
+    try {
+      final coreId = libretroCoreId('snes')!;
+      final coresDir = await coresDirectory();
+      final coreFile = File('${coresDir.path}/${coreFileName(coreId)}');
+      // Real filesystem work has to leave the fake-async zone: its
+      // completion is delivered by the real event loop, which the zone
+      // never runs, so awaiting it here directly hangs for ever.
+      await tester.runAsync(() async {
+        await coreFile.parent.create(recursive: true);
+        await coreFile.writeAsBytes([0]);
+      });
 
-        final router = GoRouter(
-          initialLocation: '/game',
-          routes: [
-            GoRoute(
-              path: '/game',
-              builder: (context, state) => NativeGamePlayerScreen(
-                libraryId: 'lib1',
-                gameId: 'game1',
-                core: 'snes',
-                startFresh: true,
-                player: player,
-              ),
+      final router = GoRouter(
+        initialLocation: '/game',
+        routes: [
+          GoRoute(
+            path: '/game',
+            builder: (context, state) => NativeGamePlayerScreen(
+              libraryId: 'lib1',
+              gameId: 'game1',
+              core: 'snes',
+              startFresh: true,
+              player: player,
             ),
-          ],
-        );
-
-        await tester.pumpWidget(
-          MaterialApp.router(
-            routerConfig: router,
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
           ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      );
+      for (var i = 0; i < 60 && find.byType(Texture).evaluate().isEmpty; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)),
         );
-        for (
-          var i = 0;
-          i < 60 && find.byType(Texture).evaluate().isEmpty;
-          i++
-        ) {
-          await tester.runAsync(
-            () => Future<void>.delayed(const Duration(milliseconds: 20)),
-          );
-          await tester.pump(const Duration(milliseconds: 20));
-        }
-        expect(find.byType(Texture), findsOneWidget);
-
-        player.emitMenuPressed();
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
-        await tester.scrollUntilVisible(
-          find.text('Controller mapping'),
-          200,
-          scrollable: find.byType(Scrollable).last,
-        );
-        await tester.tap(find.text('Controller mapping'));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
-
-        // RetroPad index 8 (B / cancel) at the mapping list's top level asks
-        // to close, which kicks off the async Player 1 check.
-        player.emitButton(8, true);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
-
-        expect(find.text('Keep editing'), findsOneWidget);
-        expect(find.text('Leave with Player 1 vacant'), findsOneWidget);
-
-        // The regression under test: the mapping screen is unmounted while
-        // confirming (see _buildOverlayBody), so routing these presses to it
-        // would reach a null currentState and do nothing. They must instead
-        // fall through to _nav and drive the confirmation's own rows.
-        player.emitButton(5, true); // down: Keep editing -> Leave with...
-        await tester.pump();
-        player.emitButton(0, true); // confirm the highlighted row
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
-
-        expect(
-          find.text('Leave with Player 1 vacant'),
-          findsNothing,
-          reason: 'confirming must resolve the dialog, not leave it stranded',
-        );
-        expect(find.text('Resume'), findsOneWidget);
-        expect(
-          find.byType(Texture),
-          findsOneWidget,
-          reason: 'leaving the mapping screen must not end the session',
-        );
-      } finally {
-        debugDefaultTargetPlatformOverride = null;
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-            .setMockMethodCallHandler(gamepadChannel, null);
+        await tester.pump(const Duration(milliseconds: 20));
       }
-    },
-  );
+      expect(find.byType(Texture), findsOneWidget);
+
+      player.emitMenuPressed();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.scrollUntilVisible(
+        find.text('Controller mapping'),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(find.text('Controller mapping'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // RetroPad index 8 (B / cancel) at the mapping list's top level asks
+      // to close, which kicks off the async Player 1 check.
+      player.emitButton(8, true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Keep editing'), findsOneWidget);
+      expect(find.text('Leave with Player 1 vacant'), findsOneWidget);
+
+      // The regression under test: the mapping screen is unmounted while
+      // confirming (see _buildOverlayBody), so routing these presses to it
+      // would reach a null currentState and do nothing. They must instead
+      // fall through to _nav and drive the confirmation's own rows.
+      player.emitButton(5, true); // down: Keep editing -> Leave with...
+      await tester.pump();
+      player.emitButton(0, true); // confirm the highlighted row
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(
+        find.text('Leave with Player 1 vacant'),
+        findsNothing,
+        reason: 'confirming must resolve the dialog, not leave it stranded',
+      );
+      expect(find.text('Resume'), findsOneWidget);
+      expect(
+        find.byType(Texture),
+        findsOneWidget,
+        reason: 'leaving the mapping screen must not end the session',
+      );
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(gamepadChannel, null);
+    }
+  });
 }

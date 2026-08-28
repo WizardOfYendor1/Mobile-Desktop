@@ -1275,6 +1275,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get downloadSubtitles => 'Prenesi podnapise';
 
   @override
+  String get searchingSubtitles => 'Searching for subtitles…';
+
+  @override
+  String get downloadingSubtitle => 'Downloading subtitle…';
+
+  @override
   String get selectedSubtitleInvalid => 'Izbrani podnaslov je neveljaven.';
 
   @override
@@ -1450,6 +1456,20 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get perfectMatch => 'Popolno ujemanje';
+
+  @override
+  String get aiTranslated => 'AI Translated';
+
+  @override
+  String get machineTranslated => 'Machine Translated';
+
+  @override
+  String get hearingImpaired => 'SDH';
+
+  @override
+  String framerateFps(String rate) {
+    return '$rate fps';
+  }
 
   @override
   String channelsCount(int count) {
@@ -4172,6 +4192,24 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get seerrRequestedStatus => 'Zahtevano';
+
+  @override
+  String get seerrDownloading => 'Downloading';
+
+  @override
+  String seerrDownloadingSize(String done, String total) {
+    return 'Downloading · $done / $total';
+  }
+
+  @override
+  String seerrDownloadedOfTotal(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String seerrPercentValue(int percent) {
+    return '$percent%';
+  }
 
   @override
   String seerrDownloadingPercent(int percent) {

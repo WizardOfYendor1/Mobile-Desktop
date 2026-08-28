@@ -49,9 +49,9 @@ const _nextSeasonEpisodeFields =
     'Type,UserData,SeriesName,ParentIndexNumber,IndexNumber,SeriesId,SeasonId,'
     'MediaSources,MediaStreams,RunTimeTicks,Chapters';
 
-bool _isDolbyVisionResolution(StreamResolutionResult resolution) {
+bool _needsDolbyVisionFallback(StreamResolutionResult resolution) {
   for (final stream in resolution.mediaStreams) {
-    if (HdrStreamCapability.isDolbyVisionVideoStream(stream)) {
+    if (HdrStreamCapability.needsDolbyVisionFallback(stream)) {
       return true;
     }
   }
@@ -461,7 +461,7 @@ void registerPlaybackModule() {
       return true;
     }
 
-    if (!_isDolbyVisionResolution(resolution)) {
+    if (!_needsDolbyVisionFallback(resolution)) {
       return false;
     }
 

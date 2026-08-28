@@ -22,9 +22,12 @@ class InputModeTracker extends StatefulWidget {
   /// a TV box -- screen mirroring, or a USB mouse -- really is being used, and
   /// a widget that draws hover state has to know. [of] stays pinned to
   /// keyboard there so focus visuals can never vanish for a remote user.
+  ///
+  /// Kept in its own inherited widget, so a pointer arriving or leaving
+  /// rebuilds only those widgets and not every caller of [showFocusVisuals].
   static bool pointerIsLive(BuildContext context) =>
       context
-          .dependOnInheritedWidgetOfExactType<_InputModeProvider>()
+          .dependOnInheritedWidgetOfExactType<_PointerLiveProvider>()
           ?.pointerLive ??
       false;
 
@@ -111,8 +114,10 @@ class _InputModeTrackerState extends State<InputModeTracker> {
       onPointerSignal: _onPointer,
       child: _InputModeProvider(
         mode: _mode,
-        pointerLive: _pointerLive,
-        child: widget.child,
+        child: _PointerLiveProvider(
+          pointerLive: _pointerLive,
+          child: widget.child,
+        ),
       ),
     );
   }
@@ -120,14 +125,18 @@ class _InputModeTrackerState extends State<InputModeTracker> {
 
 class _InputModeProvider extends InheritedWidget {
   final InputMode mode;
-  final bool pointerLive;
-  const _InputModeProvider({
-    required this.mode,
-    required this.pointerLive,
-    required super.child,
-  });
+  const _InputModeProvider({required this.mode, required super.child});
 
   @override
   bool updateShouldNotify(covariant _InputModeProvider oldWidget) =>
-      oldWidget.mode != mode || oldWidget.pointerLive != pointerLive;
+      oldWidget.mode != mode;
+}
+
+class _PointerLiveProvider extends InheritedWidget {
+  final bool pointerLive;
+  const _PointerLiveProvider({required this.pointerLive, required super.child});
+
+  @override
+  bool updateShouldNotify(covariant _PointerLiveProvider oldWidget) =>
+      oldWidget.pointerLive != pointerLive;
 }

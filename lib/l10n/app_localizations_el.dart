@@ -1278,6 +1278,12 @@ class AppLocalizationsEl extends AppLocalizations {
   String get downloadSubtitles => 'Κατεβάστε υπότιτλους';
 
   @override
+  String get searchingSubtitles => 'Searching for subtitles…';
+
+  @override
+  String get downloadingSubtitle => 'Downloading subtitle…';
+
+  @override
   String get selectedSubtitleInvalid =>
       'Ο επιλεγμένος υπότιτλος δεν είναι έγκυρος.';
 
@@ -1451,6 +1457,20 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get perfectMatch => 'Τέλειο ταίρι';
+
+  @override
+  String get aiTranslated => 'AI Translated';
+
+  @override
+  String get machineTranslated => 'Machine Translated';
+
+  @override
+  String get hearingImpaired => 'SDH';
+
+  @override
+  String framerateFps(String rate) {
+    return '$rate fps';
+  }
 
   @override
   String channelsCount(int count) {
@@ -4193,6 +4213,24 @@ class AppLocalizationsEl extends AppLocalizations {
 
   @override
   String get seerrRequestedStatus => 'Ζητήθηκε';
+
+  @override
+  String get seerrDownloading => 'Downloading';
+
+  @override
+  String seerrDownloadingSize(String done, String total) {
+    return 'Downloading · $done / $total';
+  }
+
+  @override
+  String seerrDownloadedOfTotal(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String seerrPercentValue(int percent) {
+    return '$percent%';
+  }
 
   @override
   String seerrDownloadingPercent(int percent) {

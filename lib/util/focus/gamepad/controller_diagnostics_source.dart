@@ -55,7 +55,8 @@ abstract class ControllerDiagnosticsSource {
 /// Dart ever sees it, so there is no axis pair to classify as analog or
 /// digital on desktop. The analog/digital verdict is therefore an Android
 /// capability in practice; see the design's "No hat channel on desktop".
-class GamepadsControllerDiagnosticsSource implements ControllerDiagnosticsSource {
+class GamepadsControllerDiagnosticsSource
+    implements ControllerDiagnosticsSource {
   // ~30Hz, matching the design's "Cost" section. Button transitions bypass
   // this and are emitted immediately since they are rare.
   static const Duration _throttleInterval = Duration(milliseconds: 33);
@@ -184,7 +185,8 @@ class ControllerDiagnosticsFolder {
     final stick = _stickAxes[axis];
     if (stick != null) {
       final (id, isX) = stick;
-      _axisTrackers.putIfAbsent(_trackerKey(id, isX), AxisVerdictTracker.new)
+      _axisTrackers
+          .putIfAbsent(_trackerKey(id, isX), AxisVerdictTracker.new)
           .sample(value);
       final existing = _sticks[id];
       _sticks[id] = StickChannel(
@@ -255,7 +257,8 @@ class ControllerDiagnosticsFolder {
 /// for the channel plumbing (`ensureInstalled`, arm on [begin], disarm on
 /// [end]/[dispose]) -- monitor mode is the read-only sibling of capture mode,
 /// see the design doc's "Placement and lifecycle" invariants.
-class _AndroidControllerDiagnosticsSource implements ControllerDiagnosticsSource {
+class _AndroidControllerDiagnosticsSource
+    implements ControllerDiagnosticsSource {
   void Function(ControllerDiagnosticsSnapshot)? _onSnapshot;
   AndroidControllerDiagnosticsFolder? _folder;
 

@@ -70,7 +70,7 @@
             }
         }
     },
-    "whosWatching": "Wer schaut zu ?",
+    "whosWatching": "Wer schaut?",
     "@whosWatching": {
         "description": "Server user selection heading"
     },
@@ -99,7 +99,7 @@
     "@discoveredServers": {
         "description": "Section heading for auto-discovered local servers"
     },
-    "noneFound": "Keine Server automatisch gefunden",
+    "noneFound": "Es konnten keine Server automatisch gefunden werden",
     "@noneFound": {
         "description": "Shown when no servers are discovered on the network"
     },
@@ -156,7 +156,7 @@
     "@secureStorageUnavailable": {
         "description": "Dialog title when system keyring is inaccessible"
     },
-    "secureStorageUnavailableMessage": "Moonfin konnte nicht auf deinen System-Schlüsselbund zugreifen. Die Anmeldung kann fortgesetzt werden, aber die sichere Token-Speicherung ist möglicherweise nicht verfügbar, bis der Schlüsselbund entsperrt wird.",
+    "secureStorageUnavailableMessage": "Moonfin konnte nicht auf den Schlüsselbund Ihres Systems zugreifen. Sie können sich trotzdem anmelden, aber die sichere Speicherung des Anmeldetokens ist möglicherweise erst verfügbar, wenn der Schlüsselbund entsperrt wurde.",
     "@secureStorageUnavailableMessage": {
         "description": "Explanation when secure storage is not available"
     },
@@ -168,7 +168,7 @@
     "@settingsAppearanceTheme": {
         "description": "Title for the theme selection screen and theme settings entry"
     },
-    "settingsAppearanceThemeSubtitle": "Wechsel zwischen \"Moonfin\" und \"Neon Pulse\", ohne die App neu zu starten",
+    "settingsAppearanceThemeSubtitle": "Passe das Design vollständig an und wähle zwischen einer an Apple oder Material angelehnten Oberfläche.",
     "@settingsAppearanceThemeSubtitle": {
         "description": "Subtitle for the theme selection screen and theme settings entry"
     },
@@ -176,7 +176,7 @@
     "@themeMoonfin": {
         "description": "Display name for the Moonfin theme"
     },
-    "themeMoonfinSubtitle": "Aktueller Standard-Moonfin-Look",
+    "themeMoonfinSubtitle": "Das ursprüngliche und schlichte Moonfin-Design.",
     "@themeMoonfinSubtitle": {
         "description": "Preview description for the Moonfin theme"
     },
@@ -236,7 +236,7 @@
     "@noReachableAddress": {
         "description": "Shown when a discovered server has no usable address"
     },
-    "invalidServerExchangeResponse": "Ungültige Antwort vom Server-Austauschendpunkt",
+    "invalidServerExchangeResponse": "Der Server hat eine ungültige Antwort zurückgegeben",
     "@invalidServerExchangeResponse": {
         "description": "Error when server exchange returns invalid data"
     },
@@ -265,7 +265,7 @@
     "@noHomeRowsLoaded": {
         "description": "Heading when home screen has no rows to display"
     },
-    "noHomeRowsHint": "Versuche, die Seite neu zu laden, oder reduziere aktive Bereiche.",
+    "noHomeRowsHint": "Versuche, die Seite neu zu laden, oder verringere die Anzahl aktiver Bereiche.",
     "@noHomeRowsHint": {
         "description": "Hint text below the no-home-rows heading"
     },
@@ -548,7 +548,7 @@
     "@discoverAudiobooks": {
         "description": "Section title for audiobook discovery"
     },
-    "librivoxDescription": "Beliebte gemeinfreie Titel von LibriVox.",
+    "librivoxDescription": "Beliebte freie Hörbücher von LibriVox.",
     "@librivoxDescription": {
         "description": "Subtitle for audiobook discovery section"
     },
@@ -826,7 +826,7 @@
     "@noLibrivoxDescription": {
         "description": "Fallback when LibriVox title has no description"
     },
-    "readers": "Vorleser",
+    "readers": "Sprecher",
     "@readers": {
         "description": "Section header for LibriVox audiobook readers"
     },
@@ -1221,7 +1221,7 @@
     "@noTracksLoaded": {
         "description": "Message when no tracks are available"
     },
-    "noItemsLoaded": "{itemLabel} nicht geladen",
+    "noItemsLoaded": "Keine {itemLabel} für den Download geladen",
     "@noItemsLoaded": {
         "description": "Message when no items are loaded for download",
         "placeholders": {
@@ -6244,7 +6244,7 @@
     "@openLink": {
         "description": "Action label to open a URL externally"
     },
-    "scanWithYourPhone": "Scanne mit dem Mobiltelefon",
+    "scanWithYourPhone": "Scanne den QR-Code mit dem Smartphone",
     "@scanWithYourPhone": {
         "description": "Instruction shown above a QR code"
     },
@@ -7310,11 +7310,11 @@
     "whenFullscreen": "Im Vollbildmodus",
     "transcodingLimits": "Transkodierungsgrenzen",
     "settingsSupportMoonfinSubtitle": "Spenden Sie dem Entwickler einen Kaffee",
-    "interfaceStyle": "Oberflächen-Stil",
+    "interfaceStyle": "Darstellungsstil",
     "@interfaceStyle": {
         "description": "Label for the Automatic/Apple/Material interface style setting"
     },
-    "accountPreferences": "KONTO-PRÄFERENZEN",
+    "accountPreferences": "Kontopräferenzen",
     "@accountPreferences": {
         "description": "Section header for account preferences settings"
     },
@@ -7338,7 +7338,7 @@
     "@themeGlassSubtitle": {
         "description": "Preview description for the Glass theme"
     },
-    "interfaceStyleSubtitle": "\"Automatisch\" nutzt natives Aussehen auf Apple-Geräten. Wähle \"Apple-nativ\", um dieses zu erzwingen, oder \"Material\" für das Standardaussehen.",
+    "interfaceStyleSubtitle": "\"Automatisch\" passt sich an Ihr Gerät an. Wählen Sie Apple oder Material, um einen bestimmten Darstellungsstil festzulegen.",
     "@interfaceStyleSubtitle": {
         "description": "Explanation under the interface style setting"
     },
@@ -7346,7 +7346,7 @@
     "@interfaceStyleAutomatic": {
         "description": "Interface style option: follow the platform"
     },
-    "interfaceStyleApple": "Apple-nativ",
+    "interfaceStyleApple": "Apple",
     "@interfaceStyleApple": {
         "description": "Interface style option: Apple native look"
     },
@@ -7375,7 +7375,7 @@
     "@showTechnicalDetails": {
         "description": "Label for the detail screen setting to show stream/codec technical details"
     },
-    "recommendationSystemTmdb": "TMDb-Ähnlichkeit",
+    "recommendationSystemTmdb": "TMDb Ähnlichkeit",
     "@recommendationSystemTmdb": {
         "description": "Recommendation system option: TMDb Similarity"
     },
@@ -7387,19 +7387,19 @@
     "@expandedTabsSubtitle": {
         "description": "Explanation under the expanded tabs setting"
     },
-    "recommendationsApplyParentalRatingCap": "Begrenzung nach Altersfreigabe anwenden?",
+    "recommendationsApplyParentalRatingCap": "Altersfreigabe für Empfehlungen begrenzen?",
     "@recommendationsApplyParentalRatingCap": {
         "description": "Label for the toggle that controls whether similar suggestions are capped by target media parental rating"
     },
-    "customThemeTitle": "Benutzerdefiniertes Theme",
+    "customThemeTitle": "Benutzerdefiniertes Design",
     "@customThemeTitle": {
         "description": "Title for the custom theme settings section"
     },
-    "detailScreenStyle": "Stil der Detailseite",
+    "detailScreenStyle": "Layout der Mediendetails",
     "@detailScreenStyle": {
         "description": "Label for the media detail screen layout style setting"
     },
-    "detailScreenStyleSubtitle": "„Klassisch“ ist das ursprüngliche zentrierte Moonfin-Layout. „Modern“ ist ein responsives, filmisches Layout.",
+    "detailScreenStyleSubtitle": "„Klassisch“ ist das ursprüngliche zentrierte Moonfin-Layout.\n„Modern“ ist ein responsives, filmisches Layout.",
     "@detailScreenStyleSubtitle": {
         "description": "Explanation under the detail screen style setting"
     },
@@ -7411,7 +7411,7 @@
     "@detailScreenStyleModern": {
         "description": "Detail screen style option: the responsive cinematic layout"
     },
-    "showTechnicalDetailsSubtitle": "Codec-, Auflösungs- und Stream-Informationen in der Banner-Zusammenfassung anzeigen",
+    "showTechnicalDetailsSubtitle": "Codec-, Auflösungs- und Stream-Informationen in der Banner-Zusammenfassung anzeigen.",
     "@showTechnicalDetailsSubtitle": {
         "description": "Explanation under the show technical details setting"
     },
@@ -7419,23 +7419,23 @@
     "@recommendationSystem": {
         "description": "Label for the Recommendation System setting"
     },
-    "recommendationSystemSubtitle": "Den lokalen Bibliotheksalgorithmus „Moonfin empfiehlt“ oder die Online-Ähnlichkeitsmetriken von TMDb verwenden. Hinweis: Online-Empfehlungen erfordern die Seerr-Integration.",
+    "recommendationSystemSubtitle": "Verwenden Sie den lokalen Algorithmus „Moonfin Empfehlungen“ für Ihre Bibliothek oder die Online-Ähnlichkeitswerte von TMDb. Hinweis: Für Online-Empfehlungen ist eine Seerr-Integration erforderlich.",
     "@recommendationSystemSubtitle": {
         "description": "Explanation under the recommendation system setting"
     },
-    "recommendationSystemMoonfin": "Moonfin empfiehlt",
+    "recommendationSystemMoonfin": "Moonfin Empfehlungen",
     "@recommendationSystemMoonfin": {
         "description": "Recommendation system option: Moonfin Recommends"
     },
-    "recommendationsApplyParentalRatingCapSubtitle": "Vorschläge von „Moonfin empfiehlt“ nach Altersfreigabe der Zielmedien begrenzen",
+    "recommendationsApplyParentalRatingCapSubtitle": "Empfehlungen von Moonfin anhand der Altersfreigabe der empfohlenen Inhalte begrenzen",
     "@recommendationsApplyParentalRatingCapSubtitle": {
         "description": "Explanation under the parental rating cap setting toggle"
     },
-    "glassQuality": "Glass-Qualität",
+    "glassQuality": "Qualität des Glaseffekts",
     "@glassQuality": {
         "description": "Label for the glass rendering quality setting"
     },
-    "glassQualitySubtitle": "„Automatisch“ wählt den besten Glass-Effekt für dieses Gerät. „Voll“ erzwingt echte Unschärfe, „Reduziert“ nutzt ein leichtgewichtiges Glass, das GPU-Leistung spart.",
+    "glassQualitySubtitle": "\"Automatisch\" wählt den besten Glaseffekt für dieses Gerät. \"Voll\" verwendet starke Unschärfe, \"Verringert\" nutzt einen einfachen Glaseffekt und spart GPU-Leistung.",
     "@glassQualitySubtitle": {
         "description": "Explanation under the glass quality setting"
     },
@@ -7447,11 +7447,11 @@
     "@glassQualityFull": {
         "description": "Glass quality option: force real blur"
     },
-    "glassQualityReduced": "Reduziert",
+    "glassQualityReduced": "Verringert",
     "@glassQualityReduced": {
         "description": "Glass quality option: lightweight zero-blur glass"
     },
-    "customThemeSubtitle": "Benutzerdefinierte Themes verändern visuelle Elemente in ganz Moonfin. Wählen Sie eine dieser Optionen passend zu Ihrem Stil.",
+    "customThemeSubtitle": "Benutzerdefinierte Designs verändern das Erscheinungsbild von Moonfin. Wählen Sie die Option, die am besten zu Ihrem Stil passt.",
     "@customThemeSubtitle": {
         "description": "Description under custom themes section"
     },
@@ -9006,7 +9006,7 @@
     "@oledMode": {
         "description": "Label for the setting that deepens blacks and enriches artwork on OLED displays"
     },
-    "oledModeSubtle": "Subtil",
+    "oledModeSubtle": "Dezent",
     "@oledModeSubtle": {
         "description": "OLED Mode level that darkens surfaces gently and lightly enriches artwork"
     },
@@ -9026,7 +9026,7 @@
     "@scrollDirectionHorizontal": {
         "description": "Library scroll direction option: horizontal grid for ultrawide displays"
     },
-    "scrollToTop": "Scroll nach oben",
+    "scrollToTop": "Nach oben scrollen",
     "@scrollToTop": {
         "description": "Tooltip for the button that returns a scrolled list to the top"
     },
@@ -9068,7 +9068,7 @@
     "@cancelRequest4k": {
         "description": "Button/dialog title to cancel a 4K media request"
     },
-    "interfaceLayoutPhone": "Telefon",
+    "interfaceLayoutPhone": "Smartphone",
     "@interfaceLayoutPhone": {
         "description": "Interface layout option: phone layout"
     },
@@ -9220,11 +9220,11 @@
     "@shuffleAll": {
         "description": "Action button label for shuffling all tracks of an artist"
     },
-    "interfaceLayout": "Benutzeroberflächen Layout",
+    "interfaceLayout": "Layout der Benutzeroberfläche",
     "@interfaceLayout": {
         "description": "Setting to override which UI layout the app uses"
     },
-    "interfaceLayoutAutomatic": "automatisch",
+    "interfaceLayoutAutomatic": "Automatisch",
     "@interfaceLayoutAutomatic": {
         "description": "Interface layout option: detect from the device"
     },
@@ -9318,5 +9318,9 @@
         "description": "Details screen button label when the title is already on the Seerr watchlist"
     },
     "emulatorCoreUnavailable": "Auf diesem Gerät nicht verfügbar",
-    "sortOrder": "Sortierreihenfolge"
+    "sortOrder": "Sortierreihenfolge",
+    "interfaceLayoutSubtitle": "Überschreibt das automatisch erkannte Layout, wenn Ihr Gerät falsch erkannt wurde. Starten Sie Moonfin neu, damit die Änderungen wirksam werden.",
+    "@interfaceLayoutSubtitle": {
+        "description": "Subtitle for the interface layout setting"
+    }
 }

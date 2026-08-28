@@ -125,7 +125,11 @@ void main() {
       folder.fold(_axisEvent('0', GamepadAxis.leftTrigger, 0.75));
       folder.fold(_axisEvent('0', GamepadAxis.rightTrigger, 0.1));
 
-      final triggers = folder.snapshot().channels.whereType<TriggerChannel>().toList();
+      final triggers = folder
+          .snapshot()
+          .channels
+          .whereType<TriggerChannel>()
+          .toList();
       expect(triggers.length, 2);
       final l2 = triggers.firstWhere((t) => t.id == 'l2');
       final r2 = triggers.firstWhere((t) => t.id == 'r2');
@@ -137,7 +141,11 @@ void main() {
       final folder = ControllerDiagnosticsFolder('pad:0');
       folder.fold(_buttonEvent('0', GamepadButton.a, 1.0));
 
-      var buttons = folder.snapshot().channels.whereType<ButtonChannel>().toList();
+      var buttons = folder
+          .snapshot()
+          .channels
+          .whereType<ButtonChannel>()
+          .toList();
       expect(buttons.single.pressed, true);
       expect(buttons.single.rawName, 'a');
 
@@ -194,7 +202,9 @@ void main() {
       expect(changed, true);
       final channels = folder.snapshot().channels;
 
-      final sticks = {for (final s in channels.whereType<StickChannel>()) s.id: s};
+      final sticks = {
+        for (final s in channels.whereType<StickChannel>()) s.id: s,
+      };
       expect(sticks.keys.toSet(), {'left', 'right', 'hat'});
       expect(sticks['left']!.x, 0.5);
       expect(sticks['left']!.y, -0.25);
@@ -228,31 +238,44 @@ void main() {
       expect(sticks.any((s) => s.id == 'hat'), true);
     });
 
-    test('a button payload converts to a ButtonChannel with keyCode/keyName/pressed', () {
-      final folder = AndroidControllerDiagnosticsFolder('android-connection-2');
-      final changed = folder.foldButton({
-        'connectionId': 'android-connection-2',
-        'port': 1,
-        'keyCode': 96,
-        'keyName': 'KEYCODE_BUTTON_A',
-        'pressed': true,
-      });
+    test(
+      'a button payload converts to a ButtonChannel with keyCode/keyName/pressed',
+      () {
+        final folder = AndroidControllerDiagnosticsFolder(
+          'android-connection-2',
+        );
+        final changed = folder.foldButton({
+          'connectionId': 'android-connection-2',
+          'port': 1,
+          'keyCode': 96,
+          'keyName': 'KEYCODE_BUTTON_A',
+          'pressed': true,
+        });
 
-      expect(changed, true);
-      final buttons = folder.snapshot().channels.whereType<ButtonChannel>().toList();
-      expect(buttons.single.rawCode, 96);
-      expect(buttons.single.rawName, 'KEYCODE_BUTTON_A');
-      expect(buttons.single.pressed, true);
+        expect(changed, true);
+        final buttons = folder
+            .snapshot()
+            .channels
+            .whereType<ButtonChannel>()
+            .toList();
+        expect(buttons.single.rawCode, 96);
+        expect(buttons.single.rawName, 'KEYCODE_BUTTON_A');
+        expect(buttons.single.pressed, true);
 
-      folder.foldButton({
-        'connectionId': 'android-connection-2',
-        'keyCode': 96,
-        'keyName': 'KEYCODE_BUTTON_A',
-        'pressed': false,
-      });
-      final updated = folder.snapshot().channels.whereType<ButtonChannel>().toList();
-      expect(updated.single.pressed, false);
-    });
+        folder.foldButton({
+          'connectionId': 'android-connection-2',
+          'keyCode': 96,
+          'keyName': 'KEYCODE_BUTTON_A',
+          'pressed': false,
+        });
+        final updated = folder
+            .snapshot()
+            .channels
+            .whereType<ButtonChannel>()
+            .toList();
+        expect(updated.single.pressed, false);
+      },
+    );
 
     test('re-pressing a button moves it to the end, latest last', () {
       final folder = AndroidControllerDiagnosticsFolder('android-connection-1');
@@ -287,23 +310,28 @@ void main() {
       expect(pressedOrder, [97, 96]);
     });
 
-    test('an axes payload for a different connectionId than begun is ignored', () {
-      final folder = AndroidControllerDiagnosticsFolder('android-connection-1');
-      final changed = folder.foldAxes({
-        'connectionId': 'android-connection-9',
-        'lx': 0.5,
-        'ly': 0.0,
-        'rx': 0.0,
-        'ry': 0.0,
-        'hatX': 0.0,
-        'hatY': 0.0,
-        'l2': 0.0,
-        'r2': 0.0,
-      });
+    test(
+      'an axes payload for a different connectionId than begun is ignored',
+      () {
+        final folder = AndroidControllerDiagnosticsFolder(
+          'android-connection-1',
+        );
+        final changed = folder.foldAxes({
+          'connectionId': 'android-connection-9',
+          'lx': 0.5,
+          'ly': 0.0,
+          'rx': 0.0,
+          'ry': 0.0,
+          'hatX': 0.0,
+          'hatY': 0.0,
+          'l2': 0.0,
+          'r2': 0.0,
+        });
 
-      expect(changed, false);
-      expect(folder.snapshot().channels, isEmpty);
-    });
+        expect(changed, false);
+        expect(folder.snapshot().channels, isEmpty);
+      },
+    );
 
     test('a channel echoed unchanged alongside another axis moving never '
         'earns a DIGITAL verdict', () {
@@ -337,25 +365,29 @@ void main() {
       expect(sticks['right']!.verdict, DiagnosticVerdict.unknown);
       expect(sticks['hat']!.verdict, DiagnosticVerdict.unknown);
       final triggers = {
-        for (final t
-            in folder.snapshot().channels.whereType<TriggerChannel>())
+        for (final t in folder.snapshot().channels.whereType<TriggerChannel>())
           t.id: t,
       };
       expect(triggers['l2']!.verdict, DiagnosticVerdict.unknown);
       expect(triggers['r2']!.verdict, DiagnosticVerdict.unknown);
     });
 
-    test('a button payload for a different connectionId than begun is ignored', () {
-      final folder = AndroidControllerDiagnosticsFolder('android-connection-1');
-      final changed = folder.foldButton({
-        'connectionId': 'android-connection-9',
-        'keyCode': 96,
-        'keyName': 'KEYCODE_BUTTON_A',
-        'pressed': true,
-      });
+    test(
+      'a button payload for a different connectionId than begun is ignored',
+      () {
+        final folder = AndroidControllerDiagnosticsFolder(
+          'android-connection-1',
+        );
+        final changed = folder.foldButton({
+          'connectionId': 'android-connection-9',
+          'keyCode': 96,
+          'keyName': 'KEYCODE_BUTTON_A',
+          'pressed': true,
+        });
 
-      expect(changed, false);
-      expect(folder.snapshot().channels, isEmpty);
-    });
+        expect(changed, false);
+        expect(folder.snapshot().channels, isEmpty);
+      },
+    );
   });
 }

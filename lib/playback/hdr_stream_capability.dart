@@ -38,6 +38,24 @@ class HdrStreamCapability {
         codecDescriptor.contains('HDR10PLUS');
   }
 
+  /// Whether playing [stream] with its Dolby Vision metadata ignored loses
+  /// anything. A profile 8.1 base layer is plain HDR10, so on a device that
+  /// decodes and displays HDR10 there is nothing to fall back from.
+  static bool needsDolbyVisionFallback(Map<String, dynamic> stream) {
+    if (!isDolbyVisionVideoStream(stream)) return false;
+
+    final rangeType = _videoRangeTypeToken(stream);
+    final hdr10BaseLayer =
+        rangeType.contains('WITHHDR10') && !rangeType.contains('WITHEL');
+    if (!hdr10BaseLayer) return true;
+    if (!PlatformDetection.supportsHdr10) return true;
+
+    final codec = stream['Codec']?.toString().toLowerCase() ?? '';
+    return codec == 'av1'
+        ? !PlatformDetection.supportsAv1Hdr10
+        : !PlatformDetection.supportsHevcHdr10;
+  }
+
   static DolbyVisionRequiredProfile? requiredDolbyVisionProfile(
     Map<String, dynamic> stream,
   ) {

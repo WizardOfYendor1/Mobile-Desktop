@@ -46,6 +46,18 @@ class BoundedNetworkImage extends StatelessWidget {
     this.maxWidth = 1024,
   });
 
+  /// Server requests and decodes both stop scaling here, so a phone that
+  /// reports 3 asks for and decodes the same 2x image.
+  static const maxDevicePixelRatio = 2.0;
+
+  /// [logical] points as pixels on this display, rounded up so nothing painted
+  /// at this size is ever stretched. The size to request from the server and
+  /// the size to decode to are both taken from here.
+  static int physicalPixels(double logical, double devicePixelRatio) {
+    final dpr = devicePixelRatio.clamp(1.0, maxDevicePixelRatio);
+    return (logical * dpr).ceil();
+  }
+
   /// The decoded pixel width upstream uses for every bounded image: the painted
   /// width in physical pixels, clamped. Public so the game artwork widgets --
   /// which decode from bytes rather than a URL and so cannot use this widget
@@ -57,10 +69,10 @@ class BoundedNetworkImage extends StatelessWidget {
     int minWidth = 64,
     int maxWidth = 1024,
   }) {
-    return (layoutWidth * devicePixelRatio * scale).round().clamp(
-      minWidth,
-      maxWidth,
-    );
+    return physicalPixels(
+      layoutWidth * scale,
+      devicePixelRatio,
+    ).clamp(minWidth, maxWidth);
   }
 
   static Future<void> precache(

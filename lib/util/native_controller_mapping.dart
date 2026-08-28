@@ -81,9 +81,8 @@ enum StickSnapMode {
 
   final String wireName;
 
-  static StickSnapMode fromWireName(String? name) => values
-      .where((mode) => mode.wireName == name)
-      .firstOrNull ??
+  static StickSnapMode fromWireName(String? name) =>
+      values.where((mode) => mode.wireName == name).firstOrNull ??
       StickSnapMode.off;
 }
 
@@ -117,9 +116,7 @@ class NativeControllerMapping {
     controllerTypesByCore: Map.unmodifiable(
       Map<String, int>.from(controllerTypesByCore),
     ),
-    snapByGame: Map.unmodifiable(
-      Map<String, StickSnapMode>.from(snapByGame),
-    ),
+    snapByGame: Map.unmodifiable(Map<String, StickSnapMode>.from(snapByGame)),
   );
 
   factory NativeControllerMapping.fromJson(String json) {

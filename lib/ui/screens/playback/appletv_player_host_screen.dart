@@ -27,6 +27,8 @@ import '../../navigation/destinations.dart';
 import '../../../preference/preference_constants.dart';
 import '../../../preference/user_preferences.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../util/remote_subtitle_labels.dart';
+import '../../../util/subtitle_appearance_schedule.dart';
 import '../../../util/episode_playability.dart';
 import '../../../util/play_method_label.dart';
 import 'appletv_playback_prompt_controller.dart';
@@ -55,6 +57,10 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
   StreamSubscription<Duration>? _positionSub;
   UserPreferences? _prefsListened;
   String _lastTrickplayPrefs = '';
+  TrickplayInfo? _trickplayInfo;
+  String? _trickplayKey;
+  int _trickplayLoadGeneration = 0;
+  static const int _trickplayFrameWidth = 320;
   SyncPlayManager? _syncPlay;
   AppThemeController? _themeController;
   ScreensaverController? _screensaverController;
@@ -605,34 +611,57 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
     if (prefs.get(UserPreferences.trickPlayMode) == TrickplayMode.disabled) {
       return null;
     }
-    final raw = _rawDataForQueueItem(item);
     final itemId = _itemIdForQueueItem(item);
     final client = _clientForQueueItem(item);
-    if (raw == null || itemId == null || itemId.isEmpty || client == null) {
+    if (itemId == null || itemId.isEmpty || client == null) {
       return null;
     }
     final mediaSourceId = manager.currentResolution?.mediaSourceId;
-    final info = TrickplayInfo.fromItemData(raw, mediaSourceId: mediaSourceId);
+    final key = '$itemId|${mediaSourceId ?? ''}';
+    final info = key == _trickplayKey ? _trickplayInfo : null;
     if (info == null || !info.isValid) return null;
 
-    final runtimeTicks = raw['RunTimeTicks'] as int?;
-    final durationMs = runtimeTicks != null ? runtimeTicks ~/ 10000 : 0;
-    final msPerImage = info.interval * info.tilesPerImage;
-    var imageCount = durationMs > 0 ? (durationMs / msPerImage).ceil() + 1 : 16;
-    imageCount = imageCount.clamp(1, 128);
-
-    final urls = List<String>.generate(
-      imageCount,
-      (i) => client.imageApi.getTrickplayTileImageUrl(
-        itemId,
-        width: info.width,
-        index: i,
-        mediaSourceId: mediaSourceId,
-      ),
-    );
+    final List<String> urls;
+    final List<int> timestampsMs;
+    if (info.usesIndividualFrames) {
+      urls = info.frames
+          .map(
+            (frame) => client.trickplayApi!.getFrameImageUrl(
+              itemId,
+              width: info.width,
+              positionTicks: frame.positionTicks,
+              imageTag: frame.imageTag,
+              mediaSourceId: mediaSourceId,
+            ),
+          )
+          .toList(growable: false);
+      timestampsMs = info.frames
+          .map((frame) => frame.positionTicks ~/ 10000)
+          .toList(growable: false);
+    } else {
+      final raw = _rawDataForQueueItem(item);
+      final runtimeTicks = raw?['RunTimeTicks'] as int?;
+      final durationMs = runtimeTicks != null ? runtimeTicks ~/ 10000 : 0;
+      final msPerImage = info.interval * info.tilesPerImage;
+      var imageCount = durationMs > 0
+          ? (durationMs / msPerImage).ceil() + 1
+          : 16;
+      imageCount = imageCount.clamp(1, 128);
+      urls = List<String>.generate(
+        imageCount,
+        (i) => client.imageApi.getTrickplayTileImageUrl(
+          itemId,
+          width: info.width,
+          index: i,
+          mediaSourceId: mediaSourceId,
+        ),
+      );
+      timestampsMs = const [];
+    }
     final token = client.accessToken;
     return {
       'urls': urls,
+      if (timestampsMs.isNotEmpty) 'timestampsMs': timestampsMs,
       'headers': {
         if (token != null && token.isNotEmpty)
           'Authorization': 'MediaBrowser Token="$token"',
@@ -750,41 +779,6 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
         !isAudio;
   }
 
-  String _remoteSubtitleLanguage(
-    List<Map<String, dynamic>> subtitleStreams,
-    List<Map<String, dynamic>> audioStreams,
-  ) {
-    final preferred = GetIt.instance<UserPreferences>()
-        .get(UserPreferences.defaultSubtitleLanguage)
-        .trim()
-        .toLowerCase();
-    if (preferred.isNotEmpty && preferred != 'auto' && preferred != 'none') {
-      return preferred;
-    }
-    for (final stream in [...subtitleStreams, ...audioStreams]) {
-      final language = (stream['Language'] as String?)?.trim();
-      if (language != null && language.isNotEmpty) return language;
-    }
-    return 'eng';
-  }
-
-  String _remoteSubtitleOptionSubtitle(Map<String, dynamic> subtitle) {
-    final details = <String>[];
-    final language =
-        (subtitle['ThreeLetterISOLanguageName'] as String?)?.trim() ??
-        (subtitle['Language'] as String?)?.trim();
-    final provider = subtitle['ProviderName'] as String?;
-    final format = subtitle['Format'] as String?;
-    final rating = subtitle['CommunityRating'] as num?;
-    if (language != null && language.isNotEmpty) {
-      details.add(language.toUpperCase());
-    }
-    if (provider != null && provider.isNotEmpty) details.add(provider);
-    if (format != null && format.isNotEmpty) details.add(format.toUpperCase());
-    if (rating != null) details.add('${rating.toStringAsFixed(1)}*');
-    return details.join(' · ');
-  }
-
   void _searchRemoteSubtitles() {
     final manager = _manager;
     final backend = _backend;
@@ -806,31 +800,56 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
         .where((s) => s['Type'] == 'Subtitle')
         .toList();
     final audioStreams = allStreams.where((s) => s['Type'] == 'Audio').toList();
-    final language = _remoteSubtitleLanguage(subtitleStreams, audioStreams);
+    final language = remoteSubtitleLanguage(subtitleStreams, audioStreams);
+    final l10n = AppLocalizations.of(context);
     () async {
-      var results = const <Map<String, dynamic>>[];
+      // The search alert is raised from here rather than from Swift so that a
+      // refused or failed search can end on the reason. Left to itself the
+      // native side could only fall through to "No Subtitles Found", which told
+      // the viewer the film had none when the truth was a rejected request.
+      await backend.showSubtitleProgress(l10n.searchingSubtitles);
+
+      List<Map<String, dynamic>> results;
       try {
         results = await client.itemsApi.searchRemoteSubtitles(
           item.id,
           language: language,
         );
-      } catch (_) {}
-      if (!mounted) return;
+      } catch (error) {
+        await backend.hideSubtitleProgress(
+          message: remoteSubtitleErrorMessage(
+            error,
+            l10n,
+            action: l10n.search,
+          ),
+        );
+        return;
+      }
+
+      if (!mounted) {
+        await backend.hideSubtitleProgress();
+        return;
+      }
+
       final mapped = results
           .map((s) {
             final id = (s['Id']?.toString()) ?? '';
             final label =
                 (s['Name'] as String?) ??
                 (s['Author'] as String?) ??
-                'Subtitle';
+                l10n.subtitles;
             return {
               'id': id,
               'label': label,
-              'subtitle': _remoteSubtitleOptionSubtitle(s),
+              'subtitle': remoteSubtitleSummary(s, l10n),
             };
           })
           .where((m) => (m['id']?.toString() ?? '').isNotEmpty)
           .toList();
+
+      // The results sheet takes the progress alert down itself and waits for
+      // the dismissal before presenting. Hiding it here instead leaves the
+      // sheet presenting over an alert still animating out, which tvOS drops.
       backend.showRemoteSubtitles(mapped);
     }();
   }
@@ -849,7 +868,15 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
             .map((s) => s['Index'] as int?)
             .whereType<int>()
             .toSet();
+    final backend = _backend;
+    final l10n = AppLocalizations.of(context);
     () async {
+      // The wait after the press is the server queueing a metadata refresh, so
+      // it can run to twenty seconds. Every ending says something: swallowing
+      // them left the viewer staring at a player that had gone back to normal
+      // with no idea whether the subtitle was coming.
+      await backend?.showSubtitleProgress(l10n.downloadingSubtitle);
+      String? outcome;
       try {
         await client.itemsApi.downloadRemoteSubtitle(item.id, subtitleId);
         final newStream = await _refreshAndFindSubtitle(
@@ -860,9 +887,17 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
         final index = newStream?['Index'] as int?;
         if (index != null) {
           await manager.changeSubtitleTrack(index);
+        } else {
+          outcome = l10n.subtitleDownloadedPending;
         }
-      } catch (_) {
+      } catch (error) {
+        outcome = remoteSubtitleErrorMessage(
+          error,
+          l10n,
+          action: l10n.download,
+        );
       } finally {
+        await backend?.hideSubtitleProgress(message: outcome);
         if (mounted) _pushMetadata();
       }
     }();
@@ -872,26 +907,13 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
     AggregatedItem item,
     MediaServerClient client,
     Set<int> existingIndexes,
-  ) async {
-    for (var attempt = 0; attempt < 8; attempt++) {
-      try {
-        final raw = await client.itemsApi.getItem(item.id);
-        if (!mounted) return null;
-        final refreshed = AggregatedItem(
-          id: item.id,
-          serverId: item.serverId,
-          rawData: raw,
-        );
-        for (final s in refreshed.mediaStreams.where(
-          (s) => s['Type'] == 'Subtitle',
-        )) {
-          final index = s['Index'] as int?;
-          if (index != null && !existingIndexes.contains(index)) return s;
-        }
-      } catch (_) {}
-      await Future<void>.delayed(const Duration(milliseconds: 500));
-    }
-    return null;
+  ) {
+    return awaitNewSubtitleStream(
+      client: client,
+      item: item,
+      existingIndexes: existingIndexes,
+      keepGoing: () => mounted,
+    );
   }
 
   void _toggleFavorite(dynamic item) {
@@ -975,6 +997,7 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
     final manager = _manager;
     if (manager == null) return;
     final item = manager.queueService.currentItem;
+    unawaited(_loadTrickplayForCurrentItem(item, manager));
     final id = _itemIdForQueueItem(item);
     if (id == null || id.isEmpty || id == _segmentsLoadedForItemId) return;
     final client = _clientForQueueItem(item);
@@ -999,6 +1022,55 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
         }),
       );
     } catch (_) {}
+  }
+
+  Future<void> _loadTrickplayForCurrentItem(
+    dynamic item,
+    PlaybackManager manager,
+  ) async {
+    final itemId = _itemIdForQueueItem(item);
+    final mediaSourceId = manager.currentResolution?.mediaSourceId;
+    final key = itemId == null ? null : '$itemId|${mediaSourceId ?? ''}';
+    if (key == _trickplayKey) return;
+
+    final generation = ++_trickplayLoadGeneration;
+    _trickplayKey = key;
+    _trickplayInfo = null;
+    if (itemId == null || itemId.isEmpty) {
+      _pushMetadata();
+      return;
+    }
+
+    final raw = _rawDataForQueueItem(item);
+    var info = raw == null
+        ? null
+        : TrickplayInfo.fromItemData(raw, mediaSourceId: mediaSourceId);
+    final client = _clientForQueueItem(item);
+    if (info == null && client?.trickplayApi != null) {
+      try {
+        final thumbnailSet = await client!.trickplayApi!.getThumbnailSet(
+          itemId,
+          width: _trickplayFrameWidth,
+          mediaSourceId: mediaSourceId,
+        );
+        if (thumbnailSet != null && thumbnailSet.isValid) {
+          info = TrickplayInfo.fromThumbnailSet(
+            thumbnailSet,
+            width: _trickplayFrameWidth,
+          );
+        }
+      } catch (_) {
+        // Emby BIF previews are optional. Playback remains usable when the
+        // server has not generated them or the request fails.
+      }
+    }
+
+    if (!mounted || generation != _trickplayLoadGeneration) return;
+    final currentItemId = _itemIdForQueueItem(manager.queueService.currentItem);
+    final currentSourceId = manager.currentResolution?.mediaSourceId;
+    if (currentItemId != itemId || currentSourceId != mediaSourceId) return;
+    _trickplayInfo = info?.isValid == true ? info : null;
+    _pushMetadata();
   }
 
   AppleTvQueueSnapshot _queueSnapshot() {
@@ -1427,6 +1499,7 @@ class _AppleTvPlayerHostScreenState extends State<AppleTvPlayerHostScreen> {
 
   @override
   void dispose() {
+    _trickplayLoadGeneration++;
     _exitSub?.cancel();
     _queueSub?.cancel();
     _sessionEndedSub?.cancel();

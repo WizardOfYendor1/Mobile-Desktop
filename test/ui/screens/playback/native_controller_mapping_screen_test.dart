@@ -423,7 +423,8 @@ void main() {
 
     final deviceHeading = find.text('Pad A - (Player 1, pinned)');
     expect(deviceHeading, findsOneWidget);
-    final headingSpan = tester.widget<Text>(deviceHeading).textSpan! as TextSpan;
+    final headingSpan =
+        tester.widget<Text>(deviceHeading).textSpan! as TextSpan;
     final headingSpans = headingSpan.children!;
     expect(headingSpans.first.style?.fontStyle, isNot(FontStyle.italic));
     expect(headingSpans.last.style?.fontStyle, FontStyle.italic);
@@ -565,9 +566,7 @@ void main() {
     expect(find.text('Play/Pause'), findsOneWidget);
   });
 
-  testWidgets('an unlisted keycode still renders "Key code N"', (
-    tester,
-  ) async {
+  testWidgets('an unlisted keycode still renders "Key code N"', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(

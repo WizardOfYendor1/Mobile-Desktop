@@ -2633,7 +2633,7 @@
     "@signInAndSecurity": {
         "description": "Account section description"
     },
-    "administration": "Hallinta",
+    "administration": "Järjestelmänvalvoja",
     "@administration": {
         "description": "Administration section title"
     },
@@ -2722,7 +2722,7 @@
     "@seriesThumbnails": {
         "description": "Setting for series thumbnails"
     },
-    "seriesThumbnailsDescription": "Vain jaksot: käytä sarjakuvia, jotka vastaavat kutakin rivikuvatyyppiä",
+    "seriesThumbnailsDescription": "Televisiosarjojen kohdalla käytä sarjan pääkuvaa jakson pikkukuvan sijaan.",
     "@seriesThumbnailsDescription": {
         "description": "Description for series thumbnails setting"
     },
@@ -3121,7 +3121,7 @@
     "@pathToMpvConf": {
         "description": "Hint text for mpv.conf path input"
     },
-    "subtitleStyleDescription": "Tyyliasetukset (koko, väri, offset) koskevat tekstipohjaisia ​​tekstityksiä (SRT, VTT, TTML). ASS/SSA-tekstitykset käyttävät omaa upotettua tyyliään, ellei \"ASS/SSA Direct Play\" ole poistettu käytöstä. Bittikarttatekstitystä (PGS, DVB, VobSub) ei voi muokata uudelleen.",
+    "subtitleStyleDescription": "Tyyliasetukset (koko, väri, offset) koskevat tekstipohjaisia tekstityksiä (SRT, VTT, TTML). ASS/SSA-tekstitykset käyttävät omaa upotettua tyyliään, ellei \"ASS/SSA Direct Play\" ole poistettu käytöstä. Bittikarttatekstitystä (PGS, DVB, VobSub) ei voi muokata uudelleen.",
     "@subtitleStyleDescription": {
         "description": "Info text about subtitle styling"
     },
@@ -4535,7 +4535,7 @@
     "installed": "Asennettu",
     "interval": "Intervalli",
     "name": "Nimi",
-    "networking": "Verkostoituminen",
+    "networking": "Verkkoasetukset",
     "next": "Seuraava",
     "path": "Polku",
     "paused": "Keskeytetty",
@@ -4675,7 +4675,7 @@
     "sessionVolumeDown": "Ääni –",
     "sessionVolumeUp": "Ääni +",
     "uhd4k": "4K",
-    "nowPlaying": "Nyt pelaa",
+    "nowPlaying": "Nyt toistetaan",
     "volume": "Äänenvoimakkuus",
     "actions": "Toiminnot",
     "videoCodec": "Videokoodekki",
@@ -4904,7 +4904,7 @@
     "adminBackToUsers": "Takaisin Käyttäjiin",
     "adminSaveProfile": "Tallenna profiili",
     "adminDeleteUser": "Poista käyttäjä",
-    "admin": "Ylläpito",
+    "admin": "Järjestelmänvalvoja",
     "adminFullAccessWarning": "Järjestelmänvalvojilla on täydellinen pääsy palvelimeen. Myönnä varoen.",
     "administrator": "Järjestelmänvalvoja",
     "adminHiddenUser": "Piilotettu käyttäjä",
@@ -8264,7 +8264,7 @@
     "adminLibRealtimeMonitorHint": "Tunnista tiedostomuutokset ja käsittele ne automaattisesti.",
     "adminLibArchiveMediaFiles": "Käsittele arkistot mediatiedostoina",
     "adminLibEnablePhotos": "Näytä valokuvat",
-    "adminLibSaveLocalMetadata": "Tallenna kuvitus mediakansioihin",
+    "adminLibSaveLocalMetadata": "Tallenna kuvat mediakansioihin",
     "adminLibRefreshInterval": "Metatietojen automaattinen päivitys",
     "adminLibRefreshNever": "Ei koskaan",
     "adminLibDefault": "Oletus",
@@ -8617,7 +8617,7 @@
     "mpvConfiguration": "MPV-määritykset",
     "externalPlayerAppDescription": "Määritä ulkoinen soitin, niin pitkä painallus tarjoaa toistovaihtoehdon",
     "crewContributionsSeerr": "Työryhmän osuudet (Seerr)",
-    "changeArtwork": "Vaihda kuvitus",
+    "changeArtwork": "Vaihda kansikuva",
     "missing": "Puuttuu",
     "clearAllArtworkButton": "Tyhjennetäänkö kaikki kuvitus?",
     "clearAllArtworkWarning": "Haluatko varmasti tyhjentää kaiken ladatun kuvituksen?",
@@ -8931,7 +8931,7 @@
     },
     "rewatchPlaylist": "Katso soittolista uudelleen",
     "noSubtitlesFound": "Tekstityksiä ei löytynyt.",
-    "adminControls": "Ylläpidon hallinta",
+    "adminControls": "Järjestelmänvalvojan toiminnot",
     "impellerRendering": "Renderöintimoottori (Impeller)",
     "@impellerRendering": {
         "description": "Title of the setting that selects the Flutter rendering engine (Impeller vs. legacy)."
@@ -9566,12 +9566,535 @@
     "adminMetadataPersonKindLyricist": "Sanoittaja",
     "adminMetadataPersonKindArranger": "Järjestä",
     "adminMetadataPersonKindMixer": "Sekoita",
-    "adminMetadataPersonKindRemixer": "Remixer",
+    "adminMetadataPersonKindRemixer": "Remixaaja",
     "adminMetadataPersonKindCreator": "Luoja",
     "adminMetadataPersonKindArtist": "Artisti",
     "adminMetadataPersonKindAlbumArtist": "Albumin artisti",
-    "adminMetadataPersonKindAuthor": "Luoja",
+    "adminMetadataPersonKindAuthor": "Tekijä",
     "adminMetadataPersonKindIllustrator": "Kuvittaja",
     "adminMetadataPersonKindTranslator": "Kääntäjä",
-    "adminMetadataPersonKindNarrator": "Kertoja"
+    "adminMetadataPersonKindNarrator": "Kertoja",
+    "adminMetadataPersonKindPenciller": "Piirtäjä",
+    "adminMetadataPersonKindColorist": "Värimäärittelijä",
+    "adminMetadataLockItem": "Lukitse tämä kohde, jotta metatietoja ei voida muuttaa myöhemmin",
+    "adminMetadataEnabledFields": "Käytössä olevat kentät",
+    "adminMetadataEnabledFieldsHelp": "Poista valinta kentästä, jotta se lukitaan ja sen tietojen muuttaminen estetään.",
+    "adminMetadataLockFieldName": "Nimi",
+    "adminMetadataLockFieldOverview": "Yleiskatsaus",
+    "adminMetadataLockFieldGenres": "Genret",
+    "adminMetadataLockFieldOfficialRating": "Ikäraja",
+    "adminMetadataLockFieldProductionLocations": "Tuotantopaikat",
+    "adminMetadataLockFieldBirthLocation": "Syntymäpaikka",
+    "adminMetadataLockFieldRuntime": "Kesto",
+    "adminMetadataLockFieldStudios": "Studiot",
+    "adminMetadataLockFieldTags": "Tagit",
+    "adminPluginsRestartRequired": "Uudelleenkäynnistys vaaditaan",
+    "@adminPluginsRestartRequired": {
+        "description": "Label for the installed-plugin filter showing changes that require a server restart"
+    },
+    "adminPluginsNoneActive": "Ei aktiivisia laajennuksia",
+    "@adminPluginsNoneActive": {
+        "description": "Empty state for the active installed-plugin filter"
+    },
+    "adminPluginsNoneRequireRestart": "Mikään laajennus ei vaadi palvelimen uudelleenkäynnistystä",
+    "@adminPluginsNoneRequireRestart": {
+        "description": "Empty state for the installed-plugin filter showing changes that require a server restart"
+    },
+    "emulatorCoreResetSettings": "Palauta {system} asetukset oletusarvoihin",
+    "@emulatorCoreResetSettings": {
+        "description": "Semantic label for the button that resets one core's saved emulator settings",
+        "placeholders": {
+            "system": {
+                "type": "String"
+            }
+        }
+    },
+    "emulatorCoreSettingsReset": "Asetukset on palautettu oletusarvoihin.",
+    "@emulatorCoreSettingsReset": {
+        "description": "Snackbar shown after resetting a core's saved emulator settings"
+    },
+    "emulatorCoreResetSettingsFailed": "Asetuksia ei voitu palauttaa. Tarkista yhteys ja yritä uudelleen.",
+    "@emulatorCoreResetSettingsFailed": {
+        "description": "Snackbar shown when resetting a core's saved emulator settings fails"
+    },
+    "settingsMediaSegmentTypeAction": "{segment} Segmentit",
+    "@settingsMediaSegmentTypeAction": {
+        "description": "Setting label for what to do with one type of media segment",
+        "placeholders": {
+            "segment": {
+                "type": "String"
+            }
+        }
+    },
+    "displayStudiosRows": "Display Studio -rivi",
+    "displayStudiosRowsSubtitle": "Näytä Studio-rivi Koti-osiossa.",
+    "studiosRowSorting": "Studio Row -lajittelu",
+    "studiosRowSortingDescription": "”Studio row” -nimiset, äskettäin lisätyt ja paljon muuta.",
+    "studiosRowSortOrderDescription": "Valitse lajittelujärjestys: nouseva tai laskeva.",
+    "selectStudiosToInclude": "Valitse sisällytettävät studiot",
+    "selectStudiosToIncludeDescription": "Valitse, mitkä studiot tulisi sisällyttää aloitusriville.",
+    "selectAllStudios": "Valitse kaikki",
+    "deselectAllStudios": "Poista kaikki valinnat",
+    "tvStudiosFilter": "TV-studiot",
+    "movieStudiosFilter": "Elokuvastudiot",
+    "selectedStudiosFilter": "Valitut studiot",
+    "unselectedStudiosFilter": "Valitsemattomat studiot",
+    "filtersHeader": "Suodattimet",
+    "showHeader": "Näytä",
+    "playlistsRowSortOrderDescription": "Lajittele soittolistan rivit nousevaan tai laskevaan järjestykseen.",
+    "playlistsRowShowEpisodes": "Näytä yksittäiset jaksot",
+    "playlistsRowShowEpisodesSubtitle": "Laajenna TV-sarjat, jotta jokainen jakso näkyy erikseen.",
+    "audioRowsSortOrderDescription": "Lajittele ääni-rivit nousevaan tai laskevaan järjestykseen.",
+    "addToWatchlist": "Lisää seurantalistalle",
+    "@addToWatchlist": {
+        "description": "Button label to add media to the user's Seerr watchlist"
+    },
+    "removeFromWatchlist": "Poista seurantalistalta",
+    "@removeFromWatchlist": {
+        "description": "Button label to remove media from the user's Seerr watchlist"
+    },
+    "watchlistUpdateFailed": "Seurantaluetteloa ei voitu päivittää",
+    "@watchlistUpdateFailed": {
+        "description": "Snackbar shown when adding/removing a Seerr watchlist item fails"
+    },
+    "adminSearchParameters": "Hakuparametrit",
+    "@adminSearchParameters": {
+        "description": "Column header above the editable fields used to search metadata providers in the Identify dialog"
+    },
+    "adminCurrentMetadata": "Nykyiset metatiedot",
+    "@adminCurrentMetadata": {
+        "description": "Column header above the read-only values currently stored on the item in the Identify dialog"
+    },
+    "adminLabelYear": "Vuosi",
+    "@adminLabelYear": {
+        "description": "Label for the release year field in the Identify dialog"
+    },
+    "adminLabelImdbId": "IMDb Id",
+    "@adminLabelImdbId": {
+        "description": "Label for the IMDb identifier field in the Identify dialog. IMDb is a brand name and is normally left untranslated"
+    },
+    "adminLabelTmdbMovieId": "TheMovieDb-elokuvatunnus",
+    "@adminLabelTmdbMovieId": {
+        "description": "Label for the TheMovieDb movie identifier field in the Identify dialog. TheMovieDb is a brand name and is normally left untranslated"
+    },
+    "adminLabelTmdbBoxSetId": "TheMovieDb-kokoelman tunniste",
+    "@adminLabelTmdbBoxSetId": {
+        "description": "Label for the TheMovieDb collection identifier field in the Identify dialog. TheMovieDb is a brand name and is normally left untranslated"
+    },
+    "adminLabelTvdbBoxSetId": "TheTVDB:n sarjakokoelman tunnus",
+    "@adminLabelTvdbBoxSetId": {
+        "description": "Label for the TheTVDB collection identifier field in the Identify dialog. TheTVDB is a brand name and is normally left untranslated"
+    },
+    "adminLabelTvdbId": "TheTVDB:n numerotunnus",
+    "@adminLabelTvdbId": {
+        "description": "Label for the numeric TheTVDB identifier field in the Identify dialog. TheTVDB is a brand name and is normally left untranslated"
+    },
+    "adminLabelTvdbSlug": "TheTVDB-tunniste Elokuvan tunnus",
+    "@adminLabelTvdbSlug": {
+        "description": "Label for the TheTVDB slug identifier field in the Identify dialog. TheTVDB is a brand name and is normally left untranslated"
+    },
+    "adminReplaceImages": "Korvaa nykyiset kuvat",
+    "@adminReplaceImages": {
+        "description": "Checkbox label in the confirmation dialog shown before applying an identified metadata match"
+    },
+    "adminBackToSearch": "Takaisin hakuehtoihin",
+    "@adminBackToSearch": {
+        "description": "Tooltip on the button that returns from the Identify results list to the search form"
+    },
+    "grouping": "Ryhmittely",
+    "@grouping": {
+        "description": "Section header in the library display dialog for grouping options"
+    },
+    "groupByType": "Ryhmitä tyypin mukaan",
+    "@groupByType": {
+        "description": "Checkbox label to group playlists by their media type category"
+    },
+    "playlistTypes": "Soittolistatyypit",
+    "@playlistTypes": {
+        "description": "Section header in the library display dialog for filtering playlist categories"
+    },
+    "playlistTypeVideo": "Video",
+    "@playlistTypeVideo": {
+        "description": "Filter checkbox label for video playlists"
+    },
+    "playlistTypeAudio": "Ääni (musiikki)",
+    "@playlistTypeAudio": {
+        "description": "Filter checkbox label for audio/music playlists"
+    },
+    "playlistTypeAudiobook": "Äänikirja",
+    "@playlistTypeAudiobook": {
+        "description": "Filter checkbox label for audiobook playlists"
+    },
+    "playlistTypeBook": "Kirja",
+    "@playlistTypeBook": {
+        "description": "Filter checkbox label for book playlists"
+    },
+    "playlistTypePhoto": "Kuva",
+    "@playlistTypePhoto": {
+        "description": "Filter checkbox label for photo playlists"
+    },
+    "playlistTypeMixed": "Sekalainen",
+    "@playlistTypeMixed": {
+        "description": "Filter checkbox label for mixed media playlists"
+    },
+    "videoPlaylistsSection": "Videosoittolistat",
+    "@videoPlaylistsSection": {
+        "description": "Section header above video playlists when Group by Type is enabled"
+    },
+    "audioPlaylistsSection": "Äänisoittolistat",
+    "@audioPlaylistsSection": {
+        "description": "Section header above audio playlists when Group by Type is enabled"
+    },
+    "audiobookPlaylistsSection": "Äänisoittolistat",
+    "@audiobookPlaylistsSection": {
+        "description": "Section header above audiobook playlists when Group by Type is enabled"
+    },
+    "bookPlaylistsSection": "Kirjojen soittolistat",
+    "@bookPlaylistsSection": {
+        "description": "Section header above book playlists when Group by Type is enabled"
+    },
+    "photoPlaylistsSection": "Valokuvien soittolistat",
+    "@photoPlaylistsSection": {
+        "description": "Section header above photo playlists when Group by Type is enabled"
+    },
+    "mixedPlaylistsSection": "Sekalaiset soittolistat",
+    "@mixedPlaylistsSection": {
+        "description": "Section header above mixed playlists when Group by Type is enabled"
+    },
+    "playbackTimeDisplay": "Edistymispalkin aika",
+    "@playbackTimeDisplay": {
+        "description": "Setting title for what is shown next to the playback progress bar"
+    },
+    "settingsPlaybackTimeDisplayDescription": "Valitse, mitkä aikamerkit näkyvät toiston etenemispalkin ympärillä.",
+    "@settingsPlaybackTimeDisplayDescription": {
+        "description": "Setting description for the progress bar time option"
+    },
+    "playbackTimeTotal": "Kokonaiskesto",
+    "@playbackTimeTotal": {
+        "description": "Progress bar time option showing the full runtime"
+    },
+    "playbackTimeRemaining": "Jäljellä oleva aika",
+    "@playbackTimeRemaining": {
+        "description": "Progress bar time option showing how much is left to play"
+    },
+    "playbackTimeEndsAt": "Päättyy klo",
+    "@playbackTimeEndsAt": {
+        "description": "Progress bar time option showing the clock time playback finishes"
+    },
+    "playbackTimeElapsed": "Kulunut aika",
+    "@playbackTimeElapsed": {
+        "description": "Progress bar time option showing how far into the item playback is"
+    },
+    "playbackTimeVideoSection": "Videosoitin",
+    "@playbackTimeVideoSection": {
+        "description": "Section header above the video progress bar time slots"
+    },
+    "playbackTimeMusicSection": "Musiikkisoitin",
+    "@playbackTimeMusicSection": {
+        "description": "Section header above the music progress bar time option"
+    },
+    "playbackTimeSlotDescription": "Valitse, mitä tässä näytetään, tai piilota se.",
+    "@playbackTimeSlotDescription": {
+        "description": "Setting description for a single progress bar time slot"
+    },
+    "playbackTimeAboveBarLeft": "Palkin yläpuolella, vasemmalla",
+    "@playbackTimeAboveBarLeft": {
+        "description": "Progress bar time slot above the bar on the left"
+    },
+    "playbackTimeAboveBarCenter": "Palkin yläpuolella, keskellä",
+    "@playbackTimeAboveBarCenter": {
+        "description": "Progress bar time slot above the bar in the center"
+    },
+    "playbackTimeAboveBarRight": "Palkin yläpuolella, oikealla",
+    "@playbackTimeAboveBarRight": {
+        "description": "Progress bar time slot above the bar on the right"
+    },
+    "playbackTimeBelowBarLeft": "Palkin alapuolella, vasemmalla",
+    "@playbackTimeBelowBarLeft": {
+        "description": "Progress bar time slot below the bar on the left"
+    },
+    "playbackTimeBelowBarCenter": "Palkin alapuolella, keskellä",
+    "@playbackTimeBelowBarCenter": {
+        "description": "Progress bar time slot below the bar in the center"
+    },
+    "playbackTimeBelowBarRight": "Palkin alapuolella, oikealla",
+    "@playbackTimeBelowBarRight": {
+        "description": "Progress bar time slot below the bar on the right"
+    },
+    "settingsMusicPlaybackTimeDescription": "Valitse, mitä musiikin etenemispalkin oikealla puolella näytetään.",
+    "@settingsMusicPlaybackTimeDescription": {
+        "description": "Setting description for the music progress bar time option"
+    },
+    "groupByTitle": "Ryhmittele",
+    "@groupByTitle": {
+        "description": "Dialog title and button label for library group by options"
+    },
+    "groupByDecade": "Vuosikymmen (vuosi)",
+    "@groupByDecade": {
+        "description": "Option to group library items by release decade"
+    },
+    "groupByParentalRating": "Vanhempien luokitus",
+    "@groupByParentalRating": {
+        "description": "Option to group library items by parental rating"
+    },
+    "personalRatingMine": "Arvosteluni",
+    "@personalRatingMine": {
+        "description": "Label under the viewer's own rating in the ratings row."
+    },
+    "increase": "Lisää",
+    "@increase": {
+        "description": "Action that increases a numeric personal rating."
+    },
+    "decrease": "Vähennä",
+    "@decrease": {
+        "description": "Action that decreases a numeric personal rating."
+    },
+    "filterInProgress": "Käynnissä",
+    "@filterInProgress": {
+        "description": "Library filter for items the viewer has started but not finished."
+    },
+    "filterUnreleased": "Julkaisematon",
+    "@filterUnreleased": {
+        "description": "Series status filter for shows that have not started airing."
+    },
+    "filterTrailers": "Trailerit",
+    "@filterTrailers": {
+        "description": "Library filter for items that have a trailer."
+    },
+    "filterExtras": "Extrat",
+    "@filterExtras": {
+        "description": "Library filter for items that have bonus features."
+    },
+    "filterThemeSongs": "Tunnusmusiikit",
+    "@filterThemeSongs": {
+        "description": "Library filter for items that have a theme song."
+    },
+    "filterThemeVideos": "Teemavideot",
+    "@filterThemeVideos": {
+        "description": "Library filter for items that have a theme video."
+    },
+    "source": "Lähde",
+    "@source": {
+        "description": "Heading for the disc source filters in the library filter picker."
+    },
+    "years": "Vuodet",
+    "@years": {
+        "description": "Heading for the release year filters in the library filter picker."
+    },
+    "audioLanguage": "Äänen kieli",
+    "@audioLanguage": {
+        "description": "Heading for the audio language filters in the library filter picker."
+    },
+    "subtitleLanguage": "Tekstityskieli",
+    "@subtitleLanguage": {
+        "description": "Heading for the subtitle language filters in the library filter picker."
+    },
+    "clearFilters": "Tyhjennä suodattimet",
+    "@clearFilters": {
+        "description": "Action that turns every library filter back off."
+    },
+    "seerrReleased": "Julkaistu",
+    "@seerrReleased": {
+        "description": "Heading for the release window filter in the Seerr browse dialog."
+    },
+    "seerrMinRating": "Vähimmäisarvosana",
+    "@seerrMinRating": {
+        "description": "Heading for the TMDB score floor filter in the Seerr browse dialog."
+    },
+    "seerrMinVotes": "Äänien vähimmäismäärä",
+    "@seerrMinVotes": {
+        "description": "Heading for the TMDB vote count floor filter in the Seerr browse dialog."
+    },
+    "seerrOriginalLanguage": "Alkuperäinen kieli",
+    "@seerrOriginalLanguage": {
+        "description": "Heading for the original language filter in the Seerr browse dialog."
+    },
+    "seerrRuntime": "Kesto",
+    "@seerrRuntime": {
+        "description": "Heading for the runtime window filter in the Seerr browse dialog."
+    },
+    "subtitleHdrSeparate": "Erillinen HDR-tyyli",
+    "@subtitleHdrSeparate": {
+        "description": "Toggle for a second subtitle appearance used only while HDR is playing."
+    },
+    "subtitleHdrSeparateSubtitle": "Valkoinen on HDR-tilassa huomattavasti kirkkaampi kuin SDR-tilassa, joten tässä tapauksessa himmeämpi tyyli estää häikäisyn",
+    "@subtitleHdrSeparateSubtitle": {
+        "description": "Explains why a separate HDR subtitle style is worth setting."
+    },
+    "scrollSensitivity": "Vierityksen herkkyys",
+    "@scrollSensitivity": {
+        "description": "Title of the desktop setting that scales mouse wheel scrolling."
+    },
+    "scrollSensitivitySubtitle": "Kuinka pitkälle hiiren rullaa yksi askel",
+    "@scrollSensitivitySubtitle": {
+        "description": "Explains the desktop scroll sensitivity slider."
+    },
+    "mediaDetailsAndSpoilers": "Tiedot elokuvasta ja juonipaljastukset",
+    "@mediaDetailsAndSpoilers": {
+        "description": "Section header for media details and spoiler settings"
+    },
+    "openTrailersExternally": "Avaa trailerit ulkoisessa sovelluksessa",
+    "@openTrailersExternally": {
+        "description": "Details screen setting that hands trailers to the system"
+    },
+    "openTrailersExternallySubtitle": "Trailerit avautuvat YouTube-sovelluksessa tai selaimessa sisäänrakennetun soittimen sijaan",
+    "@openTrailersExternallySubtitle": {
+        "description": "Subtitle for the external trailers setting"
+    },
+    "hideDetailsMediaDescription": "Piilota median kuvaus tietosivulla",
+    "@hideDetailsMediaDescription": {
+        "description": "Setting title to hide media description on details screen"
+    },
+    "hideDetailsMediaDescriptionSubtitle": "Piilota elokuvan tai jakson kuvausteksti.",
+    "@hideDetailsMediaDescriptionSubtitle": {
+        "description": "Description for setting to hide media description on details page"
+    },
+    "detailUseSeriesThumbnails": "Käytä sarjan pikkukuvia tietosivulla",
+    "@detailUseSeriesThumbnails": {
+        "description": "Setting title to replace thumbnails on Classic details page with series thumbnail"
+    },
+    "detailUseSeriesThumbnailsSubtitle": "Korvaa kaikki Classic-tiedotussivun pikkukuvat sarjan pikkukuvalla",
+    "@detailUseSeriesThumbnailsSubtitle": {
+        "description": "Description for setting to use series thumbnails on Classic details page"
+    },
+    "hideHomeMediaDescription": "Piilota median kuvaus aloitusnäytöltä",
+    "@hideHomeMediaDescription": {
+        "description": "Setting title to hide media description on home screen"
+    },
+    "hideHomeMediaDescriptionSubtitle": "Piilota elokuvan tai jakson kuvausteksti.",
+    "@hideHomeMediaDescriptionSubtitle": {
+        "description": "Description for setting to hide media description on home screen"
+    },
+    "continueWatchingAndNextUpHeader": "Jatka katsomista ja seuraava jakso",
+    "@continueWatchingAndNextUpHeader": {
+        "description": "Header for settings section containing Continue Watching and Next Up options"
+    },
+    "setupSkip": "Ohita asennus",
+    "@setupSkip": {
+        "description": "Leaves the first-run setup wizard without answering anything"
+    },
+    "setupNavbarQuestion": "Mihin navigointi tulisi sijoittaa?",
+    "@setupNavbarQuestion": {
+        "description": "Setup question asking where the navigation bar should sit"
+    },
+    "setupMediaBarQuestion": "Miltä aloitusnäytön yläosan pitäisi näyttää?",
+    "@setupMediaBarQuestion": {
+        "description": "Setup wizard question for the media bar style"
+    },
+    "setupHomeRowsQuestion": "Miltä rivien tulisi näyttää?",
+    "@setupHomeRowsQuestion": {
+        "description": "Setup wizard question for the home row style"
+    },
+    "setupDetailQuestion": "Miltä elokuvan tai sarjan pitäisi näyttää, kun sen avaa?",
+    "@setupDetailQuestion": {
+        "description": "Setup wizard question for the detail screen style"
+    },
+    "setupTourQuestion": "Valmis. Tässä on muutkin sisällön osat.",
+    "@setupTourQuestion": {
+        "description": "Heading of the final setup wizard screen"
+    },
+    "setupStyleClassic": "Klassikko",
+    "@setupStyleClassic": {
+        "description": "Name of the original layout, offered in the setup wizard"
+    },
+    "setupStyleModern": "Moderni",
+    "@setupStyleModern": {
+        "description": "Name of the newer layout, offered in the setup wizard"
+    },
+    "setupRowsClassicHint": "Kompakti. Näytölle mahtuu kerralla enemmän rivejä.",
+    "@setupRowsClassicHint": {
+        "description": "What the classic home row style gives you"
+    },
+    "setupRowsModernHint": "Suuremmat kortit, joiden alla on otsikot.",
+    "@setupRowsModernHint": {
+        "description": "What the modern home row style gives you"
+    },
+    "setupDetailClassicHint": "Kaikki on koottu yhteen pinoon.",
+    "@setupDetailClassicHint": {
+        "description": "What the classic detail screen style gives you"
+    },
+    "setupDetailModernHint": "Elokuvamainen, ja siinä on välilehdet näyttelijöille ja avustajille.",
+    "@setupDetailModernHint": {
+        "description": "What the modern detail screen style gives you"
+    },
+    "setupPickALook": "Valitse tyyli",
+    "@setupPickALook": {
+        "description": "Label above the theme swatches on the final setup screen"
+    },
+    "setupTourMoreHeader": "Asetuksissa on vielä lisää odotettavaa",
+    "@setupTourMoreHeader": {
+        "description": "Heading of the closing setup screen block that lists features found in settings"
+    },
+    "setupTourBulletSyncPlay": "SyncPlay-katselutilaisuudet",
+    "@setupTourBulletSyncPlay": {
+        "description": "Bullet on the closing setup screen for SyncPlay"
+    },
+    "setupTourBulletThemes": "Mukautetut teemat",
+    "@setupTourBulletThemes": {
+        "description": "Bullet on the closing setup screen for custom themes"
+    },
+    "setupTourBulletDownloads": "Lataaminen offline-tilassa",
+    "@setupTourBulletDownloads": {
+        "description": "Bullet on the closing setup screen for downloads"
+    },
+    "setupTourBulletMore": "Ja paljon muuta",
+    "@setupTourBulletMore": {
+        "description": "Closing bullet on the setup screen settings list"
+    },
+    "adminMetadataPersonKindEngineer": "Insinööri",
+    "adminMetadataPersonKindInker": "Tussaaja",
+    "adminMetadataPersonKindLetterer": "Tekstaaja",
+    "adminMetadataPersonKindCoverArtist": "Kansitaiteilija",
+    "adminMetadataPersonKindEditor": "Editori",
+    "personalRatingOutOfTen": "{rating} / 10",
+    "@personalRatingOutOfTen": {
+        "description": "Numeric personal rating displayed on a scale out of ten.",
+        "placeholders": {
+            "rating": {
+                "type": "String"
+            }
+        }
+    },
+    "personalRatingOutOfFive": "{rating} / 5",
+    "@personalRatingOutOfFive": {
+        "description": "Personal rating displayed on a five-star scale.",
+        "placeholders": {
+            "rating": {
+                "type": "String"
+            }
+        }
+    },
+    "seerrShortcutsRow": "Seerr Valitse",
+    "@seerrShortcutsRow": {
+        "description": "Title of the Seerr shortcuts row that jumps to Discover, Movies, Series, Requests and Issues."
+    },
+    "setupTourBulletRequests": "Seerr-pyynnöt",
+    "@setupTourBulletRequests": {
+        "description": "Bullet on the closing setup screen for the Seerr request feature"
+    },
+    "runSetupAgain": "Suorita asennus uudelleen",
+    "@runSetupAgain": {
+        "description": "Starts the first-run setup wizard again from settings"
+    },
+    "serverMessages": "Viestit",
+    "@serverMessages": {
+        "description": "Menu button and window title for messages sent by the server admin"
+    },
+    "serverMessagesEmpty": "Palvelimeltasi ei ole vielä viestejä",
+    "@serverMessagesEmpty": {
+        "description": "Shown in the messages window when the server has sent nothing"
+    },
+    "serverMessagesMarkAllRead": "Merkitse kaikki luetuiksi",
+    "@serverMessagesMarkAllRead": {
+        "description": "Button in the messages window that marks every message as read"
+    },
+    "serverMessagesShowButton": "Näytä viestit -painike",
+    "@serverMessagesShowButton": {
+        "description": "Setting that shows or hides the messages button in the menu"
+    },
+    "serverMessagesShowButtonSubtitle": "Lisää valikkoon painikkeen, joka koskee palvelimen järjestelmänvalvojan lähettämiä viestejä",
+    "@serverMessagesShowButtonSubtitle": {
+        "description": "Explains the setting that shows or hides the messages button"
+    },
+    "adminMetadataLockFieldCast": "Henkilöt"
 }

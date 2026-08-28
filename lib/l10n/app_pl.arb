@@ -10077,5 +10077,25 @@
     "openTrailersExternallySubtitle": "Otwieraj zwiastuny w aplikacji YouTube lub przeglądarce zamiast we wbudowanym odtwarzaczu",
     "@openTrailersExternallySubtitle": {
         "description": "Subtitle for the external trailers setting"
+    },
+    "serverMessages": "Wiadomości",
+    "@serverMessages": {
+        "description": "Menu button and window title for messages sent by the server admin"
+    },
+    "serverMessagesEmpty": "Brak wiadomości z serwera",
+    "@serverMessagesEmpty": {
+        "description": "Shown in the messages window when the server has sent nothing"
+    },
+    "serverMessagesMarkAllRead": "Oznacz wszystkie jako przeczytane",
+    "@serverMessagesMarkAllRead": {
+        "description": "Button in the messages window that marks every message as read"
+    },
+    "serverMessagesShowButton": "Pokaż przycisk wiadomości",
+    "@serverMessagesShowButton": {
+        "description": "Setting that shows or hides the messages button in the menu"
+    },
+    "serverMessagesShowButtonSubtitle": "Dodaje do menu przycisk wiadomości wysyłanych przez administratora serwera",
+    "@serverMessagesShowButtonSubtitle": {
+        "description": "Explains the setting that shows or hides the messages button"
     }
 }

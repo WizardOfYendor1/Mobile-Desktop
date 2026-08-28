@@ -1578,6 +1578,7 @@ class Media3VideoView(
     }
 
     private fun createPlayer(): ExoPlayer {
+        Media3LogRelay.install()
         emitFfmpegDecoderDiagnosticsOnce()
         // Fresh selector for every player; see the trackSelector field comment.
         trackSelector = DefaultTrackSelector(context)

@@ -162,17 +162,17 @@ void _dataLossGuardTests() {
     test('retries a dropped connection instead of losing the edit', () async {
       final api = _UnreachableGamesApi();
       var calls = 0;
-      when(() => api.putSave(any(), any(), kind: any(named: 'kind'))).thenAnswer(
-        (_) async {
-          calls++;
-          if (calls < 2) {
-            throw DioException(
-              requestOptions: RequestOptions(path: '/'),
-              type: DioExceptionType.connectionError,
-            );
-          }
-        },
-      );
+      when(
+        () => api.putSave(any(), any(), kind: any(named: 'kind')),
+      ).thenAnswer((_) async {
+        calls++;
+        if (calls < 2) {
+          throw DioException(
+            requestOptions: RequestOptions(path: '/'),
+            type: DioExceptionType.connectionError,
+          );
+        }
+      });
 
       await saveControllerMapping(
         api,
@@ -184,25 +184,30 @@ void _dataLossGuardTests() {
       expect(calls, 2);
     });
 
-    test('rethrows once retries are exhausted, so callers can say so', () async {
-      final api = _UnreachableGamesApi();
-      when(() => api.putSave(any(), any(), kind: any(named: 'kind'))).thenThrow(
-        DioException(
-          requestOptions: RequestOptions(path: '/'),
-          type: DioExceptionType.connectionError,
-        ),
-      );
+    test(
+      'rethrows once retries are exhausted, so callers can say so',
+      () async {
+        final api = _UnreachableGamesApi();
+        when(
+          () => api.putSave(any(), any(), kind: any(named: 'kind')),
+        ).thenThrow(
+          DioException(
+            requestOptions: RequestOptions(path: '/'),
+            type: DioExceptionType.connectionError,
+          ),
+        );
 
-      await expectLater(
-        saveControllerMapping(
-          api,
-          'pad-1',
-          NativeControllerMapping.empty,
-          retryDelay: (_) async {},
-        ),
-        throwsA(isA<DioException>()),
-      );
-    });
+        await expectLater(
+          saveControllerMapping(
+            api,
+            'pad-1',
+            NativeControllerMapping.empty,
+            retryDelay: (_) async {},
+          ),
+          throwsA(isA<DioException>()),
+        );
+      },
+    );
   });
 
   group('stick snap', () {

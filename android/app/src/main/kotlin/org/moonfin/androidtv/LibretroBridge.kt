@@ -82,6 +82,21 @@ class LibretroBridge(
   // not resume a game the user left paused.
   @Volatile private var userPaused = false
 
+  // Whether Flutter's SurfaceProducer callbacks have ever actually fired.
+  //
+  // They do not fire on every device. Flutter picks the producer implementation
+  // on Build.VERSION.SDK_INT >= 29, and the pre-29 one -
+  // SurfaceTextureSurfaceProducer - has a setCallback that compiles to a bare
+  // `return`. So on API 24-28 (the Fire TV Cube is API 28) onSurfaceAvailable
+  // and onSurfaceCleanup NEVER arrive, and nothing pauses the core or drops the
+  // surface when the app is backgrounded.
+  //
+  // This is detected EMPIRICALLY rather than by re-deriving Flutter's own
+  // SDK_INT rule: that rule has an extra device-specific exclusion, and it is
+  // Flutter's to change. If a callback ever arrives we trust the callbacks and
+  // the Activity-driven path below stands down.
+  @Volatile private var producerCallbacksObserved = false
+
   // The most recent message from the core, used as the reason if it then quits.
   @Volatile private var lastCoreMessage: String? = null
 
@@ -206,11 +221,13 @@ class LibretroBridge(
     // backgrounding, so swap it out of the native side in lockstep.
     producer.setCallback(object : TextureRegistry.SurfaceProducer.Callback {
       override fun onSurfaceAvailable() {
+        producerCallbacksObserved = true
         nativeSetSurface(producer.surface)
         if (isActive && !userPaused) nativeResume()
       }
 
       override fun onSurfaceCleanup() {
+        producerCallbacksObserved = true
         nativePause()
         nativeSetSurface(null)
       }
@@ -238,7 +255,15 @@ class LibretroBridge(
 
     val width = av[0].toInt()
     val height = av[1].toInt()
-    producer.setSize(width, height)
+    // On the SOFTWARE path the producer must match the frame exactly - the
+    // blit is pixel-for-pixel. On the HARDWARE path the core renders into our
+    // own FBO at its internal resolution, which can be far larger, and sizing
+    // the producer to the base geometry throws all of that away: the present
+    // pass downscales to 640x480 and Flutter scales it back up, so a high
+    // internal resolution buys antialiasing and no detail at 9x the fill cost
+    // (bug-154, measured on device).
+    val presentSize = hardwarePresentSize() ?: Pair(width, height)
+    producer.setSize(presentSize.first, presentSize.second)
     nativeSetSurface(producer.surface)
 
     startAudio(av[4].toInt())
@@ -265,6 +290,77 @@ class LibretroBridge(
   // when the host, its ring buffer, and its audio mutex are freed. Safe to
   // call repeatedly - isActive/audioTrack/audioThread/surfaceProducer are all
   // null-guarded, and nativeStop()'s teardown() no-ops once g_ctx.host is NULL.
+  /// The size to give the presentation surface on the hardware path, or null
+  /// on the software path (where the caller must keep using the frame size).
+  ///
+  /// Scales the core's render size to fit the display, scaling BOTH AXES BY THE
+  /// SAME FACTOR. A per-axis min() would be wrong: the core renders 4:3, so
+  /// fitting 1920x1440 into a 1920x1080 display per-axis would give a 16:9
+  /// window and the present pass - which draws a full-screen quad over
+  /// glViewport(0,0,w,h) - would stretch the picture to fill it. A uniform fit
+  /// keeps 1920x1440 as 1440x1080: still exactly 4:3, and using the full height
+  /// of the display.
+  ///
+  /// Capped to the display because there is nothing to gain from a surface
+  /// larger than the screen, and buffers are not free - an ImageReader-backed
+  /// producer holds several of them.
+  private fun hardwarePresentSize(): Pair<Int, Int>? {
+    val hw = nativeHwRenderSize() ?: return null
+    val coreW = hw.getOrNull(0) ?: return null
+    val coreH = hw.getOrNull(1) ?: return null
+    if (coreW <= 0 || coreH <= 0) return null
+
+    // Resources.getSystem() rather than an Activity context: this class holds
+    // no Context and should not start holding one just for a screen size. On a
+    // fullscreen TV app the system metrics ARE the app's display area, and
+    // they already reflect the device's override resolution (the Fire Cube
+    // reports 1920x1080 despite a 3840x2160 panel).
+    val metrics = android.content.res.Resources.getSystem().displayMetrics
+    val displayW = metrics.widthPixels
+    val displayH = metrics.heightPixels
+    if (displayW <= 0 || displayH <= 0) return Pair(coreW, coreH)
+
+    // Only ever scale DOWN: if the core renders smaller than the display there
+    // is no detail to recover by enlarging the surface, and doing so would just
+    // cost memory and fill rate.
+    val scale = minOf(
+      displayW.toDouble() / coreW,
+      displayH.toDouble() / coreH,
+      1.0,
+    )
+    val w = Math.max(1, Math.round(coreW * scale).toInt())
+    val h = Math.max(1, Math.round(coreH * scale).toInt())
+    return Pair(w, h)
+  }
+
+  /// Called from MainActivity.onPause. Stands in for onSurfaceCleanup on the
+  /// devices where Flutter never delivers it (see producerCallbacksObserved).
+  ///
+  /// This matters more on the hardware-render path than the software one. The
+  /// software blit just wastes work while backgrounded; a GL present pushes
+  /// into a BufferQueue whose consumer has stopped draining, and eglSwapBuffers
+  /// blocks once that queue fills - stalling the emulation thread inside a
+  /// swap, which is the shape of the teardown hang recorded in bug-063.
+  fun onHostPause() {
+    if (producerCallbacksObserved) return  // Flutter is driving this already.
+    if (!isActive) return
+    nativePause()
+    nativeSetSurface(null)
+  }
+
+  /// Called from MainActivity.onResume. The counterpart to onHostPause; stands
+  /// in for onSurfaceAvailable where that never arrives.
+  fun onHostResume() {
+    if (producerCallbacksObserved) return
+    if (!isActive) return
+    // Read the surface fresh rather than caching it: the getter recreates it
+    // when the previous one went invalid, and Flutter's own guidance is never
+    // to hold a Surface across a lifecycle boundary.
+    val producer = surfaceProducer ?: return
+    nativeSetSurface(producer.surface)
+    if (!userPaused) nativeResume()
+  }
+
   fun stop() {
     val hadActiveSession = isActive
     isActive = false
@@ -554,7 +650,24 @@ class LibretroBridge(
   // Called from JNI on the host run-loop thread when the core geometry changes.
   fun onGeometry(width: Int, height: Int, aspect: Double) {
     mainHandler.post {
-      surfaceProducer?.setSize(width, height)
+      val producer = surfaceProducer
+      // Use the hardware render size, not the geometry the core just reported.
+      // A restart-required option change (raising the internal resolution, say)
+      // rebuilds the core on the emulation thread and never re-enters load(),
+      // so this is the ONLY place the presentation surface learns about the new
+      // render size. Sizing it from `width`/`height` here would leave the
+      // window at the base geometry and silently downscale everything the
+      // higher resolution bought - the exact bug-154 failure, reintroduced on
+      // the restart path.
+      val size = hardwarePresentSize() ?: Pair(width, height)
+      producer?.setSize(size.first, size.second)
+      // setSize invalidates the Surface on API 29+: Flutter's
+      // ImageReaderSurfaceProducer marks its reader stale, so the next
+      // getSurface() hands back one from a brand-new ImageReader. load() has
+      // always re-surfaced after setSize; this path did not, which left native
+      // holding the old reader's window. Harmless-looking on the software
+      // blit, fatal on the hardware path where an EGLSurface is bound to it.
+      if (producer != null) nativeSetSurface(producer.surface)
       eventSink?.success(
         mapOf("event" to "videoGeometry", "width" to width, "height" to height,
           "aspect" to aspect))
@@ -650,6 +763,7 @@ class LibretroBridge(
     optVals: Array<String>): DoubleArray?
 
   private external fun nativeSetSurface(surface: Surface?)
+  private external fun nativeHwRenderSize(): IntArray?
   private external fun nativeStart(): Int
   private external fun nativePause()
   private external fun nativeResume()

@@ -80,19 +80,19 @@ internal class NativePadInput(
     // bridge, the callbacks and the Activity reachable for the life of the
     // process -- and the orphan goes on receiving device callbacks.
     private val deviceListener = object : InputManager.InputDeviceListener {
-        // Drop the classifier's cache on every device list change.
+        // Added evicts too, since an id can be one a removed device left behind.
         override fun onInputDeviceAdded(deviceId: Int) {
-            NativeInputDeviceClassifier.invalidate()
+            NativeInputDeviceClassifier.invalidate(deviceId)
             onDeviceAdded(deviceId)
         }
 
         override fun onInputDeviceRemoved(deviceId: Int) {
-            NativeInputDeviceClassifier.invalidate()
+            NativeInputDeviceClassifier.invalidate(deviceId)
             onDeviceRemoved(deviceId)
         }
 
         override fun onInputDeviceChanged(deviceId: Int) {
-            NativeInputDeviceClassifier.invalidate()
+            NativeInputDeviceClassifier.invalidate(deviceId)
             onDeviceChanged(deviceId)
         }
     }

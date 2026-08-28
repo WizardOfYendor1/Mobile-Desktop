@@ -1,5 +1,6 @@
 import 'emulator_host_messages_io.dart'
-    if (dart.library.js_interop) 'emulator_host_messages_web.dart' as impl;
+    if (dart.library.js_interop) 'emulator_host_messages_web.dart'
+    as impl;
 
 /// Delivers messages the EmulatorJS player shell posts to `window.parent`.
 ///

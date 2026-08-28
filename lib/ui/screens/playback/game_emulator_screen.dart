@@ -666,12 +666,7 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
         ),
         // Not localized yet: adding an .arb key regenerates every locale file,
         // so this matches the native player's untranslated exit actions.
-        _OverlayItem(
-          Icons.save_outlined,
-          'Save & exit',
-          null,
-          _saveAndExit,
-        ),
+        _OverlayItem(Icons.save_outlined, 'Save & exit', null, _saveAndExit),
         _OverlayItem(Icons.close, l?.exit ?? 'Exit', null, _exit, danger: true),
       ];
     }
@@ -858,7 +853,8 @@ class _GameEmulatorScreenState extends State<GameEmulatorScreen>
       try {
         open = await _invokePlayer('moonfinControlsOpen', const [], () async {
           final r = await controller?.callAsyncJavaScript(
-            functionBody: 'return window.moonfinControlsOpen ? '
+            functionBody:
+                'return window.moonfinControlsOpen ? '
                 'window.moonfinControlsOpen() : true;',
           );
           return r?.value;

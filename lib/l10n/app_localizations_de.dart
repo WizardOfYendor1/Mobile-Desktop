@@ -12,7 +12,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get appTitle => 'Moonfin';
 
   @override
-  String get accountPreferences => 'KONTO-PRÄFERENZEN';
+  String get accountPreferences => 'Kontopräferenzen';
 
   @override
   String get interfaceLanguage => 'Sprache der App-Oberfläche';
@@ -70,7 +70,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get whosWatching => 'Wer schaut zu ?';
+  String get whosWatching => 'Wer schaut?';
 
   @override
   String get addUser => 'Benutzer hinzufügen';
@@ -90,7 +90,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get discoveredServers => 'Gefundene Server';
 
   @override
-  String get noneFound => 'Keine Server automatisch gefunden';
+  String get noneFound => 'Es konnten keine Server automatisch gefunden werden';
 
   @override
   String get unableToConnectToServer => 'Verbindung zum Server fehlgeschlagen';
@@ -132,7 +132,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get secureStorageUnavailableMessage =>
-      'Moonfin konnte nicht auf deinen System-Schlüsselbund zugreifen. Die Anmeldung kann fortgesetzt werden, aber die sichere Token-Speicherung ist möglicherweise nicht verfügbar, bis der Schlüsselbund entsperrt wird.';
+      'Moonfin konnte nicht auf den Schlüsselbund Ihres Systems zugreifen. Sie können sich trotzdem anmelden, aber die sichere Speicherung des Anmeldetokens ist möglicherweise erst verfügbar, wenn der Schlüsselbund entsperrt wurde.';
 
   @override
   String get ok => 'OK';
@@ -141,11 +141,11 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsAppearanceTheme => 'App-Theme';
 
   @override
-  String get detailScreenStyle => 'Stil der Detailseite';
+  String get detailScreenStyle => 'Layout der Mediendetails';
 
   @override
   String get detailScreenStyleSubtitle =>
-      '„Klassisch“ ist das ursprüngliche zentrierte Moonfin-Layout. „Modern“ ist ein responsives, filmisches Layout.';
+      '„Klassisch“ ist das ursprüngliche zentrierte Moonfin-Layout.\n„Modern“ ist ein responsives, filmisches Layout.';
 
   @override
   String get detailScreenStyleMoonfin => 'Klassisch';
@@ -165,54 +165,54 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get showTechnicalDetailsSubtitle =>
-      'Codec-, Auflösungs- und Stream-Informationen in der Banner-Zusammenfassung anzeigen';
+      'Codec-, Auflösungs- und Stream-Informationen in der Banner-Zusammenfassung anzeigen.';
 
   @override
   String get recommendationSystem => 'Empfehlungssystem';
 
   @override
   String get recommendationSystemSubtitle =>
-      'Den lokalen Bibliotheksalgorithmus „Moonfin empfiehlt“ oder die Online-Ähnlichkeitsmetriken von TMDb verwenden. Hinweis: Online-Empfehlungen erfordern die Seerr-Integration.';
+      'Verwenden Sie den lokalen Algorithmus „Moonfin Empfehlungen“ für Ihre Bibliothek oder die Online-Ähnlichkeitswerte von TMDb. Hinweis: Für Online-Empfehlungen ist eine Seerr-Integration erforderlich.';
 
   @override
-  String get recommendationSystemMoonfin => 'Moonfin empfiehlt';
+  String get recommendationSystemMoonfin => 'Moonfin Empfehlungen';
 
   @override
-  String get recommendationSystemTmdb => 'TMDb-Ähnlichkeit';
+  String get recommendationSystemTmdb => 'TMDb Ähnlichkeit';
 
   @override
   String get recommendationsApplyParentalRatingCap =>
-      'Begrenzung nach Altersfreigabe anwenden?';
+      'Altersfreigabe für Empfehlungen begrenzen?';
 
   @override
   String get recommendationsApplyParentalRatingCapSubtitle =>
-      'Vorschläge von „Moonfin empfiehlt“ nach Altersfreigabe der Zielmedien begrenzen';
+      'Empfehlungen von Moonfin anhand der Altersfreigabe der empfohlenen Inhalte begrenzen';
 
   @override
-  String get interfaceStyle => 'Oberflächen-Stil';
+  String get interfaceStyle => 'Darstellungsstil';
 
   @override
   String get interfaceStyleSubtitle =>
-      '\"Automatisch\" nutzt natives Aussehen auf Apple-Geräten. Wähle \"Apple-nativ\", um dieses zu erzwingen, oder \"Material\" für das Standardaussehen.';
+      '\"Automatisch\" passt sich an Ihr Gerät an. Wählen Sie Apple oder Material, um einen bestimmten Darstellungsstil festzulegen.';
 
   @override
   String get interfaceStyleAutomatic => 'Automatisch';
 
   @override
-  String get interfaceStyleApple => 'Apple-nativ';
+  String get interfaceStyleApple => 'Apple';
 
   @override
   String get interfaceStyleMaterial => 'Material';
 
   @override
-  String get interfaceLayout => 'Benutzeroberflächen Layout';
+  String get interfaceLayout => 'Layout der Benutzeroberfläche';
 
   @override
   String get interfaceLayoutSubtitle =>
-      'Override the detected layout when this device is read wrong. Restart Moonfin for changes to take effect.';
+      'Überschreibt das automatisch erkannte Layout, wenn Ihr Gerät falsch erkannt wurde. Starten Sie Moonfin neu, damit die Änderungen wirksam werden.';
 
   @override
-  String get interfaceLayoutAutomatic => 'automatisch';
+  String get interfaceLayoutAutomatic => 'Automatisch';
 
   @override
   String get interfaceLayoutTv => 'Fernseher';
@@ -221,10 +221,10 @@ class AppLocalizationsDe extends AppLocalizations {
   String get interfaceLayoutDesktop => 'Desktop';
 
   @override
-  String get interfaceLayoutPhone => 'Telefon';
+  String get interfaceLayoutPhone => 'Smartphone';
 
   @override
-  String get glassQuality => 'Glass-Qualität';
+  String get glassQuality => 'Qualität des Glaseffekts';
 
   @override
   String get oledMode => 'OLED Modus';
@@ -234,14 +234,14 @@ class AppLocalizationsDe extends AppLocalizations {
       'Tiefere Schwarztöne und sattere Grafiken. Besonders gut auf OLED-Displays.';
 
   @override
-  String get oledModeSubtle => 'Subtil';
+  String get oledModeSubtle => 'Dezent';
 
   @override
   String get oledModeVivid => 'Lebhaft';
 
   @override
   String get glassQualitySubtitle =>
-      '„Automatisch“ wählt den besten Glass-Effekt für dieses Gerät. „Voll“ erzwingt echte Unschärfe, „Reduziert“ nutzt ein leichtgewichtiges Glass, das GPU-Leistung spart.';
+      '\"Automatisch\" wählt den besten Glaseffekt für dieses Gerät. \"Voll\" verwendet starke Unschärfe, \"Verringert\" nutzt einen einfachen Glaseffekt und spart GPU-Leistung.';
 
   @override
   String get glassQualityAuto => 'Automatisch';
@@ -250,18 +250,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String get glassQualityFull => 'Voll';
 
   @override
-  String get glassQualityReduced => 'Reduziert';
+  String get glassQualityReduced => 'Verringert';
 
   @override
   String get settingsAppearanceThemeSubtitle =>
-      'Wechsel zwischen \"Moonfin\" und \"Neon Pulse\", ohne die App neu zu starten';
+      'Passe das Design vollständig an und wähle zwischen einer an Apple oder Material angelehnten Oberfläche.';
 
   @override
-  String get customThemeTitle => 'Benutzerdefiniertes Theme';
+  String get customThemeTitle => 'Benutzerdefiniertes Design';
 
   @override
   String get customThemeSubtitle =>
-      'Benutzerdefinierte Themes verändern visuelle Elemente in ganz Moonfin. Wählen Sie eine dieser Optionen passend zu Ihrem Stil.';
+      'Benutzerdefinierte Designs verändern das Erscheinungsbild von Moonfin. Wählen Sie die Option, die am besten zu Ihrem Stil passt.';
 
   @override
   String get keyboardPreferSystemIme => 'Bevorzugen der Systemtastatur';
@@ -284,7 +284,8 @@ class AppLocalizationsDe extends AppLocalizations {
   String get themeMoonfin => 'Moonfin';
 
   @override
-  String get themeMoonfinSubtitle => 'Aktueller Standard-Moonfin-Look';
+  String get themeMoonfinSubtitle =>
+      'Das ursprüngliche und schlichte Moonfin-Design.';
 
   @override
   String get themeNeonPulse => 'Neon Pulse';
@@ -352,7 +353,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get invalidServerExchangeResponse =>
-      'Ungültige Antwort vom Server-Austauschendpunkt';
+      'Der Server hat eine ungültige Antwort zurückgegeben';
 
   @override
   String unableToConnectTo(String target) {
@@ -406,7 +407,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get noHomeRowsHint =>
-      'Versuche, die Seite neu zu laden, oder reduziere aktive Bereiche.';
+      'Versuche, die Seite neu zu laden, oder verringere die Anzahl aktiver Bereiche.';
 
   @override
   String get retryHomeRows => 'Versuche, Startseiten-Zeilen erneut zu laden';
@@ -644,7 +645,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get openLink => 'Link öffnen';
 
   @override
-  String get scanWithYourPhone => 'Scanne mit dem Mobiltelefon';
+  String get scanWithYourPhone => 'Scanne den QR-Code mit dem Smartphone';
 
   @override
   String get audiobookGenres => 'Hörbuch-Genres';
@@ -657,7 +658,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get discoverAudiobooks => 'Hörbücher entdecken';
 
   @override
-  String get librivoxDescription => 'Beliebte gemeinfreie Titel von LibriVox.';
+  String get librivoxDescription => 'Beliebte freie Hörbücher von LibriVox.';
 
   @override
   String titlesCount(int count) {
@@ -671,7 +672,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get scrollRight => 'Nach rechts scrollen';
 
   @override
-  String get scrollToTop => 'Scroll nach oben';
+  String get scrollToTop => 'Nach oben scrollen';
 
   @override
   String get couldNotLoadGenre =>
@@ -922,7 +923,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Für diesen Titel ist keine Beschreibung von LibriVox verfügbar.';
 
   @override
-  String get readers => 'Vorleser';
+  String get readers => 'Sprecher';
 
   @override
   String get openLinks => 'Links öffnen';
@@ -1292,7 +1293,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String noItemsLoaded(String itemLabel) {
-    return '$itemLabel nicht geladen';
+    return 'Keine $itemLabel für den Download geladen';
   }
 
   @override
@@ -1339,6 +1340,12 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get downloadSubtitles => 'Untertitel herunterladen';
+
+  @override
+  String get searchingSubtitles => 'Searching for subtitles…';
+
+  @override
+  String get downloadingSubtitle => 'Downloading subtitle…';
 
   @override
   String get selectedSubtitleInvalid =>
@@ -1508,6 +1515,20 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get perfectMatch => 'Exakte Übereinstimmung';
+
+  @override
+  String get aiTranslated => 'AI Translated';
+
+  @override
+  String get machineTranslated => 'Machine Translated';
+
+  @override
+  String get hearingImpaired => 'SDH';
+
+  @override
+  String framerateFps(String rate) {
+    return '$rate fps';
+  }
 
   @override
   String channelsCount(int count) {
@@ -4247,6 +4268,24 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get seerrRequestedStatus => 'Angefragt';
+
+  @override
+  String get seerrDownloading => 'Downloading';
+
+  @override
+  String seerrDownloadingSize(String done, String total) {
+    return 'Downloading · $done / $total';
+  }
+
+  @override
+  String seerrDownloadedOfTotal(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String seerrPercentValue(int percent) {
+    return '$percent%';
+  }
 
   @override
   String seerrDownloadingPercent(int percent) {

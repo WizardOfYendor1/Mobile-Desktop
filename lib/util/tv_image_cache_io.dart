@@ -1,8 +1,10 @@
 import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:server_core/server_core.dart';
 
@@ -26,7 +28,7 @@ Future<void> configureImageDiskCache() async {
     // a proxy that filters on the agent blocks every image while API calls
     // still succeed.
     final fileService = HttpFileService(
-      httpClient: _ServerUserAgentHttpClient(http.Client()),
+      httpClient: _ServerUserAgentHttpClient(IOClient(buildImageHttpClient())),
     );
     Config config;
     if (PlatformDetection.isAppleTV) {
@@ -312,6 +314,21 @@ Future<void> clearImageDiskCache() async {
     }
   } catch (_) {}
 }
+
+/// The client every artwork request goes through.
+///
+/// A grid asks for dozens of images at once, and with no bound this opened a
+/// connection per image and waited for the system to give up on each one that
+/// hung. That is what fails on a link that drops connection attempts while the
+/// API calls beside it, which are bounded, succeed.
+@visibleForTesting
+HttpClient buildImageHttpClient() => HttpClient()
+  ..maxConnectionsPerHost = imageRequestSlots
+  ..connectionTimeout = const Duration(seconds: 8)
+  ..idleTimeout = const Duration(seconds: 120);
+
+/// Artwork shares the link with the API calls, so it takes the smaller share.
+const imageRequestSlots = 4;
 
 class _ServerUserAgentHttpClient extends http.BaseClient {
   _ServerUserAgentHttpClient(this._inner);

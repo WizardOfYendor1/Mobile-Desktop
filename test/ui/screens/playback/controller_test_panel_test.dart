@@ -42,31 +42,32 @@ void main() {
     expect(find.text('[F710 - P1]'), findsOneWidget);
   });
 
-  testWidgets('an unknown verdict renders the placeholder, not a verdict word', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      harness(
-        const ControllerDiagnosticsSnapshot(
-          connectionId: 'a',
-          port: null,
-          channels: [
-            StickChannel(
-              id: 'left',
-              x: 0,
-              y: 0,
-              verdict: DiagnosticVerdict.unknown,
-            ),
-          ],
+  testWidgets(
+    'an unknown verdict renders the placeholder, not a verdict word',
+    (tester) async {
+      await tester.pumpWidget(
+        harness(
+          const ControllerDiagnosticsSnapshot(
+            connectionId: 'a',
+            port: null,
+            channels: [
+              StickChannel(
+                id: 'left',
+                x: 0,
+                y: 0,
+                verdict: DiagnosticVerdict.unknown,
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(find.text('--'), findsWidgets);
-    expect(find.text('ANALOG'), findsNothing);
-    expect(find.text('DIGITAL'), findsNothing);
-    expect(find.text('[F710 - Unassigned]'), findsOneWidget);
-  });
+      expect(find.text('--'), findsWidgets);
+      expect(find.text('ANALOG'), findsNothing);
+      expect(find.text('DIGITAL'), findsNothing);
+      expect(find.text('[F710 - Unassigned]'), findsOneWidget);
+    },
+  );
 
   testWidgets('a button with the full naming chain renders every link', (
     tester,
@@ -93,7 +94,6 @@ void main() {
     // The user-facing phrasing: the button they know plus what the game calls
     // it, with the raw code still on its own line for diagnosing odd pads.
     expect(find.text('Button A (Fire)'), findsOneWidget);
-
   });
 
   testWidgets(

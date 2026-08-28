@@ -2440,6 +2440,18 @@ abstract class AppLocalizations {
   /// **'Download Subtitles'**
   String get downloadSubtitles;
 
+  /// Shown while a remote subtitle search is running
+  ///
+  /// In en, this message translates to:
+  /// **'Searching for subtitles…'**
+  String get searchingSubtitles;
+
+  /// Shown while a chosen subtitle is downloaded and the server is picking it up
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading subtitle…'**
+  String get downloadingSubtitle;
+
   /// Error message when a selected subtitle is invalid
   ///
   /// In en, this message translates to:
@@ -2691,6 +2703,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Perfect match'**
   String get perfectMatch;
+
+  /// Label for a remote subtitle the provider marked as AI translated
+  ///
+  /// In en, this message translates to:
+  /// **'AI Translated'**
+  String get aiTranslated;
+
+  /// Label for a remote subtitle the provider marked as machine translated
+  ///
+  /// In en, this message translates to:
+  /// **'Machine Translated'**
+  String get machineTranslated;
+
+  /// Label for a remote subtitle marked as hearing impaired
+  ///
+  /// In en, this message translates to:
+  /// **'SDH'**
+  String get hearingImpaired;
+
+  /// Framerate of a remote subtitle, shown in its detail line
+  ///
+  /// In en, this message translates to:
+  /// **'{rate} fps'**
+  String framerateFps(String rate);
 
   /// Audio channel count label
   ///
@@ -7515,6 +7551,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Requested'**
   String get seerrRequestedStatus;
+
+  /// Seerr download bar label when the server reports no usable file sizes
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading'**
+  String get seerrDownloading;
+
+  /// Label above the Seerr download progress bar when byte counts are known
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading · {done} / {total}'**
+  String seerrDownloadingSize(String done, String total);
+
+  /// Short form of the Seerr download label, used when the card is too narrow for the verb
+  ///
+  /// In en, this message translates to:
+  /// **'{done} / {total}'**
+  String seerrDownloadedOfTotal(String done, String total);
+
+  /// Standalone percentage shown at the end of the Seerr download bar label
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}%'**
+  String seerrPercentValue(int percent);
 
   /// Label above the Seerr download progress bar
   ///

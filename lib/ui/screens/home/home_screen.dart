@@ -2019,7 +2019,6 @@ class _ContentRowsState extends State<_ContentRows>
         context,
         url,
         layoutWidth: v2FocusedWidth,
-        scale: 0.9,
         maxWidth: 960,
       ).catchError((_) {
         _v2FocusPrefetchedUrls.remove(url);

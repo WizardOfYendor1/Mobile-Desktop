@@ -121,6 +121,8 @@ class Media3PlayerBackend extends PlayerBackend {
   // Freeze diagnostics: surface decode/render stalls into the in-app report so
   // a frozen-picture playback is visible without adb. See _checkPlaybackWatchdogs.
   static const _watchdogStallMs = 6000;
+  static const _watchdogBufferingStallMs = 30000;
+  static const _watchdogBufferingRepeatMs = 60000;
   Timer? _watchdogTimer;
   String _watchdogItemLabel = 'item';
   bool _sawFirstFrame = false;
@@ -131,6 +133,8 @@ class Media3PlayerBackend extends PlayerBackend {
   bool _stallWarned = false;
   int _loadRequestedAtMs = 0;
   bool _neverStartedWarned = false;
+  int _bufferingSinceMs = 0;
+  int _bufferingWarnedAtMs = 0;
 
   final _positionStream = StreamController<Duration>.broadcast();
   final _durationStream = StreamController<Duration>.broadcast();
@@ -191,7 +195,7 @@ class Media3PlayerBackend extends PlayerBackend {
         if (_isPlaying != wasPlaying || _isBuffering != wasBuffering) {
           _diag(
             'Media3 state: playing=$_isPlaying buffering=$_isBuffering '
-            'pos=${_position.inMilliseconds}ms',
+            'pos=${_position.inMilliseconds}ms ahead=${_bufferedAheadMs}ms',
           );
         }
 
@@ -282,6 +286,10 @@ class Media3PlayerBackend extends PlayerBackend {
       case 'repeatModeChanged':
         _repeatMode = _repeatModeFromWire(map['repeatMode']?.toString());
       case 'tunnelingDiscontinuity':
+        _diag(
+          'Media3: tunneling discontinuity at ${_position.inMilliseconds}ms',
+          level: LogLevel.warning,
+        );
         _onTunnelingDiscontinuity();
       case 'firstFrameRendered':
         _sawFirstFrame = true;
@@ -366,6 +374,15 @@ class Media3PlayerBackend extends PlayerBackend {
         _onAudioTrackMapping(map);
       case 'doviCompat':
         _onDoviCompat(map);
+      case 'media3Log':
+        final repeats = _toInt(map['repeats']);
+        final error = map['error']?.toString();
+        _diag(
+          'Media3 [${map['tag']}]: ${map['message']}'
+          '${repeats > 0 ? ' (and $repeats more like it)' : ''}'
+          '${error == null || error.isEmpty ? '' : ' $error'}',
+          level: map['level'] == 'error' ? LogLevel.error : LogLevel.warning,
+        );
       case 'videoSizeChanged':
         _diag(
           'Media3: video size ${_toInt(map['width'])}x${_toInt(map['height'])}',
@@ -492,6 +509,11 @@ class Media3PlayerBackend extends PlayerBackend {
     }
 
     _discontinuityTimestamps.clear();
+    _diag(
+      'Media3: repeated tunneling discontinuities, '
+      'disabling tunneling for this session',
+      level: LogLevel.warning,
+    );
     unawaited(disableTunnelingFallback());
   }
 
@@ -542,6 +564,7 @@ class Media3PlayerBackend extends PlayerBackend {
     _lastPositionAdvanceAtMs = 0;
     _loadRequestedAtMs = DateTime.now().millisecondsSinceEpoch;
     _neverStartedWarned = false;
+    _bufferingSinceMs = 0;
     _watchdogTimer ??= Timer.periodic(
       const Duration(seconds: 2),
       (_) => _checkPlaybackWatchdogs(),
@@ -616,6 +639,39 @@ class Media3PlayerBackend extends PlayerBackend {
       _lastObservedPositionMs = _position.inMilliseconds;
       _lastPositionAdvanceAtMs = nowMs;
     }
+
+    // The watchdogs above all miss a freeze that leaves the player buffering
+    // mid film, since two of them want a first frame that already came and the
+    // third only runs while playing. Repeating the line says whether the runway
+    // is growing, which separates a slow load from a loader that has stopped.
+    if (_isBuffering && _sawFirstFrame) {
+      if (_bufferingSinceMs == 0) {
+        _bufferingSinceMs = nowMs;
+        _bufferingWarnedAtMs = 0;
+      }
+      final stuckMs = nowMs - _bufferingSinceMs;
+      final due = _bufferingWarnedAtMs == 0
+          ? stuckMs > _watchdogBufferingStallMs
+          : nowMs - _bufferingWarnedAtMs > _watchdogBufferingRepeatMs;
+      if (due) {
+        _bufferingWarnedAtMs = nowMs;
+        _diag(
+          'Media3 watchdog: "$_watchdogItemLabel" buffering for '
+          '${stuckMs ~/ 1000}s at ${_position.inMilliseconds}ms '
+          'with ${_bufferedAheadMs}ms buffered ahead',
+          level: LogLevel.warning,
+        );
+      }
+    } else {
+      _bufferingSinceMs = 0;
+    }
+  }
+
+  /// How much play time is loaded past the playhead. The player reports a
+  /// buffered position rather than a runway, so the playhead comes off it.
+  int get _bufferedAheadMs {
+    final ahead = _buffer.inMilliseconds - _position.inMilliseconds;
+    return ahead > 0 ? ahead : 0;
   }
 
   Future<void> disableTunnelingFallback({bool persist = true}) async {

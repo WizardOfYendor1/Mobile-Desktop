@@ -1261,6 +1261,12 @@ class AppLocalizationsFa extends AppLocalizations {
   String get downloadSubtitles => 'دانلود زیرنویس';
 
   @override
+  String get searchingSubtitles => 'Searching for subtitles…';
+
+  @override
+  String get downloadingSubtitle => 'Downloading subtitle…';
+
+  @override
   String get selectedSubtitleInvalid => 'زیرنویس انتخاب شده نامعتبر است.';
 
   @override
@@ -1430,6 +1436,20 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get perfectMatch => 'تطابق کامل';
+
+  @override
+  String get aiTranslated => 'AI Translated';
+
+  @override
+  String get machineTranslated => 'Machine Translated';
+
+  @override
+  String get hearingImpaired => 'SDH';
+
+  @override
+  String framerateFps(String rate) {
+    return '$rate fps';
+  }
 
   @override
   String channelsCount(int count) {
@@ -4124,6 +4144,24 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get seerrRequestedStatus => 'درخواست شده است';
+
+  @override
+  String get seerrDownloading => 'Downloading';
+
+  @override
+  String seerrDownloadingSize(String done, String total) {
+    return 'Downloading · $done / $total';
+  }
+
+  @override
+  String seerrDownloadedOfTotal(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String seerrPercentValue(int percent) {
+    return '$percent%';
+  }
 
   @override
   String seerrDownloadingPercent(int percent) {

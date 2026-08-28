@@ -21,8 +21,10 @@ class AndroidGamepadChannel {
   // Handles both onButton and onKeyboard despite the name; not button-only.
   static Future<dynamic> Function(MethodCall)? _emulatorInputHandler;
   static Future<dynamic> Function(MethodCall)? _controllerMappingKeyHandler;
-  static Future<dynamic> Function(MethodCall)? _controllerDiagnosticsAxesHandler;
-  static Future<dynamic> Function(MethodCall)? _controllerDiagnosticsButtonHandler;
+  static Future<dynamic> Function(MethodCall)?
+  _controllerDiagnosticsAxesHandler;
+  static Future<dynamic> Function(MethodCall)?
+  _controllerDiagnosticsButtonHandler;
   static AndroidStickNavigator? _navigator;
   static bool _installed = false;
 

@@ -336,6 +336,19 @@ class HomeViewModel extends ChangeNotifier {
        _multiServerRepo = multiServerRepo,
        _ownerUserId = client.userId ?? '';
 
+  /// Whether a section whose load threw keeps what is already on screen.
+  ///
+  /// A thrown load is a transient failure rather than an empty result, so a
+  /// populated row stays, and rows the cache restored count too since a first
+  /// load is exactly when the cache put them there. With nothing worth keeping
+  /// the row clears, so a cold load still drops its placeholder.
+  @visibleForTesting
+  static bool keepsRowsOnFailure({
+    required bool preserveExisting,
+    required bool hydratedFromCache,
+    required bool hasVisibleRow,
+  }) => (preserveExisting || hydratedFromCache) && hasVisibleRow;
+
   Future<void> load({bool preserveExisting = false, bool forceRefresh = false}) async {
     _checkAndTriggerDailyExternalRowsRefresh();
     if (_isLoading) {
@@ -518,16 +531,15 @@ class HomeViewModel extends ChangeNotifier {
           sectionRows = await _loadConfig(cfg, forceRefresh: forceRefresh);
         } catch (e) {
           debugPrint('[Home] Failed to load section $cfg: $e');
-          // A thrown load is a transient failure, not a genuinely empty
-          // result. When we are refreshing and a populated row is already on
-          // screen, keep it instead of wiping it. Only fall through to
-          // clearing when there is nothing to preserve, so a cold load still
-          // drops its loading placeholder.
           final hasVisibleRow = _rowsForConfig(
             _rows,
             cfg,
           ).any((r) => !r.isLoading);
-          if (preserveExisting && hasVisibleRow) {
+          if (keepsRowsOnFailure(
+            preserveExisting: preserveExisting,
+            hydratedFromCache: hydratedFromCache,
+            hasVisibleRow: hasVisibleRow,
+          )) {
             return;
           }
           sectionRows = const <HomeRow>[];
@@ -1553,10 +1565,10 @@ class HomeViewModel extends ChangeNotifier {
     required String Function(AppLocalizations l10n, String descriptor)
         mergedTitle,
   }) async {
-    final viewsFuture = GetIt.instance<UserViewsRepository>()
-        .getAllViewsIncludingHidden();
-    final configFuture = _client.usersApi
-        .getUserConfiguration()
+    final viewsRepo = GetIt.instance<UserViewsRepository>();
+    final viewsFuture = viewsRepo.getAllViewsIncludingHidden();
+    final configFuture = viewsRepo
+        .cachedUserConfiguration()
         .then<Set<String>>((config) => config.latestItemsExcludes.toSet())
         .catchError((_) => const <String>{});
 

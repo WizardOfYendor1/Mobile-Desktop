@@ -59,8 +59,9 @@ internal object NativeInputDeviceClassifier {
      * [classify] for the per-key-event path, which must avoid binder calls:
      * `traitsOf`'s `hasKeys()` calls are synchronous round trips to
      * system_server, and paying that per key event risks an input-dispatch ANR.
-     * Keyed by descriptor+deviceId (descriptor alone isn't guaranteed non-empty);
-     * [invalidate] clears it on any device list change.
+     * Keyed by descriptor+deviceId, since descriptor alone isn't guaranteed
+     * non-empty. A device list change evicts the device it names, and teardown
+     * clears the lot.
      */
     fun classifyCached(device: InputDevice): NativeInputDeviceClass? {
         val key = "${device.descriptor}:${device.id}"
@@ -72,7 +73,16 @@ internal object NativeInputDeviceClassifier {
         return result
     }
 
-    /** Drops the cache after any device list change. */
+    /**
+     * Evicts one device. Matching on the id suffix can drop a little more than
+     * asked, which only costs a recomputed classification.
+     */
+    fun invalidate(deviceId: Int) {
+        val suffix = ":$deviceId"
+        synchronized(cache) { cache.keys.removeAll { it.endsWith(suffix) } }
+    }
+
+    /** Drops the whole cache, for teardown and session resets. */
     fun invalidate() {
         synchronized(cache) { cache.clear() }
     }

@@ -1278,6 +1278,12 @@ class AppLocalizationsSk extends AppLocalizations {
   String get downloadSubtitles => 'Stiahnite si titulky';
 
   @override
+  String get searchingSubtitles => 'Searching for subtitles…';
+
+  @override
+  String get downloadingSubtitle => 'Downloading subtitle…';
+
+  @override
   String get selectedSubtitleInvalid => 'Vybraté titulky sú neplatné.';
 
   @override
@@ -1451,6 +1457,20 @@ class AppLocalizationsSk extends AppLocalizations {
 
   @override
   String get perfectMatch => 'Perfektná zhoda';
+
+  @override
+  String get aiTranslated => 'AI Translated';
+
+  @override
+  String get machineTranslated => 'Machine Translated';
+
+  @override
+  String get hearingImpaired => 'SDH';
+
+  @override
+  String framerateFps(String rate) {
+    return '$rate fps';
+  }
 
   @override
   String channelsCount(int count) {
@@ -4169,6 +4189,24 @@ class AppLocalizationsSk extends AppLocalizations {
 
   @override
   String get seerrRequestedStatus => 'Požadované';
+
+  @override
+  String get seerrDownloading => 'Downloading';
+
+  @override
+  String seerrDownloadingSize(String done, String total) {
+    return 'Downloading · $done / $total';
+  }
+
+  @override
+  String seerrDownloadedOfTotal(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String seerrPercentValue(int percent) {
+    return '$percent%';
+  }
 
   @override
   String seerrDownloadingPercent(int percent) {

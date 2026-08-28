@@ -1224,6 +1224,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get downloadSubtitles => '下载字幕';
 
   @override
+  String get searchingSubtitles => 'Searching for subtitles…';
+
+  @override
+  String get downloadingSubtitle => 'Downloading subtitle…';
+
+  @override
   String get selectedSubtitleInvalid => '所选的字幕无效。';
 
   @override
@@ -1393,6 +1399,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get perfectMatch => '完全匹配';
+
+  @override
+  String get aiTranslated => 'AI Translated';
+
+  @override
+  String get machineTranslated => 'Machine Translated';
+
+  @override
+  String get hearingImpaired => 'SDH';
+
+  @override
+  String framerateFps(String rate) {
+    return '$rate fps';
+  }
 
   @override
   String channelsCount(int count) {
@@ -3988,6 +4008,24 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get seerrRequestedStatus => '已请求';
+
+  @override
+  String get seerrDownloading => 'Downloading';
+
+  @override
+  String seerrDownloadingSize(String done, String total) {
+    return 'Downloading · $done / $total';
+  }
+
+  @override
+  String seerrDownloadedOfTotal(String done, String total) {
+    return '$done / $total';
+  }
+
+  @override
+  String seerrPercentValue(int percent) {
+    return '$percent%';
+  }
 
   @override
   String seerrDownloadingPercent(int percent) {

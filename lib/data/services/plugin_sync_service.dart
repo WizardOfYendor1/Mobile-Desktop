@@ -24,6 +24,18 @@ import '../../util/platform_detection.dart';
 
 enum _PluginAvailabilityStatus { available, unavailable, unknown }
 
+/// Bounds for the plugin's own requests.
+///
+/// Without them the socket falls back to whatever the system allows, which is
+/// minutes on a link that drops connection attempts. Sign-in waits on the
+/// themes call before it reads the profile that decides which home rows exist,
+/// so a request left hanging there holds the whole profile back.
+@visibleForTesting
+BaseOptions pluginRequestOptions() => BaseOptions(
+  connectTimeout: const Duration(seconds: 8),
+  receiveTimeout: const Duration(seconds: 30),
+);
+
 class PluginSyncService extends ChangeNotifier {
   static const List<String> supportedProfiles = <String>[
     'global',
@@ -84,14 +96,18 @@ class PluginSyncService extends ChangeNotifier {
 
   bool _isSyncingFromServer = false;
   Timer? _pushDebounceTimer;
+  static const _pushDebounce = Duration(milliseconds: 1000);
 
   /// Profile JSON as last pushed to, or applied from, each server and profile.
   /// A push whose payload matches its entry is skipped, which is what stops an
   /// applied profile from echoing back up to the server.
   final Map<String, String> _lastSyncedProfileJson = {};
 
+  /// Set while sign-in is still working out what the server holds.
+  bool _readingProfileOnSignIn = false;
+
   PluginSyncService(this._prefs, this._store, {@visibleForTesting Dio? dio})
-    : _dio = dio ?? Dio() {
+    : _dio = dio ?? Dio(pluginRequestOptions()) {
     // An injected Dio brings its own adapter, so only the one built here needs
     // the server interceptors.
     if (dio == null) {
@@ -328,6 +344,7 @@ class PluginSyncService extends ChangeNotifier {
   }
 
   Future<void> syncOnLogin(MediaServerClient client, {String? serverId}) async {
+    _readingProfileOnSignIn = true;
     try {
       _activeThemeCacheServerId = serverId;
       await _hydrateCachedThemes(client, serverId: serverId);
@@ -388,6 +405,8 @@ class PluginSyncService extends ChangeNotifier {
       await _startSettingsStream(client);
     } catch (_) {
       resetState();
+    } finally {
+      _readingProfileOnSignIn = false;
     }
   }
 
@@ -1848,16 +1867,27 @@ class PluginSyncService extends ChangeNotifier {
       return;
     }
     _pushDebounceTimer?.cancel();
-    _pushDebounceTimer = Timer(const Duration(milliseconds: 1000), () {
-      final client = GetIt.instance.isRegistered<MediaServerClient>()
-          ? GetIt.instance<MediaServerClient>()
-          : null;
-      if (client != null &&
-          client.accessToken != null &&
-          client.accessToken!.isNotEmpty) {
-        pushSettings(client);
-      }
-    });
+    _pushDebounceTimer = Timer(_pushDebounce, _pushWhenProfileRead);
+  }
+
+  /// Sends the pending change once sign-in knows what the server holds.
+  ///
+  /// Sign-in reads the server profile behind the calls ahead of it, so a change
+  /// made in that window would write local state over the stored profile and
+  /// take the rows it defines with it. Waiting keeps the change.
+  void _pushWhenProfileRead() {
+    if (_readingProfileOnSignIn) {
+      _pushDebounceTimer = Timer(_pushDebounce, _pushWhenProfileRead);
+      return;
+    }
+    final client = GetIt.instance.isRegistered<MediaServerClient>()
+        ? GetIt.instance<MediaServerClient>()
+        : null;
+    if (client != null &&
+        client.accessToken != null &&
+        client.accessToken!.isNotEmpty) {
+      pushSettings(client);
+    }
   }
 
 

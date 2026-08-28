@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:ui';
 
+import '../../widgets/bounded_network_image.dart';
 import '../../widgets/offline_aware_image.dart';
 import '../../widgets/identify_dialog.dart';
 import '../../widgets/focus/context_action.dart' show canIdentifyItemType;
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -39,6 +39,9 @@ import 'modern/modern_detail_content.dart';
 import '../../../data/repositories/seerr_repository.dart';
 import '../../../data/services/seerr/seerr_api_models.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../widgets/progress_snack_bar.dart';
+import '../../../util/remote_subtitle_labels.dart';
+import '../../../util/subtitle_appearance_schedule.dart';
 import '../../../preference/preference_constants.dart';
 import '../../../preference/user_preferences.dart';
 import '../../../preference/seerr_preferences.dart';
@@ -1551,7 +1554,6 @@ class _DetailContentState extends State<_DetailContent> {
 
   List<Widget> _buildBookContent(BuildContext context, AggregatedItem item) {
     final l10n = AppLocalizations.of(context);
-    final compact = _isCompact(context);
     final author = _bookAuthorName(item);
     final authorDisplay = author ?? l10n.unknownAuthor;
     final overview = item.overview?.trim();
@@ -1565,11 +1567,16 @@ class _DetailContentState extends State<_DetailContent> {
         ? _sectionFocusNode('detailBookSimilar')
         : null;
     final coverTag = item.primaryImageTag;
+    const coverWidth = 132.0;
+    final dpr = MediaQuery.devicePixelRatioOf(context);
     final coverUrl = coverTag == null
         ? null
         : viewModel.imageApi.getPrimaryImageUrl(
             item.id,
-            maxHeight: compact ? 520 : 720,
+            maxHeight: BoundedNetworkImage.physicalPixels(
+              coverWidth * 3 / 2,
+              dpr,
+            ),
             tag: coverTag,
           );
 
@@ -1578,7 +1585,7 @@ class _DetailContentState extends State<_DetailContent> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 132,
+            width: coverWidth,
             child: AspectRatio(
               aspectRatio: 2 / 3,
               child: ClipRRect(
@@ -1595,6 +1602,10 @@ class _DetailContentState extends State<_DetailContent> {
                       )
                     : OfflineAwareImage(
                         imageUrl: coverUrl,
+                        memCacheWidth: BoundedNetworkImage.cacheWidthFor(
+                          coverWidth,
+                          dpr,
+                        ),
                         fit: BoxFit.cover,
                         errorWidget: (_, _, _) => Container(
                           color: const Color(0xFF2C77B7),
@@ -3826,7 +3837,9 @@ class _Backdrop extends StatelessWidget {
       imageUrl: imageUrl,
       fit: BoxFit.cover,
       fadeInDuration: Duration.zero,
-      memCacheWidth: blurred ? 640 : null,
+      memCacheWidth: blurred
+          ? BackgroundService.backdropBlurredDecodeWidth
+          : BackgroundService.backdropMaxWidth,
       errorWidget: (_, _, _) => const SizedBox.shrink(),
     );
     if (!blurred) return image;
@@ -4249,6 +4262,7 @@ class DetailPosterImage extends StatelessWidget {
     final desktopScale = _desktopUiScale();
     final w = isMobile ? 120.0 : 165.0 * desktopScale;
     final h = isMobile ? 180.0 : 248.0 * desktopScale;
+    final dpr = MediaQuery.devicePixelRatioOf(context);
 
     final posterPath = item.rawData['PosterPath'] as String?;
     if (item.primaryImageTag == null &&
@@ -4268,11 +4282,12 @@ class DetailPosterImage extends StatelessWidget {
                   ? '$seerrPosterBase$posterPath'
                   : imageApi.getPrimaryImageUrl(
                       item.id,
-                      maxHeight: isMobile ? 360 : (500 * desktopScale).round(),
+                      maxHeight: BoundedNetworkImage.physicalPixels(h, dpr),
                       tag: item.primaryImageTag,
                     ),
               width: w,
               height: h,
+              memCacheWidth: BoundedNetworkImage.cacheWidthFor(w, dpr),
               fit: BoxFit.cover,
               errorWidget: (_, _, _) => SizedBox(width: w, height: h),
             ),
@@ -4387,7 +4402,8 @@ class _EpisodeThumbnail extends StatelessWidget {
     final desktopScale = _desktopUiScale();
     final w = isMobile ? 200.0 : 280.0 * desktopScale;
     final h = isMobile ? 113.0 : 158.0 * desktopScale;
-    final maxW = isMobile ? 400 : (560 * desktopScale).round();
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+    final maxW = BoundedNetworkImage.physicalPixels(w, dpr);
 
     final seriesThumbUrl =
         GetIt.instance<UserPreferences>().get(
@@ -4418,6 +4434,7 @@ class _EpisodeThumbnail extends StatelessWidget {
               imageUrl: imageUrl,
               width: w,
               height: h,
+              memCacheWidth: BoundedNetworkImage.cacheWidthFor(w, dpr),
               fit: BoxFit.cover,
               errorWidget: (_, _, _) => SizedBox(width: w, height: h),
             ),
@@ -5201,6 +5218,10 @@ class _AuthorHeader extends StatelessWidget {
                     )
                   : OfflineAwareImage(
                       imageUrl: photoUrl!,
+                      memCacheWidth: BoundedNetworkImage.cacheWidthFor(
+                        84,
+                        MediaQuery.devicePixelRatioOf(context),
+                      ),
                       fit: BoxFit.cover,
                       errorWidget: (_, _, _) => const AdaptiveIcon(
                         Icons.person,
@@ -7129,9 +7150,12 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
     final withDownloads = downloads == null
         ? rowContent
         : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               rowContent,
+              // Space it off the buttons, or it reads as an underline.
+              SizedBox(height: buttonRunSpacing),
               SeerrItemDownloadBars(state: downloads),
             ],
           );
@@ -9220,152 +9244,33 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
         !isAudio;
   }
 
-  String _remoteSubtitleErrorMessage(Object error, {required String action}) {
-    final l10n = AppLocalizations.of(context);
-    if (error is DioException) {
-      final status = error.response?.statusCode;
-      if (status == 403) {
-        return l10n.remoteSubtitlePermissionError(action);
-      }
-      if (status == 404) {
-        return l10n.remoteSubtitleNotFoundError(action);
-      }
-
-      final data = error.response?.data;
-      String? detail;
-      if (data is Map) {
-        detail =
-            (data['message'] ??
-                    data['Message'] ??
-                    data['error'] ??
-                    data['Error'])
-                as String?;
-      } else if (data is String && data.trim().isNotEmpty) {
-        detail = data.trim();
-      }
-
-      if (detail != null && detail.isNotEmpty) {
-        return l10n.remoteSubtitleDetailError(action, detail);
-      }
-      if (status != null) {
-        return l10n.remoteSubtitleHttpError(action, status);
-      }
-    }
-
-    return l10n.remoteSubtitleGenericError(action);
-  }
-
-  String _remoteSubtitleLanguage(
-    List<Map<String, dynamic>> subtitleStreams,
-    List<Map<String, dynamic>> audioStreams,
-  ) {
-    final preferred = GetIt.instance<UserPreferences>()
-        .get(UserPreferences.defaultSubtitleLanguage)
-        .trim();
-    if (preferred.isNotEmpty) {
-      return preferred;
-    }
-
-    for (final stream in [...subtitleStreams, ...audioStreams]) {
-      final language = (stream['Language'] as String?)?.trim();
-      if (language != null && language.isNotEmpty) {
-        return language;
-      }
-    }
-
-    return 'eng';
-  }
-
-  String _remoteSubtitleOptionSubtitle(Map<String, dynamic> subtitle) {
-    final details = <String>[];
-    final language =
-        (subtitle['ThreeLetterISOLanguageName'] as String?)?.trim() ??
-        (subtitle['Language'] as String?)?.trim();
-    final provider = subtitle['ProviderName'] as String?;
-    final format = subtitle['Format'] as String?;
-    final downloadCount = subtitle['DownloadCount'] as num?;
-    final rating = subtitle['CommunityRating'] as num?;
-    final isHashMatch = subtitle['IsHashMatch'] == true;
-
-    if (language != null && language.isNotEmpty) {
-      details.add(language.toUpperCase());
-    }
-
-    if (provider != null && provider.isNotEmpty) {
-      details.add(provider);
-    }
-    if (format != null && format.isNotEmpty) {
-      details.add(format.toUpperCase());
-    }
-    if (rating != null) {
-      details.add('${rating.toStringAsFixed(1)}★');
-    }
-    if (downloadCount != null) {
-      details.add(
-        AppLocalizations.of(context).downloadsCount(downloadCount.toInt()),
-      );
-    }
-    if (isHashMatch) {
-      details.add(AppLocalizations.of(context).perfectMatch);
-    }
-
-    return details.join(' | ');
-  }
-
-  Future<List<Map<String, dynamic>>> _refreshSubtitleStreams(
+  /// Waits for a freshly downloaded subtitle to show up on the item.
+  ///
+  /// The wait asks the item endpoint for the media streams alone rather than
+  /// reloading the view model: a view model load blanks the screen behind a
+  /// loading overlay and fans out into ratings, similar items, features and
+  /// Seerr, none of which say anything about whether the subtitle has landed.
+  /// One reload happens at the end, when there is something new to show.
+  Future<Map<String, dynamic>?> _awaitDownloadedSubtitle(
     AggregatedItem currentItem,
+    MediaServerClient client,
     Set<int> existingIndexes,
   ) async {
-    const attempts = 8;
-    const delay = Duration(milliseconds: 500);
-    List<Map<String, dynamic>> latestStreams = currentItem.mediaStreams
-        .where((stream) => stream['Type'] == 'Subtitle')
-        .toList(growable: false);
+    final found = await awaitNewSubtitleStream(
+      client: client,
+      item: currentItem,
+      existingIndexes: existingIndexes,
+      streamsOf: (refreshed) => mediaStreamsForItem(
+        refreshed,
+        selectedMediaSourceForItem(refreshed, widget.selectedMediaSourceId),
+      ),
+      keepGoing: () => mounted,
+    );
 
-    for (var attempt = 0; attempt < attempts; attempt++) {
+    if (found != null) {
       await viewModel.load();
-      if (!mounted) {
-        return latestStreams;
-      }
-
-      final refreshedItem = viewModel.item;
-      if (refreshedItem != null) {
-        final mediaSource = selectedMediaSourceForItem(
-          refreshedItem,
-          widget.selectedMediaSourceId,
-        );
-        latestStreams = mediaStreamsForItem(refreshedItem, mediaSource)
-            .where((stream) => stream['Type'] == 'Subtitle')
-            .toList(growable: false);
-        final hasNewStream = latestStreams.any((stream) {
-          final index = stream['Index'] as int?;
-          return index != null && !existingIndexes.contains(index);
-        });
-        if (hasNewStream) {
-          return latestStreams;
-        }
-      }
-
-      if (attempt < attempts - 1) {
-        await Future.delayed(delay);
-      }
     }
-
-    return latestStreams;
-  }
-
-  Map<String, dynamic>? _findNewSubtitleStream(
-    Set<int> existingIndexes,
-    List<Map<String, dynamic>> after,
-  ) {
-    for (final stream in after) {
-      final index = stream['Index'] as int?;
-      if (index != null && !existingIndexes.contains(index)) {
-        return stream;
-      }
-    }
-
-    return null;
+    return found;
   }
 
   Future<void> _downloadRemoteSubtitles(
@@ -9376,23 +9281,26 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
   ) async {
     final messenger = ScaffoldMessenger.of(context);
     final client = GetIt.instance<MediaServerClient>();
-    final language = _remoteSubtitleLanguage(subtitleStreams, audioStreams);
+    final language = remoteSubtitleLanguage(subtitleStreams, audioStreams);
 
     List<Map<String, dynamic>> results;
     try {
-      results = await client.itemsApi.searchRemoteSubtitles(
-        item.id,
-        language: language,
+      results = await withProgressSnackBar(
+        messenger,
+        AppLocalizations.of(context).searchingSubtitles,
+        () => client.itemsApi.searchRemoteSubtitles(item.id, language: language),
       );
     } catch (error) {
       if (!context.mounted) {
         return;
       }
-      messenger.showSnackBar(
+      trySnackBar(
+        messenger,
         SnackBar(
           content: Text(
-            _remoteSubtitleErrorMessage(
+            remoteSubtitleErrorMessage(
               error,
+              AppLocalizations.of(context),
               action: AppLocalizations.of(context).search,
             ),
           ),
@@ -9405,7 +9313,8 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
       return;
     }
     if (results.isEmpty) {
-      messenger.showSnackBar(
+      trySnackBar(
+        messenger,
         SnackBar(
           content: Text(
             AppLocalizations.of(context).noRemoteSubtitlesFound(language),
@@ -9415,19 +9324,21 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
       return;
     }
 
+    final l10n = AppLocalizations.of(context);
     final result = await TrackSelectorDialog.show(
       context,
-      title: AppLocalizations.of(context).downloadSubtitles,
+      title: l10n.downloadSubtitles,
       options: results.map((subtitle) {
-        final l10n = AppLocalizations.of(context);
         final label =
             subtitle['Name'] as String? ??
             subtitle['Author'] as String? ??
             l10n.subtitles;
-        final subtitleText = _remoteSubtitleOptionSubtitle(subtitle);
+        final subtitleText = remoteSubtitleDetails(subtitle, l10n);
         return TrackOption(
           label: label,
           subtitle: subtitleText.isNotEmpty ? subtitleText : null,
+          subtitleMaxLines: 2,
+          badges: remoteSubtitleFlags(subtitle, l10n),
         );
       }).toList(),
     );
@@ -9438,7 +9349,8 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
 
     final subtitleId = results[result]['Id']?.toString();
     if (subtitleId == null || subtitleId.isEmpty) {
-      messenger.showSnackBar(
+      trySnackBar(
+        messenger,
         SnackBar(
           content: Text(AppLocalizations.of(context).selectedSubtitleInvalid),
         ),
@@ -9446,33 +9358,28 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
       return;
     }
 
+    final existingIndexes = subtitleStreams
+        .map((stream) => stream['Index'] as int?)
+        .whereType<int>()
+        .toSet();
+
     try {
-      await client.itemsApi.downloadRemoteSubtitle(item.id, subtitleId);
-      if (!context.mounted) {
-        return;
-      }
-
-      final existingIndexes = subtitleStreams
-          .map((stream) => stream['Index'] as int?)
-          .whereType<int>()
-          .toSet();
-
-      final refreshedSubtitleStreams = await _refreshSubtitleStreams(
-        item,
-        existingIndexes,
+      final newStream = await withProgressSnackBar(
+        messenger,
+        AppLocalizations.of(context).downloadingSubtitle,
+        () async {
+          await client.itemsApi.downloadRemoteSubtitle(item.id, subtitleId);
+          return _awaitDownloadedSubtitle(item, client, existingIndexes);
+        },
       );
       if (!context.mounted) {
         return;
       }
-
-      final newStream = _findNewSubtitleStream(
-        existingIndexes,
-        refreshedSubtitleStreams,
-      );
 
       if (newStream != null) {
         setState(() => _selectedSubtitleIndex = newStream['Index'] as int?);
-        messenger.showSnackBar(
+        trySnackBar(
+          messenger,
           SnackBar(
             content: Text(
               AppLocalizations.of(context).subtitleDownloadedSelected(
@@ -9487,7 +9394,8 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
         return;
       }
 
-      messenger.showSnackBar(
+      trySnackBar(
+        messenger,
         SnackBar(
           content: Text(AppLocalizations.of(context).subtitleDownloadedPending),
         ),
@@ -9496,11 +9404,13 @@ class DetailActionButtonsState extends State<DetailActionButtons> {
       if (!context.mounted) {
         return;
       }
-      messenger.showSnackBar(
+      trySnackBar(
+        messenger,
         SnackBar(
           content: Text(
-            _remoteSubtitleErrorMessage(
+            remoteSubtitleErrorMessage(
               error,
+              AppLocalizations.of(context),
               action: AppLocalizations.of(context).download,
             ),
           ),
@@ -9745,21 +9655,21 @@ Future<bool> _runWithDolbyVisionStartupFallbackPrompt(
   }
 }
 
-({bool hasDolbyVision, bool hasUnsupportedProfile}) _analyzeDolbyVisionQueue(
+({bool needsFallback, bool hasUnsupportedProfile}) _analyzeDolbyVisionQueue(
   List<AggregatedItem> queue, {
   String? mediaSourceId,
   bool allowDolbyVisionProfile7ElDirectPlay = false,
 }) {
-  var hasDolbyVision = false;
+  var needsFallback = false;
   var hasUnsupportedProfile = false;
 
   for (final item in queue) {
     final selectedSource = selectedMediaSourceForItem(item, mediaSourceId);
     final streams = mediaStreamsForItem(item, selectedSource);
     for (final stream in streams) {
-      if (!hasDolbyVision &&
-          HdrStreamCapability.isDolbyVisionVideoStream(stream)) {
-        hasDolbyVision = true;
+      if (!needsFallback &&
+          HdrStreamCapability.needsDolbyVisionFallback(stream)) {
+        needsFallback = true;
       }
       if (!hasUnsupportedProfile &&
           HdrStreamCapability.streamNeedsDolbyVisionProfileTranscode(
@@ -9769,14 +9679,14 @@ Future<bool> _runWithDolbyVisionStartupFallbackPrompt(
           )) {
         hasUnsupportedProfile = true;
       }
-      if (hasDolbyVision && hasUnsupportedProfile) {
-        return (hasDolbyVision: true, hasUnsupportedProfile: true);
+      if (needsFallback && hasUnsupportedProfile) {
+        return (needsFallback: true, hasUnsupportedProfile: true);
       }
     }
   }
 
   return (
-    hasDolbyVision: hasDolbyVision,
+    needsFallback: needsFallback,
     hasUnsupportedProfile: hasUnsupportedProfile,
   );
 }
@@ -9888,7 +9798,7 @@ Future<bool> shouldForceTranscodeForDolbyVisionQueue(
     mediaSourceId: mediaSourceId,
     allowDolbyVisionProfile7ElDirectPlay: allowDolbyVisionProfile7ElDirectPlay,
   );
-  if (!dvAnalysis.hasDolbyVision) {
+  if (!dvAnalysis.needsFallback) {
     return false;
   }
 
@@ -13804,7 +13714,9 @@ class DetailEpisodeCardState extends State<DetailEpisodeCard>
                                     ThemeRegistry.active.borders.focusBorder.copyWith(
                                       color: isNeon
                                           ? const Color(0xFF00FFFF)
-                                          : Colors.cyan.withValues(alpha: 0.7),
+                                          : AppColorScheme.accent.withValues(
+                                              alpha: 0.7,
+                                            ),
                                       width: 1.5,
                                     ),
                                   ),

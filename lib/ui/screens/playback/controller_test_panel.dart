@@ -107,9 +107,13 @@ class ControllerTestPanel extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: _StickField(label: 'Left stick', stick: left)),
+              Expanded(
+                child: _StickField(label: 'Left stick', stick: left),
+              ),
               const SizedBox(width: 24),
-              Expanded(child: _StickField(label: 'Right stick', stick: right)),
+              Expanded(
+                child: _StickField(label: 'Right stick', stick: right),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -117,9 +121,13 @@ class ControllerTestPanel extends StatelessWidget {
           const SizedBox(height: 6),
           Row(
             children: [
-              Expanded(child: _TriggerMeter(label: 'L2', trigger: l2)),
+              Expanded(
+                child: _TriggerMeter(label: 'L2', trigger: l2),
+              ),
               const SizedBox(width: 16),
-              Expanded(child: _TriggerMeter(label: 'R2', trigger: r2)),
+              Expanded(
+                child: _TriggerMeter(label: 'R2', trigger: r2),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -143,31 +151,31 @@ class ControllerTestPanel extends StatelessWidget {
           SizedBox(
             height: 18,
             child: Row(
-            children: [
-              // The ring only appears while B is actually held, so the footer
-              // stays quiet during normal testing.
-              if (exitHoldProgress > 0) ...[
-                SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    value: exitHoldProgress,
-                    strokeWidth: 3,
-                    backgroundColor: Colors.white24,
-                    valueColor: const AlwaysStoppedAnimation<Color>(_bright),
+              children: [
+                // The ring only appears while B is actually held, so the footer
+                // stays quiet during normal testing.
+                if (exitHoldProgress > 0) ...[
+                  SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      value: exitHoldProgress,
+                      strokeWidth: 3,
+                      backgroundColor: Colors.white24,
+                      valueColor: const AlwaysStoppedAnimation<Color>(_bright),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Keep holding B to go back...',
-                  style: const TextStyle(color: _bright, fontSize: 12),
-                ),
-              ] else
-                const Text(
-                  'Hold B to go back      [ unsupported: paddle / lightgun ]',
-                  style: TextStyle(color: _dim, fontSize: 12),
-                ),
-            ],
+                  const SizedBox(width: 8),
+                  Text(
+                    'Keep holding B to go back...',
+                    style: const TextStyle(color: _bright, fontSize: 12),
+                  ),
+                ] else
+                  const Text(
+                    'Hold B to go back      [ unsupported: paddle / lightgun ]',
+                    style: TextStyle(color: _dim, fontSize: 12),
+                  ),
+              ],
             ),
           ),
         ],
@@ -209,10 +217,7 @@ class _StickField extends StatelessWidget {
             child: Stack(
               children: [
                 Align(
-                  alignment: Alignment(
-                    x.clamp(-1.0, 1.0),
-                    y.clamp(-1.0, 1.0),
-                  ),
+                  alignment: Alignment(x.clamp(-1.0, 1.0), y.clamp(-1.0, 1.0)),
                   child: Container(
                     width: 8,
                     height: 8,
@@ -299,7 +304,10 @@ class _DpadRow extends StatelessWidget {
     return Row(
       children: [
         // There might be a better graphical display option here but this works.
-        const Text('D-pad', style: TextStyle(color: Colors.white70, fontSize: 14)),
+        const Text(
+          'D-pad',
+          style: TextStyle(color: Colors.white70, fontSize: 14),
+        ),
         const SizedBox(width: 12),
         Text(
           glyphs,
@@ -337,7 +345,10 @@ class _TriggerMeter extends StatelessWidget {
     final bar = '#' * filled + '.' * (_barLength - filled);
     return Row(
       children: [
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
+        ),
         const SizedBox(width: 8),
         Text(
           bar,
@@ -388,7 +399,9 @@ class _LastButton extends StatelessWidget {
     // reporting something unexpected.
     if (b.retroPad != null) {
       lines.add(
-        b.label != null ? 'Button ${b.retroPad} (${b.label})' : 'Button ${b.retroPad}',
+        b.label != null
+            ? 'Button ${b.retroPad} (${b.label})'
+            : 'Button ${b.retroPad}',
       );
     } else if (b.label != null) {
       lines.add('(${b.label})');
@@ -409,7 +422,10 @@ class _LastButton extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 2),
             child: Text(
               line,
-              style: const TextStyle(color: ControllerTestPanel._bright, fontSize: 14),
+              style: const TextStyle(
+                color: ControllerTestPanel._bright,
+                fontSize: 14,
+              ),
             ),
           ),
       ],

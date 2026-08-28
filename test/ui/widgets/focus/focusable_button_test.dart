@@ -60,54 +60,56 @@ void main() {
     );
   });
 
-  testWidgets('without autoScroll, focusing an off-screen button leaves the scroll offset alone', (
-    tester,
-  ) async {
-    final topNode = FocusNode();
-    final bottomNode = FocusNode();
-    addTearDown(topNode.dispose);
-    addTearDown(bottomNode.dispose);
+  testWidgets(
+    'without autoScroll, focusing an off-screen button leaves the scroll offset alone',
+    (tester) async {
+      final topNode = FocusNode();
+      final bottomNode = FocusNode();
+      addTearDown(topNode.dispose);
+      addTearDown(bottomNode.dispose);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SingleChildScrollView(
-            child: Column(
-              children: [
-                FocusableButton(
-                  focusNode: topNode,
-                  onPressed: () {},
-                  child: const SizedBox(height: 40, child: Text('Top')),
-                ),
-                const SizedBox(height: 2000),
-                FocusableButton(
-                  focusNode: bottomNode,
-                  autoScroll: true,
-                  onPressed: () {},
-                  child: const SizedBox(height: 40, child: Text('Bottom')),
-                ),
-              ],
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: Column(
+                children: [
+                  FocusableButton(
+                    focusNode: topNode,
+                    onPressed: () {},
+                    child: const SizedBox(height: 40, child: Text('Top')),
+                  ),
+                  const SizedBox(height: 2000),
+                  FocusableButton(
+                    focusNode: bottomNode,
+                    autoScroll: true,
+                    onPressed: () {},
+                    child: const SizedBox(height: 40, child: Text('Bottom')),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    final scrollable = tester.state<ScrollableState>(find.byType(Scrollable));
+      final scrollable = tester.state<ScrollableState>(find.byType(Scrollable));
 
-    bottomNode.requestFocus();
-    await tester.pump();
-    await tester.pumpAndSettle();
-    final scrolledDown = scrollable.position.pixels;
-    expect(scrolledDown, greaterThan(0));
+      bottomNode.requestFocus();
+      await tester.pump();
+      await tester.pumpAndSettle();
+      final scrolledDown = scrollable.position.pixels;
+      expect(scrolledDown, greaterThan(0));
 
-    topNode.requestFocus();
-    await tester.pump();
-    await tester.pumpAndSettle();
-    expect(
-      scrollable.position.pixels,
-      scrolledDown,
-      reason: 'default autoScroll:false leaves the offset stuck, reproducing the bug',
-    );
-  });
+      topNode.requestFocus();
+      await tester.pump();
+      await tester.pumpAndSettle();
+      expect(
+        scrollable.position.pixels,
+        scrolledDown,
+        reason:
+            'default autoScroll:false leaves the offset stuck, reproducing the bug',
+      );
+    },
+  );
 }

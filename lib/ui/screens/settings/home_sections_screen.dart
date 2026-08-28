@@ -1835,6 +1835,9 @@ class _HomeSectionsScreenState extends State<HomeSectionsScreen>
           SliverToBoxAdapter(child: _buildHeader(l10n)),
         ReorderableAnimatedListImpl<HomeSectionConfig>(
           items: items,
+          dragStartDelay: PlatformDetection.useMobileUi
+              ? const Duration(milliseconds: 500)
+              : Duration.zero,
           scrollDirection: Axis.vertical,
           buildDefaultDragHandles: true,
           // Comparing the enabled state and turning off swap detection makes a

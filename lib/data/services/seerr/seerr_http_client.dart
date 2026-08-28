@@ -94,9 +94,25 @@ class SeerrHttpClient {
       throw DioException(
         requestOptions: response.requestOptions,
         response: response,
-        message: '$context: HTTP ${response.statusCode}',
+        message: '$context: HTTP ${response.statusCode}${_errorDetail(response)}',
       );
     }
+  }
+
+  /// Seerr and the Moonbase proxy send the reason in a JSON body. Include it
+  /// so the screen shows more than a status code, and take nothing else. The
+  /// message ends up in the diagnostic report, and a raw body from a proxy in
+  /// front of the server is an error page that can carry paths or tokens the
+  /// report's redaction wasn't written for.
+  String _errorDetail(Response response) {
+    final data = response.data;
+    if (data is! Map) return '';
+    final detail = (data['message'] ?? data['error'] ?? data['code'])
+        ?.toString()
+        .trim();
+    if (detail == null || detail.isEmpty) return '';
+    if (detail.length > 200) return ' - ${detail.substring(0, 200)}...';
+    return ' - $detail';
   }
 
   Future<Map<String, dynamic>> getCurrentUser() async {

@@ -63,7 +63,10 @@ final class AppleTvPlayerViewController: UIViewController {
     private var canFavorite = false
     private var isFavorite = false
     private var canDownloadSubtitles = false
-    private weak var subtitleSearchingAlert: UIAlertController?
+    /// The searching / downloading alert. Dart raises and clears it, so both
+    /// halves of the flow report their own ending instead of the search one
+    /// falling through to "No Subtitles Found" whatever went wrong.
+    private weak var subtitleProgressAlert: UIAlertController?
     /// The buttons the player button settings left switched on, in the order
     /// the user put them in. Nil until the Dart side sends one, and the row
     /// offers everything until then.
@@ -156,6 +159,7 @@ final class AppleTvPlayerViewController: UIViewController {
         let cols: Int
         let rows: Int
         let intervalMs: Int
+        let timestampsMs: [Int]
     }
 
     private enum TrickplayMode: String { case disabled, single, strip, full }
@@ -1212,9 +1216,18 @@ final class AppleTvPlayerViewController: UIViewController {
             trickplaySheetsLoading.removeAll()
         }
         let headers = (dict["headers"] as? [String: String]) ?? [:]
+        let timestampsMs = (dict["timestampsMs"] as? [NSNumber])?.map(\.intValue) ?? []
+        if !timestampsMs.isEmpty && timestampsMs.count != urls.count {
+            trickplay = nil
+            trickplaySheets.removeAll()
+            trickplaySheetsLoading.removeAll()
+            hideTrickplay()
+            return
+        }
         trickplay = TrickplayData(
             urls: urls, headers: headers, width: width, height: height,
-            cols: cols, rows: rows, intervalMs: intervalMs)
+            cols: cols, rows: rows, intervalMs: intervalMs,
+            timestampsMs: timestampsMs)
         trickplayMode = TrickplayMode(rawValue: (dict["mode"] as? String) ?? "") ?? .single
         trickplayScalePercent = (dict["scalePercent"] as? NSNumber)?.intValue ?? 30
         trickplayVerticalPercent = (dict["verticalPositionPercent"] as? NSNumber)?.intValue ?? 0
@@ -2169,13 +2182,22 @@ final class AppleTvPlayerViewController: UIViewController {
         let tilesPerImage = tp.cols * tp.rows
         guard tilesPerImage > 0 else { return nil }
         let lastMs = max(0, Int(player.duration * 1000) - 1)
-        let tileIndex = min(max(0, ms), lastMs) / tp.intervalMs
-        let imageIndex = tileIndex / tilesPerImage
-        let offset = tileIndex % tilesPerImage
+        let boundedMs = min(max(0, ms), lastMs)
+        let imageIndex: Int
+        let offset: Int
+        if tp.timestampsMs.isEmpty {
+            let tileIndex = boundedMs / tp.intervalMs
+            imageIndex = tileIndex / tilesPerImage
+            offset = tileIndex % tilesPerImage
+        } else {
+            imageIndex = trickplayImageIndex(tp, atMs: boundedMs)
+            offset = 0
+        }
         guard let sheet = trickplaySheets[imageIndex] else {
             loadTrickplaySheet(imageIndex)
             return nil
         }
+        if !tp.timestampsMs.isEmpty { return sheet }
         guard let cg = sheet.cgImage else { return nil }
         let rect = CGRect(
             x: (offset % tp.cols) * tp.width, y: (offset / tp.cols) * tp.height,
@@ -2188,13 +2210,35 @@ final class AppleTvPlayerViewController: UIViewController {
         else { return }
         let tilesPerImage = tp.cols * tp.rows
         guard tilesPerImage > 0 else { return }
-        let lastIndex = max(0, (Int(player.duration * 1000) - 1) / tp.intervalMs / tilesPerImage)
-        let current = max(0, ms) / tp.intervalMs / tilesPerImage
+        let lastIndex: Int
+        let current: Int
+        if tp.timestampsMs.isEmpty {
+            lastIndex = max(0, (Int(player.duration * 1000) - 1) / tp.intervalMs / tilesPerImage)
+            current = max(0, ms) / tp.intervalMs / tilesPerImage
+        } else {
+            lastIndex = tp.timestampsMs.count - 1
+            current = trickplayImageIndex(tp, atMs: max(0, ms))
+        }
         for ahead in 1...sheetsAhead {
             let index = forward ? current + ahead : current - ahead
             if index < 0 || index > lastIndex { break }
             loadTrickplaySheet(index)
         }
+    }
+
+    private func trickplayImageIndex(_ tp: TrickplayData, atMs ms: Int) -> Int {
+        guard !tp.timestampsMs.isEmpty else { return 0 }
+        var low = 0
+        var high = tp.timestampsMs.count - 1
+        while low <= high {
+            let middle = low + (high - low) / 2
+            if tp.timestampsMs[middle] <= ms {
+                low = middle + 1
+            } else {
+                high = middle - 1
+            }
+        }
+        return min(max(high, 0), tp.timestampsMs.count - 1)
     }
 
     private func loadTrickplaySheet(_ index: Int) {
@@ -2328,12 +2372,40 @@ final class AppleTvPlayerViewController: UIViewController {
     }
 
     private func beginSubtitleSearch() {
-        let alert = UIAlertController(
-            title: "Searching for Subtitles\u{2026}", message: nil,
-            preferredStyle: .alert)
-        subtitleSearchingAlert = alert
-        present(alert, animated: true)
         onSearchSubtitles?()
+    }
+
+    /// Put up a spinner-less "working on it" alert for the stretch between
+    /// picking a subtitle and the server listing it. Without this the sheet just
+    /// closes and nothing happens for as long as the refresh takes, which reads
+    /// as the press having been ignored.
+    func showSubtitleProgress(_ message: String) {
+        let alert = UIAlertController(title: message, message: nil, preferredStyle: .alert)
+        subtitleProgressAlert = alert
+        present(alert, animated: true)
+    }
+
+    /// Take the progress alert down. A message turns it into an alert the viewer
+    /// has to acknowledge, which is how a failure or a subtitle that never
+    /// turned up gets reported instead of being swallowed.
+    func hideSubtitleProgress(message: String?) {
+        dismissSubtitleProgress { [weak self] in
+            guard let self, let message, !message.isEmpty else { return }
+            let alert = UIAlertController(title: message, message: nil, preferredStyle: .alert)
+            alert.addAction(UIAlertAction(title: "OK", style: .cancel))
+            self.present(alert, animated: true)
+        }
+    }
+
+    /// Dismissal is asynchronous, so whatever comes next has to wait for the
+    /// completion rather than be presented on top of an alert on its way out.
+    private func dismissSubtitleProgress(then next: @escaping () -> Void) {
+        guard let existing = subtitleProgressAlert else {
+            next()
+            return
+        }
+        subtitleProgressAlert = nil
+        existing.dismiss(animated: true) { next() }
     }
 
     func presentRemoteSubtitleResults(_ results: [[String: Any]]) {
@@ -2361,12 +2433,7 @@ final class AppleTvPlayerViewController: UIViewController {
             sheet.addAction(UIAlertAction(title: "Cancel", style: .cancel))
             self.present(sheet, animated: true)
         }
-        if let searching = subtitleSearchingAlert {
-            subtitleSearchingAlert = nil
-            searching.dismiss(animated: true) { show() }
-        } else {
-            show()
-        }
+        dismissSubtitleProgress { show() }
     }
 
     private func presentChapterMenu() {
