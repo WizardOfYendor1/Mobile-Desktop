@@ -398,46 +398,6 @@ Future<List<int>?> loadGameStateWithMigration(
   return legacy;
 }
 
-/// Core options this app sets itself, because the core's own default is wrong
-/// for TV hardware. Applied BENEATH anything the user has chosen, so an
-/// explicit setting always wins and these only fill the gaps - which also
-/// means a settings reset falls back to these rather than to the core's
-/// defaults.
-///
-/// Keep this list short and evidence-backed. Overriding a core's defaults is a
-/// maintenance burden and an easy way to be subtly wrong, so an entry belongs
-/// here only when the shipped default has been measured to be harmful.
-const Map<String, Map<String, String>> coreOptionDefaults = {
-  'mupen64plus_next': {
-    // GLideN64's texture cache. The core ships 8000, which is a desktop-GPU
-    // value and kills the app on every Android TV device tested (2026-08-28,
-    // StarCraft 64 at 640x480, cache the only variable):
-    //   Shield, 3GB, Tegra - GPU memory 682MB -> 1084MB in two minutes, then
-    //     the system SIGKILLed the process.
-    //   Fire TV Cube, 2GB, Mali - graphics memory 150MB -> 682MB and still
-    //     climbing; wedged the whole device twice, needing a force-stop once
-    //     and a reboot the other time.
-    // At 1500 it converges on both: byte-identical GPU memory between minutes
-    // 2 and 4 on the Shield, and a ~330MB plateau on the Fire Cube. The growth
-    // is time-based rather than exploration-based - it happened with the
-    // camera completely stationary - so any N64 game left running drifts into
-    // it, which is why this cannot be left to the user to discover.
-    'mupen64plus-MaxTxCacheSize': '1500',
-  },
-};
-
-/// [settings] with [coreOptionDefaults] filled in underneath, or just the
-/// defaults when the user has no stored settings at all. Returns null only
-/// when there is nothing to apply, so callers can keep passing null through.
-Map<String, String>? withCoreOptionDefaults(
-  String coreId,
-  Map<String, String>? settings,
-) {
-  final defaults = coreOptionDefaults[coreId];
-  if (defaults == null || defaults.isEmpty) return settings;
-  return {...defaults, ...?settings};
-}
-
 /// The saved-settings key for [coreId], shared by every place that reads or
 /// writes a core's persisted emulator options.
 String coreSettingsKey(String coreId) => 'moonfin-native-$coreId';

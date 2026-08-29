@@ -108,15 +108,11 @@ class NativeControllerMapping {
   /// Stick snap mode by game id; absent means [StickSnapMode.off].
   final Map<String, StickSnapMode> snapByGame;
 
-  /// Whole replacement binding tables by game id. A game listed here uses its
-  /// own table instead of [keycodeToButton]; an absent game inherits the
-  /// default.
+  /// Whole replacement binding tables by game id; an absent game inherits
+  /// [keycodeToButton].
   ///
-  /// Replacement rather than an overlay on purpose: bindings are 1:1, and an
-  /// overlay has no way to say "this button is unbound here" without a second
-  /// tombstone concept. The trade is that a later change to the default does
-  /// not reach a game that has already diverged, which is the same bargain
-  /// [snapByGame] and the per-game emulator settings document already make.
+  /// Replacement rather than an overlay because bindings are 1:1, and an
+  /// overlay cannot say "unbound here" without a tombstone concept.
   final Map<String, Map<int, RetroPadButton>> bindingsByGame;
 
   /// Returns an independent immutable snapshot of this mapping.
@@ -198,10 +194,9 @@ class NativeControllerMapping {
     }
   }
 
-  /// Reads a keycode->button table, skipping anything that is not one.
-  ///
-  /// Also used on the whole document, where the nonnumeric metadata keys
-  /// (`controllerTypes`, `snapByGame`, `bindingsByGame`) fall out here.
+  /// Reads a keycode->button table, skipping anything that is not one, which
+  /// is how the nonnumeric metadata keys fall out when this runs on the whole
+  /// document.
   static Map<int, RetroPadButton> _bindingsFrom(Map source) {
     final bindings = <int, RetroPadButton>{};
     for (final entry in source.entries) {
@@ -262,10 +257,8 @@ class NativeControllerMapping {
 
   /// Binds within [gameId]'s own table, leaving every other game alone.
   ///
-  /// The first edit for a game copies the current default into it, so the
-  /// buttons the user never touched keep working; from then on that game is
-  /// independent. An empty [gameId] edits the default itself, which is what a
-  /// caller with no game in hand should affect.
+  /// The first edit copies the current default in, so buttons the user never
+  /// touched keep working. An empty [gameId] edits the default itself.
   NativeControllerMapping withBindingForGame(
     String gameId,
     int keycode,
@@ -283,11 +276,8 @@ class NativeControllerMapping {
     });
   }
 
-  /// Replaces [gameId]'s whole table with [bindings].
-  ///
-  /// For copy-to-all-pads, which copies the table the user is looking at. An
-  /// empty [gameId] replaces the default instead, so a caller with no game in
-  /// hand still does something sensible.
+  /// Replaces [gameId]'s whole table with [bindings], for copy-to-all-pads and
+  /// reset. An empty [gameId] replaces the default instead.
   NativeControllerMapping withBindingsForGame(
     String gameId,
     Map<int, RetroPadButton> bindings,

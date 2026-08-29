@@ -88,6 +88,23 @@ int? desktopBitForButton(
   return claimed ? null : fallback;
 }
 
+/// The per-profile binding tables to hand the native side for [gameId].
+///
+/// The mapping menu resolves through this same call, so what the core plays
+/// with and what the menu shows cannot drift. Keycodes only; controller type
+/// and stick snap go through their own channels.
+@visibleForTesting
+String controllerMappingsPayload(
+  Map<String, NativeControllerMapping> mappings,
+  String gameId,
+) => jsonEncode({
+  for (final entry in mappings.entries)
+    entry.key: {
+      for (final binding in entry.value.bindingsForGame(gameId).entries)
+        binding.key.toString(): binding.value.retroPadIndex,
+    },
+});
+
 /// The RetroPad bit a saved binding gives [button], or null when it is unbound.
 ///
 /// Split out so the desktop trigger path is testable: the gamepad stream is a
@@ -941,12 +958,6 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
         // managed to read is not, so writes stay disabled for this session.
         _coreOptionsReadable = false;
       }
-      // App-chosen defaults go UNDERNEATH whatever the user has stored, so an
-      // explicit setting always wins. This is also what a settings reset falls
-      // back to: clearing the document leaves these rather than the core's own
-      // defaults, which for N64 ship a texture-cache size that OOM-kills the
-      // app on TV hardware. See coreOptionDefaults.
-      settingsJson = withCoreOptionDefaults(coreId, settingsJson);
       // Last check before starting the one-per-process native session: if the
       // screen was unmounted while settings were loading, starting it now
       // would leave a session running with nothing left to tear it down.
@@ -1958,19 +1969,11 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     }
   }
 
-  /// The bindings the native side should apply RIGHT NOW, per profile.
-  ///
-  /// Resolved for the current game here rather than natively: the Android
-  /// parser reads one flat keycode table per profile, and the per-game
-  /// override is a Dart-side storage concern. Stick snap is already resolved
+  /// Resolved for the current game here rather than natively, because the
+  /// Android parser reads one flat table per profile. Stick snap is resolved
   /// the same way just below.
-  String _controllerMappingsJson() => jsonEncode({
-    for (final entry in _controllerMappings.entries)
-      entry.key: {
-        for (final binding in entry.value.bindingsForGame(widget.gameId).entries)
-          binding.key.toString(): binding.value.retroPadIndex,
-      },
-  });
+  String _controllerMappingsJson() =>
+      controllerMappingsPayload(_controllerMappings, widget.gameId);
 
   /// Pushes the mappings to whatever applies them.
   ///
@@ -2191,11 +2194,9 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
       ))
         target.id:
             (_controllerMappings[target.id] ?? NativeControllerMapping.empty)
-                // Copies the table the user is looking at, which is the
-                // source's bindings FOR THIS GAME. Scoped to this game on the
-                // target too, so copying to a pad does not reach into games
-                // the user was not looking at -- the same reasoning that keeps
-                // snap (per game, per controller) as the target's own.
+                // Copies the table the user is looking at, and scopes it to
+                // this game on the target too, so the copy cannot reach games
+                // the user was not looking at.
                 .withBindingsForGame(
                   widget.gameId,
                   source.bindingsForGame(widget.gameId),

@@ -16,7 +16,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "egl_backend.h"
 #include "libretro_host.h"
 
 #define LOG_TAG "moonfin_libretro"
@@ -219,10 +218,6 @@ static void teardown(JNIEnv *env) {
     g_ctx.host = NULL;
   }
   pthread_mutex_lock(&g_window_lock);
-  // lh_stop above already tore the context down on the emulation thread, so
-  // the backend is not holding this window any more; clear it before the
-  // reference goes away so nothing can pick it back up.
-  egl_backend_shutdown();
   if (g_ctx.window) {
     ANativeWindow_release(g_ctx.window);
     g_ctx.window = NULL;
@@ -304,17 +299,6 @@ JNI(jdoubleArray, nativeLoad)(
   if (!g_ctx.host) {
     LOGE("Could not allocate libretro host");
     return NULL;
-  }
-  // Must happen before lh_load: SET_HW_RENDER arrives inside retro_load_game,
-  // and a backend registered after that is too late for the core to use.
-  // Failure here is not fatal - the host simply keeps refusing hardware
-  // contexts, which is exactly how every build behaved before this existed.
-  if (egl_backend_install(g_ctx.host) != 0) {
-    LOGE("EGL backend failed to register; hardware cores will be refused");
-  } else {
-    pthread_mutex_lock(&g_window_lock);
-    egl_backend_set_window(g_ctx.window);
-    pthread_mutex_unlock(&g_window_lock);
   }
   g_ctx.bridge = (*env)->NewGlobalRef(env, thiz);
   if (!g_ctx.bridge) {
@@ -472,23 +456,6 @@ JNI(jdoubleArray, nativeLoad)(
   return result;
 }
 
-// The size the core renders at on the hardware path, as {width, height}, or
-// null on the software path. Lets Kotlin size the presentation surface to the
-// real render size instead of the core's much smaller base geometry - without
-// it, a high internal resolution is downscaled away before it reaches the
-// screen (bug-154).
-JNI(jintArray, nativeHwRenderSize)(JNIEnv *env, jobject thiz) {
-  (void)thiz;
-  if (!g_ctx.host) return NULL;
-  int w = 0, h = 0;
-  if (!lh_hw_render_size(g_ctx.host, &w, &h) || w <= 0 || h <= 0) return NULL;
-  jintArray out = (*env)->NewIntArray(env, 2);
-  if (!out) return NULL;
-  jint values[2] = {(jint)w, (jint)h};
-  (*env)->SetIntArrayRegion(env, out, 0, 2, values);
-  return out;
-}
-
 JNI(void, nativeSetSurface)(JNIEnv *env, jobject thiz, jobject surface) {
   (void)thiz;
   pthread_mutex_lock(&g_window_lock);
@@ -501,10 +468,6 @@ JNI(void, nativeSetSurface)(JNIEnv *env, jobject thiz, jobject surface) {
   if (surface) {
     g_ctx.window = ANativeWindow_fromSurface(env, surface);
   }
-  // The hardware path needs the same swap. It only stashes the window here;
-  // the EGLSurface is rebuilt on the emulation thread at the next present,
-  // because EGL objects belong to the thread the context is current on.
-  egl_backend_set_window(g_ctx.window);
   pthread_mutex_unlock(&g_window_lock);
 }
 
