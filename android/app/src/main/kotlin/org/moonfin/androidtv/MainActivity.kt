@@ -880,11 +880,23 @@ class MainActivity : AudioServiceActivity(), GamepadsCompatibleActivity {
 
     override fun onResume() {
         super.onResume()
+        // Re-attach the emulator's output surface on devices where Flutter's
+        // SurfaceProducer callbacks never fire (API 24-28). A no-op everywhere
+        // else - the bridge stands down as soon as it sees a real callback.
+        libretroBridge?.onHostResume()
         if (isInPictureInPictureMode) return
         dismissRunnable?.let {
             handler.removeCallbacks(it)
             dismissRunnable = null
         }
+    }
+
+    override fun onPause() {
+        // Before super: pause the core and drop the surface while the consumer
+        // is still alive, rather than after it has gone away. See
+        // LibretroBridge.onHostPause.
+        libretroBridge?.onHostPause()
+        super.onPause()
     }
 
     private fun dispatchPiPMethod(method: String, argument: Any) {

@@ -331,6 +331,39 @@ struct lh_host {
   int back_ready;
   lh_mutex video_lock;
 
+  // Hardware rendering. Registered by the platform before lh_load and copied,
+  // so the caller's table may be a temporary. has_hw_backend is the only thing
+  // consulted so far: nothing yet sets hw_active, because the host still
+  // refuses RETRO_ENVIRONMENT_SET_HW_RENDER, so every load runs the software
+  // path exactly as it did before this interface existed.
+  lh_hw_backend hw_backend;
+  void *hw_user;
+  int has_hw_backend;
+  // Set once a core has asked for a context and the backend has provided one.
+  // Read across threads via lh_hw_active, hence atomic.
+  atomic_int hw_active;
+  // Raised by lh_notify_hw_context_lost; the run loop consumes it to re-issue
+  // the core's context_reset without a paired context_destroy.
+  atomic_int hw_context_lost;
+  // The core's own callbacks, copied out of the struct it passed to
+  // SET_HW_RENDER: the core owns that memory and may reuse it the moment the
+  // environment call returns.
+  struct retro_hw_render_callback hw_render;
+  // What the core asked for, normalised. hw_requested is set on the PLATFORM
+  // thread (SET_HW_RENDER arrives inside retro_load_game, which lh_load runs
+  // inline) but the context is only ever created on the emulation thread, so
+  // this is the hand-off between the two.
+  lh_hw_request hw_request;
+  int hw_requested;
+  // The backend currently holds a live context. Emulation thread only.
+  int hw_context_up;
+  // GET_PREFERRED_HW_RENDER's answer, probed lazily and kept. The probe stands
+  // up a throwaway graphics context, so doing it once per session (and only if
+  // a core actually asks) keeps a SOFTWARE core from repeatedly poking the
+  // driver just because a backend happens to be registered.
+  int hw_pref_probed;
+  unsigned hw_pref_cached;
+
   // Audio ring: interleaved stereo S16.
   int16_t *ring;
   int ring_capacity;
@@ -387,6 +420,10 @@ struct lh_host {
 static struct lh_host *g_session;
 
 static int restart_core(struct lh_host *h);
+// Defined with the rest of the hardware-render helpers, below the frame path,
+// but called from environment_cb which comes first.
+static bool hw_note_request(struct lh_host *h,
+                            struct retro_hw_render_callback *cb);
 
 // ---------------------------------------------------------------------------
 // Options helpers.
@@ -1200,7 +1237,11 @@ static bool RETRO_CALLCONV environment_cb(unsigned cmd, void *data) {
       return data && copy_controller_info(
                          h, (const struct retro_controller_info *)data);
     case RETRO_ENVIRONMENT_SET_HW_RENDER:
-      return false;  // software rendering only
+      // Refused unless a platform backend is registered AND agrees it can
+      // provide this exact context. A refusal here is the documented, healthy
+      // outcome: the core either falls back or fails its load cleanly, which
+      // is what every software-only build has always done.
+      return hw_note_request(h, (struct retro_hw_render_callback *)data);
     case RETRO_ENVIRONMENT_GET_VARIABLE: {
       if (!data) return false;
       struct retro_variable *var = (struct retro_variable *)data;
@@ -1322,8 +1363,44 @@ static bool RETRO_CALLCONV environment_cb(unsigned cmd, void *data) {
       info->iface = (struct retro_vfs_interface *)&g_vfs_interface;
       return true;
     }
-    case RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER:
+    case RETRO_ENVIRONMENT_GET_PREFERRED_HW_RENDER: {
+      // libretro is explicit that the out-param is written even when this
+      // returns false, "unless the frontend doesn't implement it" - and
+      // PPSSPP uses the answer to choose which backend to try. Returning
+      // false with data untouched was only honest while there was no
+      // hardware path at all.
+      if (!data) return false;
+      unsigned *out = (unsigned *)data;
+      if (!h->has_hw_backend) {
+        *out = RETRO_HW_CONTEXT_NONE;
+        return false;
+      }
+      // Advertise the strongest GLES level the platform will actually stand
+      // up, probed rather than assumed. A false return means "this is all I
+      // have", which is true: we serve GLES and nothing else.
+      if (!h->hw_pref_probed) {
+        lh_hw_request probe;
+        memset(&probe, 0, sizeof(probe));
+        probe.api = LH_HW_API_GLES;
+        probe.version_major = 3;
+        probe.version_minor = 0;
+        probe.max_width = 640;
+        probe.max_height = 480;
+        if (h->hw_backend.supports(h->hw_user, &probe)) {
+          h->hw_pref_cached = RETRO_HW_CONTEXT_OPENGLES3;
+        } else {
+          probe.api = LH_HW_API_GLES2;
+          probe.version_major = 0;
+          probe.version_minor = 0;
+          h->hw_pref_cached = h->hw_backend.supports(h->hw_user, &probe)
+                                  ? RETRO_HW_CONTEXT_OPENGLES2
+                                  : RETRO_HW_CONTEXT_NONE;
+        }
+        h->hw_pref_probed = 1;
+      }
+      *out = h->hw_pref_cached;
       return false;
+    }
     default:
       return false;
   }
@@ -1476,6 +1553,172 @@ static int convert_frame(struct lh_host *h, const void *src, int width,
   return 1;
 }
 
+// ---------------------------------------------------------------------------
+// Hardware rendering. The core draws into a target the backend owns; the host
+// never sees a pixel. Everything here except hw_note_request runs on the
+// emulation thread, because a graphics context belongs to one thread and that
+// is the thread retro_run is called from.
+
+// Handed to the core inside its retro_hw_render_callback. libretro gives these
+// no user pointer, so they go through g_session like every other core-facing
+// callback in this file.
+static uintptr_t RETRO_CALLCONV hw_get_current_framebuffer(void) {
+  struct lh_host *h = g_session;
+  if (!h || !h->has_hw_backend || !h->hw_context_up) return 0;
+  lh_hw_target t = h->hw_backend.current_target(h->hw_user);
+  if (t.kind != LH_HW_TARGET_GL_FBO) return 0;
+  return (uintptr_t)t.u.gl_fbo_name;
+}
+
+static retro_proc_address_t RETRO_CALLCONV hw_get_proc_address(const char *sym) {
+  struct lh_host *h = g_session;
+  if (!h || !h->has_hw_backend || !sym) return NULL;
+  return (retro_proc_address_t)h->hw_backend.get_proc_address(h->hw_user, sym);
+}
+
+// Maps a core's requested context type onto the platform-facing enum. Returns
+// 0 when the host will not serve it at all (Vulkan, D3D, anything unknown).
+static int hw_api_from_context_type(unsigned type, lh_hw_api *out) {
+  switch (type) {
+    case RETRO_HW_CONTEXT_OPENGLES2:
+      *out = LH_HW_API_GLES2;
+      return 1;
+    case RETRO_HW_CONTEXT_OPENGLES3:
+    case RETRO_HW_CONTEXT_OPENGLES_VERSION:
+      *out = LH_HW_API_GLES;
+      return 1;
+    case RETRO_HW_CONTEXT_OPENGL:
+      *out = LH_HW_API_GL;
+      return 1;
+    case RETRO_HW_CONTEXT_OPENGL_CORE:
+      *out = LH_HW_API_GL_CORE;
+      return 1;
+    default:
+      return 0;  // Vulkan and the D3D family stay refused.
+  }
+}
+
+// SET_HW_RENDER handler. Runs on whichever thread called retro_load_game,
+// which for a first load is the platform thread - so this only RECORDS the
+// request. Creating the context here would put it on the wrong thread.
+static bool hw_note_request(struct lh_host *h,
+                            struct retro_hw_render_callback *cb) {
+  if (!cb || !h->has_hw_backend) return false;
+
+  lh_hw_api api;
+  if (!hw_api_from_context_type(cb->context_type, &api)) {
+    host_log(h, "Core asked for hardware context type %u, which this host does "
+                "not provide", (unsigned)cb->context_type);
+    return false;
+  }
+
+  lh_hw_request req;
+  memset(&req, 0, sizeof(req));
+  req.api = api;
+  req.version_major = (int)cb->version_major;
+  req.version_minor = (int)cb->version_minor;
+  req.depth = cb->depth ? 1 : 0;
+  // libretro: stencil without depth is invalid and must be ignored rather
+  // than honoured, so it never reaches the backend as a lone request.
+  req.stencil = (cb->depth && cb->stencil) ? 1 : 0;
+  req.bottom_left_origin = cb->bottom_left_origin ? 1 : 0;
+  req.debug_context = cb->debug_context ? 1 : 0;
+
+  // The render target is sized from the core's declared maximum, once. This is
+  // the only moment that number is available, and it must not be re-derived
+  // later from the current geometry: cores built on GLSM cache the target
+  // handle a single time, so a resize would hand them a dead name.
+  struct retro_system_av_info av;
+  memset(&av, 0, sizeof(av));
+  h->core.get_system_av_info(&av);
+  req.max_width = (int)av.geometry.max_width;
+  req.max_height = (int)av.geometry.max_height;
+  if (req.max_width <= 0) req.max_width = (int)av.geometry.base_width;
+  if (req.max_height <= 0) req.max_height = (int)av.geometry.base_height;
+  if (req.max_width <= 0 || req.max_height <= 0 ||
+      req.max_width > LH_MAX_FRAME_DIMENSION ||
+      req.max_height > LH_MAX_FRAME_DIMENSION) {
+    host_log(h, "Core declared an unusable hardware framebuffer size %dx%d",
+             req.max_width, req.max_height);
+    return false;
+  }
+
+  if (!h->hw_backend.supports(h->hw_user, &req)) {
+    host_log(h, "Platform cannot provide the requested hardware context "
+                "(api %d, %d.%d)", (int)req.api, req.version_major,
+             req.version_minor);
+    return false;
+  }
+
+  // Accepted. The frontend fills these two in immediately, before any context
+  // exists - the core may cache them during load and only call them later.
+  cb->get_current_framebuffer = hw_get_current_framebuffer;
+  cb->get_proc_address = hw_get_proc_address;
+  h->hw_render = *cb;
+  h->hw_request = req;
+  h->hw_requested = 1;
+  host_log(h, "Hardware rendering requested: api %d %d.%d, target %dx%d, "
+              "depth %d stencil %d, bottom_left_origin %d",
+           (int)req.api, req.version_major, req.version_minor, req.max_width,
+           req.max_height, req.depth, req.stencil, req.bottom_left_origin);
+  return true;
+}
+
+// Stands the context up and tells the core about it. Emulation thread, called
+// once per load before the first retro_run.
+static int hw_bring_up(struct lh_host *h) {
+  if (!h->hw_requested || h->hw_context_up || !h->has_hw_backend) return 0;
+  if (h->hw_backend.context_create(h->hw_user, &h->hw_request) != 0) {
+    host_log(h, "Hardware context creation failed");
+    h->hw_requested = 0;
+    return -1;
+  }
+  h->hw_context_up = 1;
+  if (h->hw_backend.make_current(h->hw_user) != 0) {
+    host_log(h, "Hardware context could not be made current");
+    h->hw_backend.context_destroy(h->hw_user);
+    h->hw_context_up = 0;
+    h->hw_requested = 0;
+    return -1;
+  }
+  atomic_store(&h->hw_active, 1);
+  // Only now, with the context live and current, does the core learn it may
+  // create GL objects.
+  if (h->hw_render.context_reset) h->hw_render.context_reset();
+  return 0;
+}
+
+// Tears the context down in libretro's required order: the core is told first,
+// while the context is still current and before it is unloaded.
+static void hw_tear_down(struct lh_host *h) {
+  if (!h->hw_context_up) {
+    atomic_store(&h->hw_active, 0);
+    h->hw_requested = 0;
+    return;
+  }
+  if (h->hw_render.context_destroy) h->hw_render.context_destroy();
+  h->hw_backend.release_current(h->hw_user);
+  h->hw_backend.context_destroy(h->hw_user);
+  h->hw_context_up = 0;
+  h->hw_requested = 0;
+  atomic_store(&h->hw_active, 0);
+  atomic_store(&h->hw_context_lost, 0);
+  memset(&h->hw_render, 0, sizeof(h->hw_render));
+}
+
+// An uncontrolled loss (device reset, surface pulled away). libretro is
+// explicit that the core must be re-reset WITHOUT a paired context_destroy:
+// its old objects are already gone and it must not try to free them.
+static void hw_handle_context_lost(struct lh_host *h) {
+  if (!h->hw_context_up) return;
+  host_log(h, "Hardware context lost; re-issuing context_reset");
+  if (h->hw_backend.make_current(h->hw_user) != 0) {
+    host_log(h, "Could not make the hardware context current after a loss");
+    return;
+  }
+  if (h->hw_render.context_reset) h->hw_render.context_reset();
+}
+
 static void RETRO_CALLCONV video_refresh_cb(const void *data, unsigned width,
                                             unsigned height, size_t pitch) {
   struct lh_host *h = g_session;
@@ -1489,7 +1732,22 @@ static void RETRO_CALLCONV video_refresh_cb(const void *data, unsigned width,
     diagnostic_log("Rejected frame %ux%u (out of bounds)", width, height);
     return;
   }
+  // The hardware path, and it MUST be tested before anything dereferences
+  // data: RETRO_HW_FRAME_BUFFER_VALID is ((void*)-1), which is non-NULL, so
+  // the dup-frame check below does not catch it and convert_frame would read
+  // through it. There is no CPU frame here - the core already drew into the
+  // backend's target, so pitch is meaningless and only the size matters.
+  if (data == RETRO_HW_FRAME_BUFFER_VALID) {
+    if (!h->hw_context_up) return;
+    h->hw_backend.present(h->hw_user, (int)width, (int)height, h->av.rotation);
+    // Deliberately no frame_ready: the pixels are already presented, and the
+    // platform's software blit path must not be woken to call lh_get_frame.
+    return;
+  }
   if (!data) {  // duped frame: re-signal the last one
+    // A hardware core dupes by passing NULL too, but there is nothing to
+    // re-signal - the previous frame is still in the backend's buffer.
+    if (h->hw_context_up) return;
     if (h->cb.frame_ready) h->cb.frame_ready(h->cb.user);
     return;
   }
@@ -1780,7 +2038,18 @@ static void *run_loop(void *arg) {
   const double pace_seconds = 0.05;
   uint64_t next = now_ns();
 
+  // The context is created HERE, not in lh_load. SET_HW_RENDER arrives inside
+  // retro_load_game, which lh_load runs inline on the platform thread, but a
+  // graphics context has to belong to the thread that calls retro_run. So the
+  // load only records the request and this is the first chance to honour it.
+  if (hw_bring_up(h) != 0 && h->cb.fatal_error) {
+    h->running = 0;
+    h->cb.fatal_error(h->cb.user,
+                      "The graphics context for this core could not be created.");
+  }
+
   while (h->running) {
+    if (atomic_exchange(&h->hw_context_lost, 0)) hw_handle_context_lost(h);
     if (atomic_exchange(&h->restart_requested, 0)) {
       if (restart_core(h) != 0) {
         if (h->cb.message) {
@@ -1851,6 +2120,9 @@ static void *run_loop(void *arg) {
   // A core that quit has no save worth keeping, and its memory pointers may
   // already be gone, so writing SRAM now would only risk the good file.
   if (!h->shutdown_requested) sram_flush(h);
+  // Before unload_game, per libretro: the core is told the context is going
+  // away while it is still current and still owns its objects.
+  hw_tear_down(h);
   if (h->core.unload_game) h->core.unload_game();
   if (h->core.deinit) h->core.deinit();
   if (h->core.handle) lib_close(h->core.handle);
@@ -2029,6 +2301,10 @@ static void free_load_paths(struct lh_host *h) {
 // the retro_load_game that succeeded before deinit runs - calling deinit
 // without unload_game first is out of the libretro contract.
 static void unwind_failed_core(struct lh_host *h) {
+  // Same ordering rule as the clean paths: the core hears about the context
+  // before it is unloaded. Harmless when no context was ever created, which
+  // is the common case for a failed load.
+  hw_tear_down(h);
   if (h->core_loaded) {
     if (h->core.unload_game) h->core.unload_game();
     h->core_loaded = 0;
@@ -2354,6 +2630,10 @@ static int restart_core(struct lh_host *h) {
   }
 
   sram_flush(h);
+  // A restart builds a brand-new core instance that knows nothing about the
+  // old context, so the old one goes away entirely and the reload's own
+  // SET_HW_RENDER stands a fresh one up (see hw_bring_up below).
+  hw_tear_down(h);
   if (h->core.unload_game) h->core.unload_game();
   if (h->core.deinit) h->core.deinit();
   if (h->core.handle) lib_close(h->core.handle);
@@ -2377,6 +2657,9 @@ static int restart_core(struct lh_host *h) {
 
   int rc = open_core(h);
   if (rc == 0) rc = load_content(h);
+  // Already on the emulation thread here, so the new core's context can be
+  // stood up immediately rather than waiting for the top of the loop.
+  if (rc == 0) rc = hw_bring_up(h);
   if (rc == 0) reapply_controller_devices(h);
   if (rc != 0) {
     // Same unwind load_failed performs for lh_load, but restart_core keeps
@@ -2484,6 +2767,55 @@ void lh_destroy(lh_host *h) {
   cond_destroy(&h->jobs_cond);
   mutex_destroy(&h->jobs_lock);
   free(h);
+}
+
+int lh_set_hw_backend(lh_host *h, const lh_hw_backend *backend, void *user) {
+  if (!h) return -1;
+  if (!backend) {  // Explicitly clearing a previously registered backend.
+    h->has_hw_backend = 0;
+    h->hw_user = NULL;
+    memset(&h->hw_backend, 0, sizeof(h->hw_backend));
+    return 0;
+  }
+  if (backend->struct_version != LH_HW_BACKEND_VERSION) {
+    diagnostic_log("Rejected hw backend: struct_version %u, host speaks %u",
+                   (unsigned)backend->struct_version,
+                   (unsigned)LH_HW_BACKEND_VERSION);
+    return -1;
+  }
+  // Every entry point is mandatory, so the frame path can call through without
+  // a null check per call. A gap here is a platform-layer bug, and failing at
+  // registration makes it obvious instead of letting it surface mid-game.
+  if (!backend->supports || !backend->context_create ||
+      !backend->context_destroy || !backend->make_current ||
+      !backend->release_current || !backend->current_target ||
+      !backend->get_proc_address || !backend->present) {
+    diagnostic_log("Rejected hw backend: incomplete entry-point table");
+    return -1;
+  }
+  h->hw_backend = *backend;
+  h->hw_user = user;
+  h->has_hw_backend = 1;
+  return 0;
+}
+
+int lh_hw_active(lh_host *h) {
+  if (!h) return 0;
+  return atomic_load(&h->hw_active);
+}
+
+int lh_hw_render_size(lh_host *h, int *width, int *height) {
+  // hw_requested is set by hw_note_request during retro_load_game, so this is
+  // answerable the moment lh_load returns and before the context exists.
+  if (!h || !h->hw_requested) return 0;
+  if (width) *width = h->hw_request.max_width;
+  if (height) *height = h->hw_request.max_height;
+  return 1;
+}
+
+void lh_notify_hw_context_lost(lh_host *h) {
+  if (!h) return;
+  atomic_store(&h->hw_context_lost, 1);
 }
 
 int lh_get_frame(lh_host *h, const void **data, int *width, int *height,
