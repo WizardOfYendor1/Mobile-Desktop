@@ -74,12 +74,15 @@ PlayerOneWarning? playerOneWarningFor(
 int? desktopBitForButton(
   NativeControllerMapping? mapping,
   GamepadButton button,
-  int? fallback,
-) {
-  final bound = desktopBoundBit(mapping, button);
+  int? fallback, {
+  String gameId = '',
+}) {
+  final bound = desktopBoundBit(mapping, button, gameId: gameId);
   if (bound != null) return bound;
   if (fallback == null || mapping == null) return fallback;
-  final claimed = mapping.keycodeToButton.values
+  final claimed = mapping
+      .bindingsForGame(gameId)
+      .values
       .map((b) => 1 << b.retroPadIndex)
       .contains(fallback);
   return claimed ? null : fallback;
@@ -90,10 +93,14 @@ int? desktopBitForButton(
 /// Split out so the desktop trigger path is testable: the gamepad stream is a
 /// static, and only Windows/Linux read it in Dart.
 @visibleForTesting
-int? desktopBoundBit(NativeControllerMapping? mapping, GamepadButton button) {
+int? desktopBoundBit(
+  NativeControllerMapping? mapping,
+  GamepadButton button, {
+  String gameId = '',
+}) {
   final code = desktopGamepadButtonCodes[button];
   if (mapping == null || code == null) return null;
-  final bound = mapping.keycodeToButton[code];
+  final bound = mapping.bindingsForGame(gameId)[code];
   return bound == null ? null : 1 << bound.retroPadIndex;
 }
 
@@ -607,7 +614,12 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
   /// Android's table and EmulatorJS, which clears duplicates the same way.
   int? _bitForGamepadButton(String gamepadId, GamepadButton button) {
     final mapping = _controllerMappings[desktopControllerDeviceId(gamepadId)];
-    return desktopBitForButton(mapping, button, _gamepadButtonToBit[button]);
+    return desktopBitForButton(
+      mapping,
+      button,
+      _gamepadButtonToBit[button],
+      gameId: widget.gameId,
+    );
   }
 
   // Negative stick values map to the first bit, positive to the second. The Y
@@ -634,7 +646,8 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     double value,
   ) {
     final mapping = _controllerMappings[desktopControllerDeviceId(gamepadId)];
-    final bit = desktopBoundBit(mapping, trigger) ?? fallbackBit;
+    final bit =
+        desktopBoundBit(mapping, trigger, gameId: widget.gameId) ?? fallbackBit;
     // Keyed by pad too: two controllers resolve the same trigger to different
     // bits, and a shared key let one clear the bit the other was holding.
     final key = (gamepadId, trigger);
@@ -1945,9 +1958,18 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
     }
   }
 
+  /// The bindings the native side should apply RIGHT NOW, per profile.
+  ///
+  /// Resolved for the current game here rather than natively: the Android
+  /// parser reads one flat keycode table per profile, and the per-game
+  /// override is a Dart-side storage concern. Stick snap is already resolved
+  /// the same way just below.
   String _controllerMappingsJson() => jsonEncode({
     for (final entry in _controllerMappings.entries)
-      entry.key: jsonDecode(entry.value.toJson()),
+      entry.key: {
+        for (final binding in entry.value.bindingsForGame(widget.gameId).entries)
+          binding.key.toString(): binding.value.retroPadIndex,
+      },
   });
 
   /// Pushes the mappings to whatever applies them.
@@ -2168,15 +2190,17 @@ class _NativeGamePlayerScreenState extends State<NativeGamePlayerScreen>
         (device) => targetIds.contains(device.id),
       ))
         target.id:
-            NativeControllerMapping(
-              source.keycodeToButton,
-              controllerTypesByCore:
-                  _controllerMappings[target.id]?.controllerTypesByCore ??
-                  const {},
-              // Snap is per game and per controller; keep the target's own.
-              snapByGame:
-                  _controllerMappings[target.id]?.snapByGame ?? const {},
-            ).withControllerType(
+            (_controllerMappings[target.id] ?? NativeControllerMapping.empty)
+                // Copies the table the user is looking at, which is the
+                // source's bindings FOR THIS GAME. Scoped to this game on the
+                // target too, so copying to a pad does not reach into games
+                // the user was not looking at -- the same reasoning that keeps
+                // snap (per game, per controller) as the target's own.
+                .withBindingsForGame(
+                  widget.gameId,
+                  source.bindingsForGame(widget.gameId),
+                )
+                .withControllerType(
               coreId,
               target.port != null &&
                       _isControllerTypeSupportedAtPort(

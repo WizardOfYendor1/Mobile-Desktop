@@ -409,7 +409,9 @@ class NativeControllerMappingScreenState
       return;
     }
 
-    final mapping = _mapping.withBinding(code, capturing);
+    // Scoped to this game: binding a button here must not rewrite what every
+    // other game plays with.
+    final mapping = _mapping.withBindingForGame(widget.gameId, code, capturing);
     if (!mounted) return;
     setState(() {
       _mapping = mapping;
@@ -504,13 +506,20 @@ class NativeControllerMappingScreenState
     unawaited(capture.begin(device.runtimeId));
   }
 
+  /// Returns THIS game's buttons to the core's own layout.
+  ///
+  /// Scoped deliberately. Replacing the whole mapping with
+  /// [NativeControllerMapping.empty] also threw away this pad's controller
+  /// type for every core and its stick snap for every game, none of which the
+  /// row claims to touch. An empty table for this game is not the same as no
+  /// entry: no entry inherits the default bindings, an empty one says this
+  /// game deliberately uses none.
   void _reset() {
     final device = _device;
     if (device == null) return;
-    setState(() => _mapping = NativeControllerMapping.empty);
-    unawaited(
-      widget.onMappingChanged(device.id, NativeControllerMapping.empty),
-    );
+    final mapping = _mapping.withBindingsForGame(widget.gameId, const {});
+    setState(() => _mapping = mapping);
+    unawaited(widget.onMappingChanged(device.id, mapping));
   }
 
   void _onDiagnosticsSnapshot(ControllerDiagnosticsSnapshot snapshot) {
@@ -553,7 +562,7 @@ class NativeControllerMappingScreenState
         }
       }
     }
-    retroPad ??= _mapping.keycodeToButton[button.rawCode];
+    retroPad ??= _mapping.bindingsForGame(widget.gameId)[button.rawCode];
     return ButtonChannel(
       rawCode: button.rawCode,
       rawName: button.rawName,
@@ -734,6 +743,12 @@ class NativeControllerMappingScreenState
         : '$label - this game and controller';
   }
 
+  /// Which of the two binding tables the button rows are showing. A game
+  /// either has its own or follows the controller's default until first edit.
+  String get _bindingScopeSubtitle => _mapping.hasGameOverride(widget.gameId)
+      ? 'Buttons are custom for this game'
+      : 'Buttons follow this controller default';
+
   void _cycleSnap() {
     final device = _device;
     if (device == null || widget.gameId.isEmpty) return;
@@ -898,7 +913,7 @@ class NativeControllerMappingScreenState
       'a disconnected controller';
 
   int? _keycodeFor(RetroPadButton button) {
-    for (final entry in _mapping.keycodeToButton.entries) {
+    for (final entry in _mapping.bindingsForGame(widget.gameId).entries) {
       if (entry.value == button) return entry.key;
     }
     return null;
@@ -1145,8 +1160,9 @@ class NativeControllerMappingScreenState
           }
           if (index == _resetRow) {
             return _row(
-              'Reset to defaults',
+              'Reset this game to defaults',
               index,
+              subtitle: _bindingScopeSubtitle,
               trailing: Icons.restart_alt,
               onTap: () {
                 setState(() => _selected = index);

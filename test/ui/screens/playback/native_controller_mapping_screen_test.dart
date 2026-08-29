@@ -85,6 +85,55 @@ void main() {
     );
   }
 
+  testWidgets('reset returns this game to defaults and nothing else', (
+    tester,
+  ) async {
+    // The row says "this game", so it must not also throw away the pad's
+    // controller type for every core, its snap for every game, or another
+    // game's bindings -- which replacing the whole mapping with empty did.
+    const gameId = 'hydro-thunder';
+    final saved = NativeControllerMapping.empty
+        .withBindingForGame(gameId, 96, RetroPadButton.a)
+        .withBindingForGame('burgertime', 190, RetroPadButton.b)
+        .withSnap('burgertime', StickSnapMode.fourWay)
+        .withControllerType('fbneo', 5);
+    NativeControllerMapping? persisted;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Column(
+            children: [
+              NativeControllerMappingScreen(
+                devices: const [deviceA],
+                mappings: {deviceA.id: saved},
+                gameId: gameId,
+                onMappingChanged: (_, mapping) async => persisted = mapping,
+                onClose: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text('Reset this game to defaults'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reset this game to defaults'));
+    await tester.pumpAndSettle();
+
+    expect(persisted, isNotNull);
+    expect(persisted!.bindingsForGame(gameId), isEmpty);
+    expect(persisted!.bindingsForGame('burgertime')[190], RetroPadButton.b);
+    expect(persisted!.snapForGame('burgertime'), StickSnapMode.fourWay);
+    expect(persisted!.controllerTypeForCore('fbneo'), 5);
+  });
+
   testWidgets(
     'rebuild with a shorter device list clamps selection instead of throwing',
     (tester) async {
