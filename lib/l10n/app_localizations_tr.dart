@@ -271,14 +271,14 @@ class AppLocalizationsTr extends AppLocalizations {
       'Metin girişi için varsayılan olarak cihazınızın giriş yöntemini kullanın';
 
   @override
-  String get controller => 'Kontrolcü';
+  String get controller => 'Controller';
 
   @override
-  String get gamepadNavigation => 'Kontrolcü Gezinmesi';
+  String get gamepadNavigation => 'Gamepad navigation';
 
   @override
   String get gamepadNavigationDescription =>
-      'Bağlı bir oyun kolunun odaklanmayı değiştirmesine ve öğeleri seçmesine izin ver';
+      'Let a connected game controller move focus and select items';
 
   @override
   String get themeMoonfin => 'Moonfin';
@@ -1266,10 +1266,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get downloadSubtitles => 'Altyazıları İndir';
 
   @override
-  String get searchingSubtitles => 'Altyazı aranıyor…';
+  String get searchingSubtitles => 'Searching for subtitles…';
 
   @override
-  String get downloadingSubtitle => 'Altyazı indiriliyor…';
+  String get downloadingSubtitle => 'Downloading subtitle…';
 
   @override
   String get selectedSubtitleInvalid => 'Seçilen altyazı geçersiz.';
@@ -1444,10 +1444,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get perfectMatch => 'Mükemmel eşleşme';
 
   @override
-  String get aiTranslated => 'Yapay Zeka Çevirisi';
+  String get aiTranslated => 'AI Translated';
 
   @override
-  String get machineTranslated => 'Makine Çevirisi';
+  String get machineTranslated => 'Machine Translated';
 
   @override
   String get hearingImpaired => 'SDH';
@@ -2489,30 +2489,30 @@ class AppLocalizationsTr extends AppLocalizations {
       'Sararken önizleme küçük resimlerini göster';
 
   @override
-  String get trickplayDisplayStyleSingle => 'Tek Küçük Resim';
+  String get trickplayDisplayStyleSingle => 'Single Thumbnail';
 
   @override
-  String get trickplayDisplayStyleStrip => 'Film Şeridi';
+  String get trickplayDisplayStyleStrip => 'Filmstrip';
 
   @override
-  String get trickplayModeFull => 'Tam Ekran';
+  String get trickplayModeFull => 'Full Screen';
 
   @override
   String get trickplaySettingsPreviewHint =>
-      'Gezinmek için kaydırıcıyı sürükleyin';
+      'Drag the slider to preview scrubbing';
 
   @override
-  String get trickplayPreviewScale => 'Önizleme Boyutu';
+  String get trickplayPreviewScale => 'Preview Size';
 
   @override
-  String get trickplayVerticalOffset => 'Arama Çubuğundan Uzaklık';
+  String get trickplayVerticalOffset => 'Distance From Seekbar';
 
   @override
-  String get trickplayFollowScrubPosition => 'Arama Konumunu Takip Et';
+  String get trickplayFollowScrubPosition => 'Follow Scrub Position';
 
   @override
   String get trickplayFollowScrubPositionSubtitle =>
-      'Ortada sabit kalmak yerine, sarma yaparken arama çubuğu boyunca slaytları önizle';
+      'Preview slides along the seekbar as you scrub, instead of staying centered';
 
   @override
   String get showDescriptionOnPause => 'Duraklatıldığında Açıklamayı Göster';
@@ -4179,11 +4179,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get seerrRequestedStatus => 'İstendi';
 
   @override
-  String get seerrDownloading => 'İndiriliyor';
+  String get seerrDownloading => 'Downloading';
 
   @override
   String seerrDownloadingSize(String done, String total) {
-    return 'İndiriliyor · $done / $total';
+    return 'Downloading · $done / $total';
   }
 
   @override
@@ -4193,7 +4193,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String seerrPercentValue(int percent) {
-    return '%$percent';
+    return '$percent%';
   }
 
   @override
@@ -11161,18 +11161,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get runSetupAgain => 'Kurulumu yeniden çalıştır';
 
   @override
-  String get serverMessages => 'Mesajlar';
+  String get serverMessages => 'Messages';
 
   @override
-  String get serverMessagesEmpty => 'Sunucunuzdan henüz mesaj yok';
+  String get serverMessagesEmpty => 'No messages from your server yet';
 
   @override
-  String get serverMessagesMarkAllRead => 'Hepsini okundu işaretle';
+  String get serverMessagesMarkAllRead => 'Mark all as read';
 
   @override
-  String get serverMessagesShowButton => 'Mesajlar butonunu göster';
+  String get serverMessagesShowButton => 'Show messages button';
 
   @override
   String get serverMessagesShowButtonSubtitle =>
-      'Sunucu yöneticiniz tarafından gönderilen mesajlar için menüye bir düğme ekler';
+      'Adds a button to the menu for messages sent by your server admin';
 }

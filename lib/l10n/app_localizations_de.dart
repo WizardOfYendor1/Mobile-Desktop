@@ -45,7 +45,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get quickConnectInstruction =>
-      'Geben Sie diesen Code an einem bereits angemeldeten Client ein:';
+      'Gib diesen Code in einem bereits angemeldeten Client ein:';
 
   @override
   String get waitingForAuthorization => 'Warte auf Autorisierung...';
@@ -2571,7 +2571,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get scaleOnDevice => 'Auf Gerät skalieren';
 
   @override
-  String get trickPlay => 'Vorschaubilder beim Scrollen';
+  String get trickPlay => 'Trickspiel';
 
   @override
   String get showPreviewThumbnailsWhenSeeking =>
@@ -2588,7 +2588,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get trickplaySettingsPreviewHint =>
-      'Bewegen Sie den Schieberegler für eine interaktive Vorschau';
+      'Drag the slider to preview scrubbing';
 
   @override
   String get trickplayPreviewScale => 'Preview Size';
@@ -4792,7 +4792,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get branding => 'Branding';
 
   @override
-  String get adminDrawerDashboard => 'Übersicht';
+  String get adminDrawerDashboard => 'Armaturenbrett';
 
   @override
   String get adminDrawerAnalytics => 'Analyse';
@@ -10150,7 +10150,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get warnings => 'Warnungen';
 
   @override
-  String get disk => 'Speicherauslastung';
+  String get disk => 'Scheibe';
 
   @override
   String get openInBrowser => 'Im Browser öffnen';

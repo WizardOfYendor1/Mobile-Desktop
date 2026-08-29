@@ -271,14 +271,14 @@ class AppLocalizationsPl extends AppLocalizations {
       'Używaj systemowej metody wprowadzania tekstu';
 
   @override
-  String get controller => 'Kontroler';
+  String get controller => 'Controller';
 
   @override
-  String get gamepadNavigation => 'Nawigacja kontrolerem';
+  String get gamepadNavigation => 'Gamepad navigation';
 
   @override
   String get gamepadNavigationDescription =>
-      'Pozwala używać podłączonego kontrolera do przesuwania zaznaczenia i wybierania pozycji';
+      'Let a connected game controller move focus and select items';
 
   @override
   String get themeMoonfin => 'Moonfin';
@@ -1349,10 +1349,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String get downloadSubtitles => 'Pobierz napisy';
 
   @override
-  String get searchingSubtitles => 'Wyszukiwanie napisów…';
+  String get searchingSubtitles => 'Searching for subtitles…';
 
   @override
-  String get downloadingSubtitle => 'Pobieranie napisów…';
+  String get downloadingSubtitle => 'Downloading subtitle…';
 
   @override
   String get selectedSubtitleInvalid => 'Wybrane napisy są nieprawidłowe.';
@@ -1546,17 +1546,17 @@ class AppLocalizationsPl extends AppLocalizations {
   String get perfectMatch => 'Idealne dopasowanie';
 
   @override
-  String get aiTranslated => 'Przetłumaczone przez AI';
+  String get aiTranslated => 'AI Translated';
 
   @override
-  String get machineTranslated => 'Tłumaczenie maszynowe';
+  String get machineTranslated => 'Machine Translated';
 
   @override
   String get hearingImpaired => 'SDH';
 
   @override
   String framerateFps(String rate) {
-    return '$rate kl./s';
+    return '$rate fps';
   }
 
   @override
@@ -2634,30 +2634,30 @@ class AppLocalizationsPl extends AppLocalizations {
       'Pokazuj podgląd klatek podczas przewijania';
 
   @override
-  String get trickplayDisplayStyleSingle => 'Pojedyncza miniatura';
+  String get trickplayDisplayStyleSingle => 'Single Thumbnail';
 
   @override
-  String get trickplayDisplayStyleStrip => 'Pasek miniatur';
+  String get trickplayDisplayStyleStrip => 'Filmstrip';
 
   @override
-  String get trickplayModeFull => 'Pełny ekran';
+  String get trickplayModeFull => 'Full Screen';
 
   @override
   String get trickplaySettingsPreviewHint =>
-      'Przeciągnij suwak, aby podejrzeć przewijanie';
+      'Drag the slider to preview scrubbing';
 
   @override
-  String get trickplayPreviewScale => 'Rozmiar podglądu';
+  String get trickplayPreviewScale => 'Preview Size';
 
   @override
-  String get trickplayVerticalOffset => 'Odległość od paska postępu';
+  String get trickplayVerticalOffset => 'Distance From Seekbar';
 
   @override
-  String get trickplayFollowScrubPosition => 'Podążaj za pozycją przewijania';
+  String get trickplayFollowScrubPosition => 'Follow Scrub Position';
 
   @override
   String get trickplayFollowScrubPositionSubtitle =>
-      'Podgląd przesuwa się wzdłuż paska postępu podczas przewijania zamiast pozostawać na środku';
+      'Preview slides along the seekbar as you scrub, instead of staying centered';
 
   @override
   String get showDescriptionOnPause => 'Pokazuj opis podczas pauzy';
@@ -4319,11 +4319,11 @@ class AppLocalizationsPl extends AppLocalizations {
   String get seerrRequestedStatus => 'Prośba wysłana';
 
   @override
-  String get seerrDownloading => 'Pobieranie';
+  String get seerrDownloading => 'Downloading';
 
   @override
   String seerrDownloadingSize(String done, String total) {
-    return 'Pobieranie · $done / $total';
+    return 'Downloading · $done / $total';
   }
 
   @override
