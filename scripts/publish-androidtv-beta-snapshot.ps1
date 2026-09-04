@@ -31,18 +31,16 @@ if ([string]::IsNullOrWhiteSpace($branchName)) {
   $branchName = '(detached HEAD)'
 }
 
-# A copied index lets git add --all capture staged, unstaged, and untracked
-# non-ignored files without changing the source worktree's real index.
-$indexPath = (Invoke-SourceGit -GitArguments @('rev-parse', '--git-path', 'index')).Trim()
-if (-not [IO.Path]::IsPathRooted($indexPath)) {
-  $indexPath = Join-Path $sourceRoot $indexPath
-}
-
+# A throwaway index lets git add --all capture staged, unstaged, and untracked
+# non-ignored files without changing the source worktree's real index. Seed it
+# from HEAD rather than copying the real index: a copy carries skip-worktree
+# bits, which silently omit those paths (the tester TV banner) from snapshots.
 $temporaryIndex = [IO.Path]::GetTempFileName()
+Remove-Item -LiteralPath $temporaryIndex -Force
 $previousIndex = $env:GIT_INDEX_FILE
 try {
-  Copy-Item -LiteralPath $indexPath -Destination $temporaryIndex -Force
   $env:GIT_INDEX_FILE = $temporaryIndex
+  Invoke-SourceGit -GitArguments @('read-tree', 'HEAD')
   Invoke-SourceGit -GitArguments @('add', '--all')
   $tree = (Invoke-SourceGit -GitArguments @('write-tree')).Trim()
   $message = "Amulet Android TV beta snapshot`n`nBase: $baseSha`nSource ref: $BaseRef`nSource branch: $branchName"
