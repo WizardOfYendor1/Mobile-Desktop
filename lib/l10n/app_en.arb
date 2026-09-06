@@ -1779,6 +1779,61 @@
   "@noEpisodesLoaded": {
     "description": "Message when no episodes are available for download"
   },
+  "downloadScopeTitle": "What to download",
+  "@downloadScopeTitle": {
+    "description": "Title of the sheet asking whether to download all or only unwatched items"
+  },
+  "downloadAllEpisodes": "All episodes",
+  "@downloadAllEpisodes": {
+    "description": "Download scope option: every episode of a series or season"
+  },
+  "downloadUnwatchedEpisodes": "All unwatched episodes",
+  "@downloadUnwatchedEpisodes": {
+    "description": "Download scope option: only episodes not yet marked as watched"
+  },
+  "downloadAllMovies": "All movies",
+  "@downloadAllMovies": {
+    "description": "Download scope option: every movie in a collection"
+  },
+  "downloadUnwatchedMovies": "All unwatched movies",
+  "@downloadUnwatchedMovies": {
+    "description": "Download scope option: only collection movies not yet marked as watched"
+  },
+  "downloadScopeLoading": "Loading items...",
+  "@downloadScopeLoading": {
+    "description": "Subtitle shown in the download scope sheet while the item list is being fetched"
+  },
+  "downloadScopeLoadFailed": "Could not load items to download",
+  "@downloadScopeLoadFailed": {
+    "description": "Snackbar shown when the item list for a batch download could not be fetched"
+  },
+  "downloadEstimateTotal": "~{size} total",
+  "@downloadEstimateTotal": {
+    "description": "Estimated total download size for a batch, e.g. '~1.2 GB total'",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadSizeTotal": "{size} total",
+  "@downloadSizeTotal": {
+    "description": "Exact total file size of a batch of original files, e.g. '12.4 GB total'",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadEstimateUnknownCount": "{count} unknown",
+  "@downloadEstimateUnknownCount": {
+    "description": "Appended to a batch size estimate when some items had no runtime to estimate from",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "downloadingItem": "Downloading {name} ({quality})...",
   "@downloadingItem": {
     "description": "Snackbar message when downloading an item",

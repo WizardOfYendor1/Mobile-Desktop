@@ -1325,6 +1325,42 @@ class AppLocalizationsTh extends AppLocalizations {
   String get noEpisodesLoaded => 'ไม่มีตอนโหลด';
 
   @override
+  String get downloadScopeTitle => 'What to download';
+
+  @override
+  String get downloadAllEpisodes => 'All episodes';
+
+  @override
+  String get downloadUnwatchedEpisodes => 'All unwatched episodes';
+
+  @override
+  String get downloadAllMovies => 'All movies';
+
+  @override
+  String get downloadUnwatchedMovies => 'All unwatched movies';
+
+  @override
+  String get downloadScopeLoading => 'Loading items...';
+
+  @override
+  String get downloadScopeLoadFailed => 'Could not load items to download';
+
+  @override
+  String downloadEstimateTotal(String size) {
+    return '~$size total';
+  }
+
+  @override
+  String downloadSizeTotal(String size) {
+    return '$size total';
+  }
+
+  @override
+  String downloadEstimateUnknownCount(int count) {
+    return '$count unknown';
+  }
+
+  @override
   String downloadingItem(String name, String quality) {
     return 'กำลังดาวน์โหลด $name ($quality)...';
   }

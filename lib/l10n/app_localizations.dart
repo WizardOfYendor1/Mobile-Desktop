@@ -2554,6 +2554,66 @@ abstract class AppLocalizations {
   /// **'No episodes loaded'**
   String get noEpisodesLoaded;
 
+  /// Title of the sheet asking whether to download all or only unwatched items
+  ///
+  /// In en, this message translates to:
+  /// **'What to download'**
+  String get downloadScopeTitle;
+
+  /// Download scope option: every episode of a series or season
+  ///
+  /// In en, this message translates to:
+  /// **'All episodes'**
+  String get downloadAllEpisodes;
+
+  /// Download scope option: only episodes not yet marked as watched
+  ///
+  /// In en, this message translates to:
+  /// **'All unwatched episodes'**
+  String get downloadUnwatchedEpisodes;
+
+  /// Download scope option: every movie in a collection
+  ///
+  /// In en, this message translates to:
+  /// **'All movies'**
+  String get downloadAllMovies;
+
+  /// Download scope option: only collection movies not yet marked as watched
+  ///
+  /// In en, this message translates to:
+  /// **'All unwatched movies'**
+  String get downloadUnwatchedMovies;
+
+  /// Subtitle shown in the download scope sheet while the item list is being fetched
+  ///
+  /// In en, this message translates to:
+  /// **'Loading items...'**
+  String get downloadScopeLoading;
+
+  /// Snackbar shown when the item list for a batch download could not be fetched
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load items to download'**
+  String get downloadScopeLoadFailed;
+
+  /// Estimated total download size for a batch, e.g. '~1.2 GB total'
+  ///
+  /// In en, this message translates to:
+  /// **'~{size} total'**
+  String downloadEstimateTotal(String size);
+
+  /// Exact total file size of a batch of original files, e.g. '12.4 GB total'
+  ///
+  /// In en, this message translates to:
+  /// **'{size} total'**
+  String downloadSizeTotal(String size);
+
+  /// Appended to a batch size estimate when some items had no runtime to estimate from
+  ///
+  /// In en, this message translates to:
+  /// **'{count} unknown'**
+  String downloadEstimateUnknownCount(int count);
+
   /// Snackbar message when downloading an item
   ///
   /// In en, this message translates to:

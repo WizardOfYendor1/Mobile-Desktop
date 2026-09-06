@@ -259,14 +259,13 @@ class DownloadService extends ChangeNotifier {
   bool _pluginEngineFor(
     DownloadQuality quality, {
     required bool destinationOnRemovableStorage,
-  }) =>
-      downloadUsesPluginEngine(
-        pluginEngineSupported: _pluginEngineSupported,
-        serverNeedsLegacyTls: _serverNeedsLegacyTls,
-        isAndroidTv: PlatformDetection.isAndroid && PlatformDetection.isTV,
-        qualityTranscoded: quality.isTranscoded,
-        destinationOnRemovableStorage: destinationOnRemovableStorage,
-      );
+  }) => downloadUsesPluginEngine(
+    pluginEngineSupported: _pluginEngineSupported,
+    serverNeedsLegacyTls: _serverNeedsLegacyTls,
+    isAndroidTv: PlatformDetection.isAndroid && PlatformDetection.isTV,
+    qualityTranscoded: quality.isTranscoded,
+    destinationOnRemovableStorage: destinationOnRemovableStorage,
+  );
 
   /// On iOS and Android the plugin posts its own download notifications for
   /// the downloads it runs. The desktop plugin engine and the legacy engine
@@ -2306,45 +2305,38 @@ class DownloadService extends ChangeNotifier {
     }
   }
 
-  Future<List<AggregatedItem>> _getAllEpisodesForSeries(String seriesId) async {
-    final seasonsData = await _client.itemsApi.getSeasons(seriesId);
-    final seasons = (seasonsData['Items'] as List?) ?? [];
-    final allEpisodes = <AggregatedItem>[];
-    for (final season in seasons) {
-      final seasonId = season['Id']?.toString() ?? '';
-      final episodesData = await _client.itemsApi.getEpisodes(
-        seriesId,
-        seasonId: seasonId,
-      );
-      final episodes = (episodesData['Items'] as List?) ?? [];
-      for (final raw in episodes) {
-        final ep = raw as Map<String, dynamic>;
-        allEpisodes.add(
-          AggregatedItem(
-            id: ep['Id']?.toString() ?? '',
-            serverId: _client.baseUrl,
-            rawData: ep,
-          ),
-        );
-      }
-    }
-    return allEpisodes;
-  }
+  /// Fields requested for batch fetches so the download sheet can estimate
+  /// sizes and filter on watched state before anything is queued.
+  static const _batchFetchFields =
+      'MediaStreams,MediaSources,RunTimeTicks,UserData';
 
-  Future<void> downloadSeries(
+  /// The episodes of [seriesId], or of one of its seasons when [seasonId] is
+  /// given, with runtime, media sources and user data populated so sizes and
+  /// watched state are known before anything is queued.
+  Future<List<AggregatedItem>> fetchEpisodes(
     String seriesId, {
-    DownloadQuality quality = DownloadQuality.original,
+    String? seasonId,
   }) async {
-    final episodes = await _getAllEpisodesForSeries(seriesId);
-    await downloadItems(episodes, quality: quality);
+    final data = await _client.itemsApi.getEpisodes(
+      seriesId,
+      seasonId: seasonId,
+      fields: _batchFetchFields,
+    );
+    return _toItems(data['Items'] as List?);
   }
 
-  Future<void> downloadBoxSet(
-    String boxSetId, {
-    DownloadQuality quality = DownloadQuality.original,
-  }) async {
-    final playableItems = await _getAllPlayableItemsForBoxSet(boxSetId);
-    await downloadItems(playableItems, quality: quality);
+  List<AggregatedItem> _toItems(List? rawItems) {
+    if (rawItems == null) return const [];
+    final serverId = _client.baseUrl;
+    return [
+      for (final raw in rawItems.whereType<Map>())
+        if (raw['Id']?.toString() case final id? when id.isNotEmpty)
+          AggregatedItem(
+            id: id,
+            serverId: serverId,
+            rawData: raw.cast<String, dynamic>(),
+          ),
+    ];
   }
 
   Future<void> downloadAlbum(
@@ -2373,37 +2365,16 @@ class DownloadService extends ChangeNotifier {
     await downloadItems(tracks, quality: quality);
   }
 
-  Future<List<AggregatedItem>> _getAllPlayableItemsForBoxSet(
-    String boxSetId,
-  ) async {
-    try {
-      final data = await _client.itemsApi.getItems(
-        parentId: boxSetId,
-        recursive: true,
-        includeItemTypes: const ['Episode', 'Movie', 'Video', 'Audio'],
-        fields: 'MediaStreams,MediaSources,RunTimeTicks,Trickplay',
-      );
-      final rawItems = data['Items'] as List?;
-      if (rawItems == null) return const [];
-      final serverId = _client.baseUrl;
-      return rawItems
-          .whereType<Map>()
-          .map((raw) => raw.cast<String, dynamic>())
-          .where((raw) {
-            final id = raw['Id']?.toString();
-            return id != null && id.isNotEmpty;
-          })
-          .map(
-            (raw) => AggregatedItem(
-              id: raw['Id']?.toString() ?? '',
-              serverId: serverId,
-              rawData: raw,
-            ),
-          )
-          .toList();
-    } catch (_) {
-      return const [];
-    }
+  /// Every playable leaf item inside the collection [boxSetId], with runtime,
+  /// media sources and user data populated.
+  Future<List<AggregatedItem>> fetchBoxSetPlayableItems(String boxSetId) async {
+    final data = await _client.itemsApi.getItems(
+      parentId: boxSetId,
+      recursive: true,
+      includeItemTypes: const ['Episode', 'Movie', 'Video', 'Audio'],
+      fields: '$_batchFetchFields,Trickplay',
+    );
+    return _toItems(data['Items'] as List?);
   }
 
   Future<bool> deleteDownloadedItems(List<AggregatedItem> items) async {

@@ -158,6 +158,48 @@ class _BlockingItemsApi implements ItemsApi {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+/// Answers the batch-fetch calls (seasons, episodes, collection children)
+/// and records the `fields` each request asked for.
+class _LibraryItemsApi implements ItemsApi {
+  _LibraryItemsApi({required this.episodesBySeason, required this.boxSetItems});
+
+  final Map<String, List<Map<String, dynamic>>> episodesBySeason;
+  final List<Map<String, dynamic>> boxSetItems;
+  final List<String?> episodeFields = [];
+  String? boxSetFields;
+
+  @override
+  Future<Map<String, dynamic>> getEpisodes(
+    String seriesId, {
+    String? seasonId,
+    String? fields,
+  }) async {
+    episodeFields.add(fields);
+    if (seasonId == null) {
+      return {'Items': episodesBySeason.values.expand((e) => e).toList()};
+    }
+    return {'Items': episodesBySeason[seasonId] ?? const []};
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    // getItems has dozens of named parameters; intercept it here instead of
+    // spelling out the full override.
+    if (invocation.memberName == #getItems) {
+      boxSetFields = invocation.namedArguments[#fields] as String?;
+      return Future<Map<String, dynamic>>.value({'Items': boxSetItems});
+    }
+    return super.noSuchMethod(invocation);
+  }
+}
+
+Map<String, dynamic> _playableItem(String id, {required bool played}) => {
+  'Id': id,
+  'Type': 'Episode',
+  'Name': 'Item $id',
+  'UserData': {'Played': played},
+};
+
 class _FakeClient implements MediaServerClient {
   _FakeClient(this._itemsApi);
 
@@ -377,9 +419,7 @@ void main() {
     await _waitFor(() => repo.upsertCalls == 1);
     itemsApi.releaseParked.complete();
 
-    await _waitFor(
-      () => service.activeDownloads['storage-b']?.error != null,
-    );
+    await _waitFor(() => service.activeDownloads['storage-b']?.error != null);
     expect(
       service.activeDownloads['storage-b']?.error,
       contains('Storage limit'),
@@ -422,6 +462,75 @@ void main() {
       expect(progress?.error, isNotNull);
       expect(progress?.isQueued, isFalse);
     }
+  });
+
+  group('unwatched-only batch downloads', () {
+    late _LibraryItemsApi api;
+    late DownloadService libraryService;
+
+    setUp(() {
+      api = _LibraryItemsApi(
+        episodesBySeason: {
+          'season-1': [
+            _playableItem('ep-1', played: true),
+            _playableItem('ep-2', played: false),
+          ],
+          'season-2': [
+            _playableItem('ep-3', played: false),
+            _playableItem('ep-4', played: true),
+          ],
+        },
+        boxSetItems: [
+          _playableItem('movie-a', played: true),
+          _playableItem('movie-b', played: false),
+        ],
+      );
+      libraryService = DownloadService(
+        _FakeClient(api),
+        DownloadNotificationService(),
+      );
+    });
+
+    tearDown(() => libraryService.dispose());
+
+    test('series fetch is one call and requests user data', () async {
+      final episodes = await libraryService.fetchEpisodes('series-1');
+
+      expect(episodes.map((e) => e.id), ['ep-1', 'ep-2', 'ep-3', 'ep-4']);
+      expect(api.episodeFields.single, contains('UserData'));
+      expect(api.episodeFields.single, contains('RunTimeTicks'));
+    });
+
+    test('season fetch requests media sources and user data', () async {
+      final episodes = await libraryService.fetchEpisodes(
+        'series-1',
+        seasonId: 'season-2',
+      );
+
+      expect(episodes.map((e) => e.id), ['ep-3', 'ep-4']);
+      expect(api.episodeFields.single, contains('MediaSources'));
+      expect(api.episodeFields.single, contains('UserData'));
+    });
+
+    test('collection fetch requests user data', () async {
+      final items = await libraryService.fetchBoxSetPlayableItems('boxset-1');
+
+      expect(items.map((e) => e.id), ['movie-a', 'movie-b']);
+      expect(api.boxSetFields, contains('UserData'));
+    });
+
+    test('downloadItems queues exactly the unwatched list', () async {
+      // wifiOnly makes every item fail fast in tests (no Connectivity
+      // platform), leaving one error entry per queued item.
+      await prefs.set(UserPreferences.downloadWifiOnly, true);
+      final episodes = await libraryService.fetchEpisodes('series-1');
+
+      await libraryService.downloadItems(
+        episodes.where((e) => !e.isPlayed).toList(),
+      );
+
+      expect(libraryService.activeDownloads.keys.toSet(), {'ep-2', 'ep-3'});
+    });
   });
 }
 
