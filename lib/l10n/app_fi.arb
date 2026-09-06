@@ -2228,11 +2228,11 @@
     "@noScheduledRecordings": {
         "description": "Empty state when no recordings are scheduled"
     },
-    "cancelRecording": "Keskeytä  tallennus?",
+    "cancelRecording": "Keskeytä tallennus?",
     "@cancelRecording": {
         "description": "Dialog title for cancelling a recording"
     },
-    "cancelScheduledRecordingOf": "Keskeytä  \"{name}\" ajoitettu nauhoitus?",
+    "cancelScheduledRecordingOf": "Peruuta ajastetun ohjelman tallennus \"{name}\"?",
     "@cancelScheduledRecordingOf": {
         "description": "Confirmation message for cancelling a scheduled recording",
         "placeholders": {
@@ -2249,7 +2249,7 @@
     "@yesCancel": {
         "description": "Confirmation button to cancel a recording"
     },
-    "failedToCancelRecording": "Tallennuksen keskeytys  epäonnistui",
+    "failedToCancelRecording": "Tallennuksen keskeytys epäonnistui",
     "@failedToCancelRecording": {
         "description": "Error when cancelling a recording fails"
     },
@@ -4289,7 +4289,7 @@
     "@request": {
         "description": "Button to submit a media request"
     },
-    "cancelRequest": "Keskeytä  pyyntö",
+    "cancelRequest": "Keskeytä pyyntö",
     "@cancelRequest": {
         "description": "Button/dialog title to cancel a media request"
     },
@@ -6373,7 +6373,7 @@
     "trackActionPlayNext": "Toista seuraavaksi",
     "trackActionAddToQueue": "Lisää jonoon",
     "trackActionAddToPlaylist": "Lisää soittolistaan",
-    "trackActionCancelDownload": "Keskeytä  lataus",
+    "trackActionCancelDownload": "Keskeytä lataus",
     "trackActionDeleteFromPlaylist": "Poista soittolistasta",
     "trackActionMoveUp": "Siirrä ylös",
     "trackActionMoveDown": "Siirrä alas",
@@ -6557,15 +6557,15 @@
     "settingsJoinDiscord": "Liity Discordiin",
     "settingsJoinDiscordSubtitle": "Keskustele yhteisön kanssa",
     "settingsJoinTheDiscord": "Liity Discordiin",
-    "settingsSupportMoonfin": "Tue Moonfin",
-    "settingsLegal": "LAKI",
+    "settingsSupportMoonfin": "Tue Moonfin:ä",
+    "settingsLegal": "OIKEUDELLISET JUTUT",
     "settingsLicenses": "Lisenssit",
-    "settingsOpenSourceLicenseNotices": "Avoimen lähdekoodin lisenssiilmoitukset",
+    "settingsOpenSourceLicenseNotices": "Avoimen lähdekoodin lisenssi-ilmoitukset",
     "settingsPrivacyPolicy": "Tietosuojakäytäntö",
     "settingsPrivacyPolicySubtitle": "Kuinka Moonfin käsittelee tietojasi",
     "settingsCheckForUpdates": "Tarkista päivitykset",
     "settingsCheckForUpdatesSubtitle": "Tarkista viimeisin Moonfin-julkaisu",
-    "settingsPoweredByFlutter": "Voimanlähteenä Flutter",
+    "settingsPoweredByFlutter": "Toteutettu Flutter-alustalla",
     "settingsLicenseNoticesCount": "{count, plural, one {# lisenssi-ilmoitus} other {# lisenssi-ilmoitusta}}",
     "@settingsLicenseNoticesCount": {
         "description": "Plural label for number of license notices",
@@ -7308,7 +7308,7 @@
     "autoHdrSwitchingDescription": "Ota HDR automaattisesti käyttöön HDR-videon toistoa varten ja palauta näyttötila poistuessasi.",
     "whenFullscreen": "Kun koko näyttö",
     "transcodingLimits": "Transkoodausrajat",
-    "settingsSupportMoonfinSubtitle": "Lahjoita kahvi kehittäjälle",
+    "settingsSupportMoonfinSubtitle": "Tarjoa kahvi kehittäjälle",
     "accountPreferences": "TILIN ASETUKSET",
     "@accountPreferences": {
         "description": "Section header for account preferences settings"
@@ -7365,19 +7365,19 @@
     "@recommendationSystemSubtitle": {
         "description": "Explanation under the recommendation system setting"
     },
-    "recommendationSystemMoonfin": "Moonfin suositukset",
+    "recommendationSystemMoonfin": "Moonfin Suositukset",
     "@recommendationSystemMoonfin": {
         "description": "Recommendation system option: Moonfin Recommends"
     },
-    "recommendationSystemTmdb": "TMDb-samankaltaisuus",
+    "recommendationSystemTmdb": "TMDb Samankaltaisuus",
     "@recommendationSystemTmdb": {
         "description": "Recommendation system option: TMDb Similarity"
     },
-    "recommendationsApplyParentalRatingCap": "Rajoitetaanko ikärajan mukaan?",
+    "recommendationsApplyParentalRatingCap": "Käytetäänkö Ikärajaluokitusta?",
     "@recommendationsApplyParentalRatingCap": {
         "description": "Label for the toggle that controls whether similar suggestions are capped by target media parental rating"
     },
-    "recommendationsApplyParentalRatingCapSubtitle": "Rajoita Moonfin suosittelee -ehdotuksia kohdemedian ikärajan mukaan",
+    "recommendationsApplyParentalRatingCapSubtitle": "Rajoita Moonfin suosittelee ehdotuksia kohdemedian ikärajan mukaan",
     "@recommendationsApplyParentalRatingCapSubtitle": {
         "description": "Explanation under the parental rating cap setting toggle"
     },
@@ -7385,7 +7385,7 @@
     "@interfaceStyle": {
         "description": "Label for the Automatic/Apple/Material interface style setting"
     },
-    "interfaceStyleSubtitle": "Automaattinen mukautuu laitteeseesi. Valitse Apple tai Material pakottaaksesi tietyn ulkoasun.",
+    "interfaceStyleSubtitle": "Automaattinen-toiminto mukautuu laitteeseesi. Valitse Apple tai Material, jos haluat määrittää ulkoasun manuaalisesti.",
     "@interfaceStyleSubtitle": {
         "description": "Explanation under the interface style setting"
     },
@@ -7910,7 +7910,7 @@
     "@clockModeBouncing": {
         "description": "Screensaver clock mode: bounces around the screen"
     },
-    "seerrDiscoveryRows": "Seerr-löytörivit",
+    "seerrDiscoveryRows": "Seerr Suositusrivit",
     "@seerrDiscoveryRows": {
         "description": "Subtitle shown under Seerr discovery home rows"
     },
@@ -9240,7 +9240,7 @@
     "@genresAndTags": {
         "description": "Button and dialog title for browsing a title's genres, networks and tags"
     },
-    "yourWatchlist": "Aktiivilistalla",
+    "yourWatchlist": "Aktiivilistallasi",
     "@yourWatchlist": {
         "description": "Seerr row: watchlist"
     },
@@ -9385,15 +9385,15 @@
     "@groupByStudio": {
         "description": "Option to group library items by production studio"
     },
-    "showAlphabeticalFilters": "Näytä aakkoset",
+    "showAlphabeticalFilters": "Näytä aakkosittain",
     "@showAlphabeticalFilters": {
         "description": "Checkbox label for toggling alphabetical picker visibility in Sort and Filter options"
     },
-    "personalRatingStyle": "Henkilökohtainen arviointityyli",
+    "personalRatingStyle": "Oma arviointyyli",
     "@personalRatingStyle": {
         "description": "Selects how personal ratings are displayed and entered on media details."
     },
-    "personalRatingThumbs": "Tykkää / ei tykkää",
+    "personalRatingThumbs": "Pidän/ En Pidä",
     "@personalRatingThumbs": {
         "description": "Personal rating style using like and dislike actions."
     },
@@ -9828,11 +9828,11 @@
     "@groupByTitle": {
         "description": "Dialog title and button label for library group by options"
     },
-    "groupByDecade": "Vuosikymmen (vuosi)",
+    "groupByDecade": "Vuosikymmenittäin (vuosi)",
     "@groupByDecade": {
         "description": "Option to group library items by release decade"
     },
-    "groupByParentalRating": "Vanhempien luokitus",
+    "groupByParentalRating": "Ikäluokituksen mukaan",
     "@groupByParentalRating": {
         "description": "Option to group library items by parental rating"
     },
