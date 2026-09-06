@@ -148,7 +148,7 @@ dependencies:
   # build against archive 4.x. See packages/kindle_unpack and the patch note.
   kindle_unpack:
     path: packages/kindle_unpack
-  archive: ^4.0.9
+  archive: ^4.2.0
   rar:
     path: packages/rar_fork
   archive_extract:
