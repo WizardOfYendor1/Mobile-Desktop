@@ -457,7 +457,7 @@
     "@views": {
         "description": "Section header for music browse view buttons"
     },
-    "albums": "Албумс",
+    "albums": "Албуми",
     "@albums": {
         "description": "Music browse view button label"
     },
@@ -1810,7 +1810,7 @@
     "@directPlay": {
         "description": "Play method label"
     },
-    "directStream": "Дирецт Стреам",
+    "directStream": "Директан стрим",
     "@directStream": {
         "description": "Audio option: direct stream"
     },
@@ -2324,7 +2324,7 @@
     "@music": {
         "description": "Filter label for music"
     },
-    "musicAlbums": "Мусиц Албумс",
+    "musicAlbums": "Музички албуми",
     "@musicAlbums": {
         "description": "Section title for downloaded music albums"
     },
@@ -2832,7 +2832,7 @@
     "@autoCrop": {
         "description": "Zoom mode: auto crop"
     },
-    "stretch": "Стретцх",
+    "stretch": "Развучи",
     "@stretch": {
         "description": "Zoom mode: stretch"
     },
@@ -2976,7 +2976,7 @@
     "@trueHdSupport": {
         "description": "Setting for TrueHD support"
     },
-    "enableDtsPassthrough": "Битстреам ДТС аудио само на АВР; захтева подршку пријемника и ДТС изворну стазу",
+    "enableDtsPassthrough": "Битстрим ДТС (DTS) звука само ка АВР-у; захтева подршку рисивера и изворни ДТС (DTS) запис",
     "@enableDtsPassthrough": {
         "description": "Description for DTS passthrough"
     },
@@ -3801,7 +3801,7 @@
     "@mode": {
         "description": "Setting for mode"
     },
-    "libraryArt": "Либрари Арт",
+    "libraryArt": "Уметност библиотеке",
     "@libraryArt": {
         "description": "Screensaver mode: library art"
     },
@@ -4557,7 +4557,7 @@
     "set": "Сет",
     "status": "Статус",
     "stop": "Заустави",
-    "streaming": "Стреаминг",
+    "streaming": "Емитовање",
     "time": "Време",
     "trickplay": "Trickplay",
     "uninstall": "Деинсталирај",
@@ -4567,7 +4567,7 @@
     "unmute": "Укључи звук",
     "mute": "Искључи звук",
     "branding": "Брендирање",
-    "adminDrawerDashboard": "Дасхбоард",
+    "adminDrawerDashboard": "Контролна таба",
     "adminDrawerAnalytics": "Аналитика",
     "adminDrawerSettings": "Подешавања",
     "adminDrawerBranding": "Брендирање",
@@ -4575,7 +4575,7 @@
     "adminDrawerLibraries": "Библиотеке",
     "adminDrawerTranscoding": "Трансцодинг",
     "adminDrawerResume": "Настави",
-    "adminDrawerStreaming": "Стреаминг",
+    "adminDrawerStreaming": "Емитовање",
     "adminDrawerTrickplay": "Trickplay",
     "adminDrawerDevices": "Уређаји",
     "adminDrawerActivity": "Активност",
@@ -4584,7 +4584,7 @@
     "adminDrawerBackups": "Резервне копије",
     "adminDrawerLogs": "Дневници",
     "adminDrawerScheduledTasks": "Планирани задаци",
-    "adminDrawerPlugins": "Плугинс",
+    "adminDrawerPlugins": "Додаци",
     "adminDrawerRepositories": "Спремишта",
     "adminDrawerLiveTv": "ТВ уживо",
     "adminExitTooltip": "Изађи из администратора",
@@ -4639,8 +4639,8 @@
     "adminServerPaths": "Путања сервера",
     "adminServerActions": "Акције сервера",
     "adminRestartServer": "Поново покрените сервер",
-    "adminShutdownServer": "Схутдовн Сервер",
-    "adminScanLibraries": "Сцан Либрариес",
+    "adminShutdownServer": "Искључи Сервер",
+    "adminScanLibraries": "Скенирај Библиотеку",
     "adminLibraryScanStarted": "Скенирање библиотеке је почело",
     "errorGeneric": "Грешка: {error}",
     "@errorGeneric": {
@@ -5952,7 +5952,7 @@
     "adminPlaybackEncodingThreads": "Енцодинг тхреадс",
     "adminPlaybackFallbackFont": "Омогући резервни фонт",
     "adminPlaybackFallbackFontPath": "Путања резервног фонта",
-    "adminPlaybackStreaming": "Стреаминг",
+    "adminPlaybackStreaming": "Емитовање",
     "adminResumeVideo": "Видео",
     "adminResumeAudiobooks": "Аудио књиге",
     "adminResumeMinAudiobookPct": "Минимални проценат резимеа аудио књиге",
@@ -6616,7 +6616,7 @@
     "settingsFortyFiveSeconds": "45 секунди",
     "settingsSixtySeconds": "60 секунди",
     "settingsSkipForwardLengthDescription": "Колико секунди да скочите унапред након притиска на дугме за брзо премотавање унапред.",
-    "settingsBitstreamAc3ToExternalDecoder": "Битстреам АЦ3 ка екстерном декодеру",
+    "settingsBitstreamAc3ToExternalDecoder": "Битстрим АЦ3 (AC3) ка спољном декодеру",
     "settingsCinemaMode": "Цинема Моде",
     "settingsCinemaModeSubtitle": "Пустите трејлере/преролове пре главне функције",
     "settingsShort": "Кратко",
@@ -6703,7 +6703,7 @@
     "@playerTooltipExitFloatOnTop": {
         "description": "Tooltip label for disabling always-on-top in desktop player"
     },
-    "email": "Емаил",
+    "email": "Имејл",
     "@email": {
         "description": "Email field label"
     },
@@ -9001,5 +9001,241 @@
     "imdbMostPopularMovies": "IMDb најпопуларнији филмови",
     "imdbMostPopularTvShows": "IMDb најпопуларније ТВ серије",
     "imdbLowestRatedMovies": "IMDb најлошије оцењени филмови",
-    "imdbTopEnglishMovies": "IMDb најбоље оцењени енглески филмови"
+    "imdbTopEnglishMovies": "IMDb најбоље оцењени енглески филмови",
+    "interfaceLayout": "Изглед интерфејса",
+    "@interfaceLayout": {
+        "description": "Setting to override which UI layout the app uses"
+    },
+    "interfaceLayoutSubtitle": "Заобиђите детектовани распоред када се овај уређај погрешно очита. Поново покрените Мунфин (Moonfin) да би промене ступиле на снагу.",
+    "@interfaceLayoutSubtitle": {
+        "description": "Subtitle for the interface layout setting"
+    },
+    "interfaceLayoutAutomatic": "Аутоматски",
+    "@interfaceLayoutAutomatic": {
+        "description": "Interface layout option: detect from the device"
+    },
+    "interfaceLayoutTv": "ТВ",
+    "@interfaceLayoutTv": {
+        "description": "Interface layout option: 10-foot TV layout"
+    },
+    "interfaceLayoutDesktop": "Десктоп",
+    "@interfaceLayoutDesktop": {
+        "description": "Interface layout option: desktop layout"
+    },
+    "interfaceLayoutPhone": "Телефон",
+    "@interfaceLayoutPhone": {
+        "description": "Interface layout option: phone layout"
+    },
+    "oledMode": "ОЛЕД мод",
+    "@oledMode": {
+        "description": "Label for the setting that deepens blacks and enriches artwork on OLED displays"
+    },
+    "oledModeSubtitle": "Продубљује црне тонове и обогаћује слику. Најбоље на ОЛЕД екранима.",
+    "@oledModeSubtitle": {
+        "description": "Explanation under the OLED Mode setting"
+    },
+    "oledModeSubtle": "Суптилно",
+    "@oledModeSubtle": {
+        "description": "OLED Mode level that darkens surfaces gently and lightly enriches artwork"
+    },
+    "oledModeVivid": "Живописно",
+    "@oledModeVivid": {
+        "description": "OLED Mode level that uses pure black surfaces and the strongest artwork enrichment"
+    },
+    "performanceMode": "Перформансе",
+    "@performanceMode": {
+        "description": "Label for the device performance setting"
+    },
+    "performanceModeSubtitle": "Аутоматски мери овај уређај и ограничава оне са мањком меморије, што задржава мање слика у меморији и оставља трејлере као статичне слике. У потпуности ступа на снагу при следећем покретању.",
+    "@performanceModeSubtitle": {
+        "description": "Explanation under the device performance setting"
+    },
+    "performanceModeAuto": "Аутоматски",
+    "@performanceModeAuto": {
+        "description": "Performance option: measure the device"
+    },
+    "performanceModeStandard": "Стандардно",
+    "@performanceModeStandard": {
+        "description": "Performance option: never hold back"
+    },
+    "performanceModeReduced": "Редуковано",
+    "@performanceModeReduced": {
+        "description": "Performance option: always hold back"
+    },
+    "trailerPreviewHeldBack": "Искључено јер су перформансе подешене на редуковано за овај уређај",
+    "@trailerPreviewHeldBack": {
+        "description": "Shown under the trailer preview switch when the device tier suppresses trailers"
+    },
+    "controller": "Контролер",
+    "@controller": {
+        "description": "Settings section header for game controller options"
+    },
+    "gamepadNavigation": "Навигација гејмпедом",
+    "@gamepadNavigation": {
+        "description": "Settings label for the switch that lets a game controller move focus and select items"
+    },
+    "gamepadNavigationDescription": "Допусти да повезани контролер мења фокус и бира ставке",
+    "@gamepadNavigationDescription": {
+        "description": "Settings subtitle for the gamepad navigation switch"
+    },
+    "scrollDirection": "Смер скроловања",
+    "@scrollDirection": {
+        "description": "Section header for scroll direction selection in library display settings"
+    },
+    "scrollDirectionVertical": "Вертикално",
+    "@scrollDirectionVertical": {
+        "description": "Library scroll direction option: vertical grid (default)"
+    },
+    "scrollDirectionHorizontal": "Водоравно",
+    "@scrollDirectionHorizontal": {
+        "description": "Library scroll direction option: horizontal grid for ultrawide displays"
+    },
+    "scrollToTop": "Скролуј на врх",
+    "@scrollToTop": {
+        "description": "Tooltip for the button that returns a scrolled list to the top"
+    },
+    "castMembers": "Глумци",
+    "@castMembers": {
+        "description": "Section title for the list of actors and performers in movie and TV metadata. Not the casting-to-a-device action"
+    },
+    "finalizingDownload": "Завршавам…",
+    "@finalizingDownload": {
+        "description": "Status label shown while a finished download is being moved to its final location and validated"
+    },
+    "queuedDownload": "На чекању",
+    "@queuedDownload": {
+        "description": "Status label for a download waiting in the queue for a free download slot"
+    },
+    "failedToDeleteItemWithError": "Операција брисања није успела са следећом грешком: {error}",
+    "@failedToDeleteItemWithError": {
+        "description": "Error message when item deletion fails, including the specific error details",
+        "placeholders": {
+            "error": {
+                "type": "String",
+                "example": "Permission denied"
+            }
+        }
+    },
+    "searchingSubtitles": "Претражујем титлове…",
+    "@searchingSubtitles": {
+        "description": "Shown while a remote subtitle search is running"
+    },
+    "downloadingSubtitle": "Преузимам титлове…",
+    "@downloadingSubtitle": {
+        "description": "Shown while a chosen subtitle is downloaded and the server is picking it up"
+    },
+    "starring": "ГЛАВНЕ УЛОГЕ",
+    "@starring": {
+        "description": "Metadata label for the leading cast"
+    },
+    "shuffleAll": "Измешај све",
+    "@shuffleAll": {
+        "description": "Action button label for shuffling all tracks of an artist"
+    },
+    "aiTranslated": "ВИ превод",
+    "@aiTranslated": {
+        "description": "Label for a remote subtitle the provider marked as AI translated"
+    },
+    "machineTranslated": "Машински превод",
+    "@machineTranslated": {
+        "description": "Label for a remote subtitle the provider marked as machine translated"
+    },
+    "hearingImpaired": "Титл за особе са оштећеним слухом",
+    "@hearingImpaired": {
+        "description": "Label for a remote subtitle marked as hearing impaired"
+    },
+    "framerateFps": "{rate} фпс",
+    "@framerateFps": {
+        "description": "Framerate of a remote subtitle, shown in its detail line",
+        "placeholders": {
+            "rate": {
+                "type": "String"
+            }
+        }
+    },
+    "showMpvStats": "Прикажи мпв (mpv) статистику (Шифт+И)",
+    "@showMpvStats": {
+        "description": "Button in the stream info sheet that shows mpv's own statistics overlay; Shift+I is the keyboard shortcut"
+    },
+    "hideMpvStats": "Сакриј мпв (mpv) статистику (Шифт+И)",
+    "@hideMpvStats": {
+        "description": "Button in the stream info sheet that hides mpv's own statistics overlay; Shift+I is the keyboard shortcut"
+    },
+    "hdrOutput": "ХДР излаз",
+    "@hdrOutput": {
+        "description": "Stream info label for whether HDR is reaching the display untouched"
+    },
+    "hdrOutputActive": "Активно — {format}",
+    "@hdrOutputActive": {
+        "description": "Stream info value when HDR passthrough is running, e.g. 'Active — HDR10 (PQ, BT.2020)'",
+        "placeholders": {
+            "format": {
+                "type": "String"
+            }
+        }
+    },
+    "hdrOutputActiveTonemapped": "Активно — тонски мапирано у СДР за овај екран",
+    "@hdrOutputActiveTonemapped": {
+        "description": "Stream info value when native output is engaged but the window sits on a display without HDR, so the renderer is tone-mapping"
+    },
+    "hdrOutputDisplayNotHdr": "Није активмо — екран није у ХДР моду",
+    "@hdrOutputDisplayNotHdr": {
+        "description": "Stream info value when the display has not been switched into HDR"
+    },
+    "hdrOutputContentSdr": "Није активно— садржај је СДР",
+    "@hdrOutputContentSdr": {
+        "description": "Stream info value when the title itself is not HDR"
+    },
+    "hdrOutputDisabled": "Није активно — искључено у подешавањима",
+    "@hdrOutputDisabled": {
+        "description": "Stream info value when the native HDR output preference is off"
+    },
+    "hdrOutputFailed": "Није активно — није се могло покренути, користи се стандардна путања",
+    "@hdrOutputFailed": {
+        "description": "Stream info value when the native HDR window could not be created"
+    },
+    "nativeHdrOutput": "Изворни ХДР излаз",
+    "@nativeHdrOutput": {
+        "description": "Settings label for sending HDR to the display untouched"
+    },
+    "nativeHdrOutputDescription": "Шаље ХДР видео на екран без измена уместо да га претвара у СДР. Користи се само када је екран већ у ХДР режиму, а наслов је ХДР.",
+    "@nativeHdrOutputDescription": {
+        "description": "Settings description for native HDR output"
+    },
+    "recordSeries": "Сними серију",
+    "@recordSeries": {
+        "description": "Button label to record every showing of a live TV series"
+    },
+    "seriesSetToRecord": "Серија подешена за снимање",
+    "@seriesSetToRecord": {
+        "description": "Snackbar confirmation after scheduling a live TV series recording"
+    },
+    "seriesRecordingCancelled": "Снимање серије отказано",
+    "@seriesRecordingCancelled": {
+        "description": "Snackbar confirmation after cancelling a live TV series recording"
+    },
+    "unableToCreateSeriesRecording": "Није могуће снимање серије",
+    "@unableToCreateSeriesRecording": {
+        "description": "Error when creating a live TV series recording fails"
+    },
+    "settingsSearchHint": "Подешавање претраге",
+    "@settingsSearchHint": {
+        "description": "Hint text in the settings search field"
+    },
+    "mixedRowsOnly": "Само мешовити редови",
+    "@mixedRowsOnly": {
+        "description": "Option: only show the label on rows holding both movies and series"
+    },
+    "detailsBackgroundOpacity": "Непрозирност детаља",
+    "@detailsBackgroundOpacity": {
+        "description": "Setting for details background opacity on modern screens"
+    },
+    "manual": "Ручно",
+    "@manual": {
+        "description": "Option: manual"
+    },
+    "autoDetect": "Аутоматсо откривање",
+    "@autoDetect": {
+        "description": "Option: detect the value automatically"
+    }
 }
