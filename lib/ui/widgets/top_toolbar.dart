@@ -161,6 +161,7 @@ class _TopToolbarState extends State<TopToolbar> with RouteAware {
         NavigationLayout.focusNavbarAvatarNotifier.value;
     NavigationLayout.focusNavbarNotifier.value = _focusNavbarCallback;
     NavigationLayout.focusNavbarAvatarNotifier.value = _focusAvatarCallback;
+    NavigationLayout.chromeFocusRoots.add(_toolbarScopeNode);
     _avatarFocus.addListener(_onAvatarFocusChanged);
     FocusManager.instance.addListener(_trackPreviousFocus);
     _updateClock();
@@ -232,6 +233,7 @@ class _TopToolbarState extends State<TopToolbar> with RouteAware {
     if (_toolbarHadFocus) {
       TopToolbar.isFocusedNotifier.value = false;
     }
+    NavigationLayout.chromeFocusRoots.remove(_toolbarScopeNode);
     _avatarFocus.removeListener(_onAvatarFocusChanged);
     FocusManager.instance.removeListener(_trackPreviousFocus);
     _toolbarScopeNode.dispose();

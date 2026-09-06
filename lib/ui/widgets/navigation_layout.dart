@@ -50,6 +50,12 @@ class NavigationLayout extends StatefulWidget {
     ),
   );
 
+  /// Focus roots of the navigation chrome, registered by the sidebar and
+  /// toolbar while mounted. The route focus observer refuses to land inside
+  /// these, so a fresh route waits for content instead of starting the d-pad
+  /// in the rail and popping it open before anything has loaded.
+  static final Set<FocusNode> chromeFocusRoots = <FocusNode>{};
+
   static final focusNavbarNotifier = ValueNotifier<VoidCallback?>(null);
   static final focusNavbarAvatarNotifier = ValueNotifier<VoidCallback?>(null);
   static final focusContentFromNavbarNotifier = ValueNotifier<VoidCallback?>(

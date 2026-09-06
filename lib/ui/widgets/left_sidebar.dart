@@ -148,6 +148,7 @@ class _LeftSidebarState extends State<LeftSidebar> with RouteAware {
         NavigationLayout.focusNavbarAvatarNotifier.value;
     NavigationLayout.focusNavbarNotifier.value = _focusNavbarCallback;
     NavigationLayout.focusNavbarAvatarNotifier.value = _focusAvatarCallback;
+    NavigationLayout.chromeFocusRoots.add(_sidebarFocus);
     _updateClock();
     _clockTimer = Timer.periodic(
       const Duration(seconds: 30),
@@ -213,6 +214,7 @@ class _LeftSidebarState extends State<LeftSidebar> with RouteAware {
       NavigationLayout.focusNavbarAvatarNotifier.value =
           _previousFocusAvatarCallback;
     }
+    NavigationLayout.chromeFocusRoots.remove(_sidebarFocus);
     FocusManager.instance.removeListener(_trackPreviousFocus);
     if (PlatformDetection.isTV || (PlatformDetection.isDesktop || (PlatformDetection.isWeb && !PlatformDetection.useMobileUi))) {
       _sidebarFocus.removeListener(_onSidebarFocusNodeChanged);
