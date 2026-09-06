@@ -551,7 +551,7 @@
   },
   "series": "Series",
   "@series": {
-    "description": "Live TV series recordings button label"
+    "description": "Section header for TV series"
   },
   "noItemsFound": "No items found",
   "@noItemsFound": {
@@ -674,7 +674,7 @@
   },
   "type": "Type",
   "@type": {
-    "description": "Section header for type filter"
+    "description": "Stream info label for subtitle type"
   },
   "sortBy": "Sort By",
   "@sortBy": {
@@ -686,11 +686,11 @@
   },
   "imageType": "Image Type",
   "@imageType": {
-    "description": "Section header for image type selection"
+    "description": "Setting for image type"
   },
   "posterSize": "Poster Size",
   "@posterSize": {
-    "description": "Section header for poster size selection"
+    "description": "Setting for poster size"
   },
   "small": "Small",
   "@small": {
@@ -706,7 +706,7 @@
   },
   "extraLarge": "Extra Large",
   "@extraLarge": {
-    "description": "Poster size option"
+    "description": "Size option: extra large"
   },
   "scrollDirection": "Scroll Direction",
   "@scrollDirection": {
@@ -1076,7 +1076,7 @@
   },
   "unread": "Unread",
   "@unread": {
-    "description": "Filter label for unread items"
+    "description": "Status label for an unread book"
   },
   "unwatched": "Unwatched",
   "@unwatched": {
@@ -1088,7 +1088,7 @@
   },
   "allLibraries": "All Libraries",
   "@allLibraries": {
-    "description": "Filter option for all libraries"
+    "description": "Label when all libraries are selected"
   },
   "books": "Books",
   "@books": {
@@ -1200,7 +1200,7 @@
   },
   "firstPublished": "First published {year}",
   "@firstPublished": {
-    "description": "Label showing first publication year",
+    "description": "Publication year for a book",
     "placeholders": {
       "year": {
         "type": "int"
@@ -1263,6 +1263,7 @@
     "description": "Placeholder text for an empty item list screen"
   },
   "failedToLoad": "Failed to load",
+
   "@failedToLoad": {
     "description": "Error message when item detail fails to load"
   },
@@ -1292,7 +1293,7 @@
   },
   "nextUp": "Next Up",
   "@nextUp": {
-    "description": "Section header for the next episode to watch"
+    "description": "Home section: next up"
   },
   "seasons": "Seasons",
   "@seasons": {
@@ -1313,10 +1314,6 @@
   "musicVideos": "Music Videos",
   "@musicVideos": {
     "description": "Section header for music videos filmography row"
-  },
-  "series": "Series",
-  "@series": {
-    "description": "Section header for TV series"
   },
   "other": "Other",
   "@other": {
@@ -1370,15 +1367,6 @@
   "unableToLoadAuthorDetails": "Unable to load author details right now.",
   "@unableToLoadAuthorDetails": {
     "description": "Error message when author details fail to load"
-  },
-  "firstPublished": "First published {year}",
-  "@firstPublished": {
-    "description": "Publication year for a book",
-    "placeholders": {
-      "year": {
-        "type": "int"
-      }
-    }
   },
   "published": "Published {year}",
   "@published": {
@@ -1533,10 +1521,6 @@
   "finished": "Finished",
   "@finished": {
     "description": "Status label for a finished book"
-  },
-  "unread": "Unread",
-  "@unread": {
-    "description": "Status label for an unread book"
   },
   "favorited": "Favorited",
   "@favorited": {
@@ -2286,7 +2270,7 @@
   },
   "unknown": "Unknown",
   "@unknown": {
-    "description": "Label for unknown or missing values"
+    "description": "Fallback label for unknown items"
   },
   "playbackInformation": "Playback Information",
   "@playbackInformation": {
@@ -2314,7 +2298,7 @@
   },
   "directStream": "Direct Stream",
   "@directStream": {
-    "description": "Play method label"
+    "description": "Audio option: direct stream"
   },
   "transcoding": "Transcoding",
   "@transcoding": {
@@ -2416,10 +2400,6 @@
   "format": "Format",
   "@format": {
     "description": "Stream info label for subtitle format"
-  },
-  "type": "Type",
-  "@type": {
-    "description": "Stream info label for subtitle type"
   },
   "external": "External",
   "@external": {
@@ -2937,8 +2917,9 @@
   },
   "seerr": "Seerr",
   "@seerr": {
-    "description": "Title for the Seerr results section"
+    "description": "Seerr brand name"
   },
+
   "seerrAccountType": "Seerr Account Type",
   "@seerrAccountType": {
     "description": "Header for selecting Seerr authentication account type"
@@ -3153,11 +3134,11 @@
   },
   "storageLimit": "Storage Limit",
   "@storageLimit": {
-    "description": "Section title for storage limit setting"
+    "description": "Setting for storage limit"
   },
   "noLimit": "No limit",
   "@noLimit": {
-    "description": "Label when no storage limit is set"
+    "description": "Option: no limit"
   },
   "deleteAllDownloads": "Delete All Downloads",
   "@deleteAllDownloads": {
@@ -3800,10 +3781,6 @@
   "audioBehavior": "Audio Behavior",
   "@audioBehavior": {
     "description": "Setting for audio behavior"
-  },
-  "directStream": "Direct Stream",
-  "@directStream": {
-    "description": "Audio option: direct stream"
   },
   "downmixToStereo": "Downmix to Stereo",
   "@downmixToStereo": {
@@ -4788,18 +4765,6 @@
   "@libraryDisplay": {
     "description": "Section title for library display settings"
   },
-  "posterSize": "Poster Size",
-  "@posterSize": {
-    "description": "Setting for poster size"
-  },
-  "extraLarge": "Extra Large",
-  "@extraLarge": {
-    "description": "Size option: extra large"
-  },
-  "imageType": "Image Type",
-  "@imageType": {
-    "description": "Setting for image type"
-  },
   "posterLabel": "Poster",
   "@posterLabel": {
     "description": "Image type: poster"
@@ -4883,10 +4848,6 @@
   "sourceLibraries": "Source Libraries",
   "@sourceLibraries": {
     "description": "Setting for source libraries"
-  },
-  "unknown": "Unknown",
-  "@unknown": {
-    "description": "Fallback label for unknown items"
   },
   "sourceCollections": "Source Collections",
   "@sourceCollections": {
@@ -5005,10 +4966,6 @@
   "@itemCount": {
     "description": "Setting for item count"
   },
-  "allLibraries": "All libraries",
-  "@allLibraries": {
-    "description": "Label when all libraries are selected"
-  },
   "noneSelected": "None selected",
   "@noneSelected": {
     "description": "Label when nothing is selected"
@@ -5116,10 +5073,6 @@
   "activeRecordings": "Active Recordings",
   "@activeRecordings": {
     "description": "Home section: active recordings"
-  },
-  "nextUp": "Next Up",
-  "@nextUp": {
-    "description": "Home section: next up"
   },
   "playlists": "Playlists",
   "@playlists": {
@@ -5846,14 +5799,6 @@
   "@mdbListTmdbRatingSources": {
     "description": "Ratings settings subtitle"
   },
-  "storageLimit": "Storage Limit",
-  "@storageLimit": {
-    "description": "Setting for storage limit"
-  },
-  "noLimit": "No limit",
-  "@noLimit": {
-    "description": "Option: no limit"
-  },
   "gbValue": "{value} GB",
   "@gbValue": {
     "description": "Gigabyte value display",
@@ -5883,11 +5828,6 @@
   "@browse": {
     "description": "Button to browse files"
   },
-  "seerr": "Seerr",
-  "@seerr": {
-    "description": "Seerr brand name"
-  },
-
   "noResults": "No results",
   "@noResults": {
     "description": "Shown when a search or browse returns no items"
@@ -6494,8 +6434,6 @@
   "path": "Path",
   "paused": "Paused",
   "permissions": "Permissions",
-  "play": "Play",
-  "pause": "Pause",
   "processing": "Processing",
   "profile": "Profile",
   "provider": "Provider",
@@ -6579,7 +6517,6 @@
     }
   },
 
-  "allLibraries": "All Libraries",
   "analyticsMediaDistribution": "Media Distribution",
   "analyticsVideoCodecs": "Video Codecs",
   "analyticsAudioCodecs": "Audio Codecs",
@@ -6639,8 +6576,6 @@
   "completion": "Completion",
   "direct": "Direct",
   "adminDisconnect": "Disconnect",
-
-  "failedToLoad": "Failed to load",
 
   "adminClearDates": "Clear dates",
   "adminActivitySeverityAll": "All severities",
@@ -6953,7 +6888,6 @@
   "adminFullAccessWarning": "Administrators have complete access to the server. Grant with caution.",
   "administrator": "Administrator",
   "adminHiddenUser": "Hidden user",
-  "disabled": "Disabled",
   "adminAllowMediaPlayback": "Allow media playback",
   "adminAllowAudioTranscoding": "Allow audio transcoding",
   "adminAllowVideoTranscoding": "Allow video transcoding",
@@ -7426,7 +7360,6 @@
   "adminMaxResumeSubtitle": "Content is considered fully played after this percentage",
   "adminMinResumeDuration": "Minimum resume duration (seconds)",
   "adminMinResumeDurationSubtitle": "Items shorter than this are not resumable",
-  "audiobooks": "Audiobooks",
   "adminMinAudiobookResume": "Minimum audiobook resume percentage",
   "adminMaxAudiobookResume": "Maximum audiobook resume percentage",
 
@@ -8849,7 +8782,6 @@
   "@settingsTimer": {
     "description": "Option label to show only countdown timer on media segment countdown overlay"
   },
-  "settingsBoth": "Both",
   "@settingsBoth": {
     "description": "Option label to show both progress bar and countdown timer on media segment countdown overlay"
   },
@@ -9275,7 +9207,6 @@
   "openIosRoutePicker": "Open iOS route picker",
   "airPlayRoutePickerUnavailable": "AirPlay route picker is unavailable on this device.",
   "videos": "Videos",
-  "trailers": "Trailers",
   "programs": "Programs",
   "songs": "Songs",
   "photoAlbums": "Photo Albums",
@@ -9643,7 +9574,7 @@
   "@libraryWriteAccessReactiveBody": {
     "description": "Reactive error warning message when artwork update fails"
   },
-  "externalLists": "External Home Row Lists",
+  "externalLists": "External Lists",
   "replay": "Replay",
   "fileInformation": "File Information",
   "fileSizeFormat": "Size: {size}  •  Format: {format}",
@@ -9748,7 +9679,6 @@
   "@adminLibChapterImageResolutionMatchSource": {
     "description": "Chapter image resolution option that matches the source resolution"
   },
-  "externalLists": "External Lists",
   "imdbTop250Movies": "IMDb Top 250 Movies",
   "imdbTop250TvShows": "IMDb Top 250 TV Shows",
   "imdbMostPopularMovies": "IMDb Most Popular Movies",
