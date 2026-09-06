@@ -1816,6 +1816,27 @@
       }
     }
   },
+  "downloadBytesOfTotal": "{received} of {total}",
+  "@downloadBytesOfTotal": {
+    "description": "Transfer status of a running download, e.g. '1.2 GB of 4.6 GB'",
+    "placeholders": {
+      "received": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadSpeed": "{speed}/s",
+  "@downloadSpeed": {
+    "description": "Transfer rate of a running download, e.g. '25.3 MB/s'",
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
   "downloadSizeTotal": "{size} total",
   "@downloadSizeTotal": {
     "description": "Exact total file size of a batch of original files, e.g. '12.4 GB total'",

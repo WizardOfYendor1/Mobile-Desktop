@@ -2602,6 +2602,18 @@ abstract class AppLocalizations {
   /// **'~{size} total'**
   String downloadEstimateTotal(String size);
 
+  /// Transfer status of a running download, e.g. '1.2 GB of 4.6 GB'
+  ///
+  /// In en, this message translates to:
+  /// **'{received} of {total}'**
+  String downloadBytesOfTotal(String received, String total);
+
+  /// Transfer rate of a running download, e.g. '25.3 MB/s'
+  ///
+  /// In en, this message translates to:
+  /// **'{speed}/s'**
+  String downloadSpeed(String speed);
+
   /// Exact total file size of a batch of original files, e.g. '12.4 GB total'
   ///
   /// In en, this message translates to:

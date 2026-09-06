@@ -44,9 +44,17 @@ class DownloadProgress {
   /// progress replaces it, so UIs can show (and cancel) the waiting item.
   final bool isQueued;
 
-  /// Seconds the server expects its transcode to still need, read from the
-  /// plugin while a transcoded download runs. Null when nothing answers.
+  /// Seconds the download is expected to still need. For transcoded
+  /// downloads this is the server's own transcode estimate; for original
+  /// files it is derived from the recent transfer rate. Null when unknown.
   final int? etaSeconds;
+
+  /// Expected size of the file in bytes, or 0 when the server did not say.
+  final int totalBytes;
+
+  /// Recent transfer rate for original-quality downloads. Null for
+  /// transcoded streams and until enough samples exist.
+  final int? bytesPerSecond;
 
   const DownloadProgress({
     required this.itemId,
@@ -58,15 +66,48 @@ class DownloadProgress {
     this.quality = DownloadQuality.original,
     this.isQueued = false,
     this.etaSeconds,
+    this.totalBytes = 0,
+    this.bytesPerSecond,
   });
 
   bool get isTranscoded => quality.isTranscoded;
+
+  /// Copy with some fields replaced. [clearRate] drops the transfer rate and
+  /// remaining time, which a plain null argument cannot express.
+  DownloadProgress copyWith({
+    double? progress,
+    int? etaSeconds,
+    bool clearRate = false,
+  }) => DownloadProgress(
+    itemId: itemId,
+    fileName: fileName,
+    progress: progress ?? this.progress,
+    bytesReceived: bytesReceived,
+    isComplete: isComplete,
+    error: error,
+    quality: quality,
+    isQueued: isQueued,
+    etaSeconds: clearRate ? null : (etaSeconds ?? this.etaSeconds),
+    totalBytes: totalBytes,
+    bytesPerSecond: clearRate ? null : bytesPerSecond,
+  );
 
   /// True while the transfer has effectively finished but the file is still
   /// being moved to its final location and validated. Progress is clamped to
   /// 0.99 during this window, so without this the UI looks stuck at 99%.
   bool get isFinalizing => !isComplete && error == null && progress >= 0.99;
 }
+
+/// Byte progress of a transfer. The native engine also reports its own rate
+/// and remaining time; the legacy engine leaves them null and the service
+/// derives them from the byte samples instead.
+typedef _ProgressCallback =
+    void Function(
+      int received,
+      int total, {
+      int? bytesPerSecond,
+      int? etaSeconds,
+    });
 
 /// Per-attempt state for a media download running on the native
 /// background_downloader engine. Keyed by itemId in
@@ -77,7 +118,7 @@ class _MediaDownloadContext {
   final String displayName;
   final DownloadQuality quality;
   final String savePath;
-  final void Function(int received, int total) onReceiveProgress;
+  final _ProgressCallback onReceiveProgress;
   final Completer<Response> completer = Completer<Response>();
   String currentTaskId = '';
 
@@ -179,7 +220,10 @@ class DownloadService extends ChangeNotifier {
   final Map<String, DateTime> _downloadStartTimes = {};
   final Map<String, double> _lastPersistedProgress = {};
   final Map<String, double> _lastNotifiedProgress = {};
-  final Map<String, double> _lastCallbackProgress = {};
+
+  /// Progress and time of the last published update per item, for the
+  /// per-item throttle in [_transferProgress].
+  final Map<String, ({double progress, DateTime at})> _lastPublished = {};
 
   // The server side view of a running transcoded download, polled from the
   // plugin. Progress replaces the indeterminate bar and the ETA feeds the
@@ -187,6 +231,11 @@ class DownloadService extends ChangeNotifier {
   final Map<String, Timer> _transcodeStatusTimers = {};
   final Map<String, double> _serverTranscodeProgress = {};
   final Map<String, int> _transcodeEtaSeconds = {};
+  final Map<String, TransferRateTracker> _transferRates = {};
+
+  Timer? _rateRefreshTimer;
+  static const _rateStaleAfter = Duration(seconds: 5);
+
   bool _cancelAllRequested = false;
 
   final Queue<_QueuedDownload> _pendingDownloads = Queue<_QueuedDownload>();
@@ -618,6 +667,95 @@ class DownloadService extends ChangeNotifier {
     }
   }
 
+  /// Byte-progress bookkeeping shared by fresh and adopted transfers: the
+  /// per-item throttle and the transfer rate of original files. Returns null
+  /// when this update should be dropped.
+  ///
+  /// The native engine reports its own rate and remaining time; when it does
+  /// they win over the byte-sample estimate, which exists for the legacy
+  /// engine. Samples are still recorded so a stalled transfer can be told
+  /// apart from one that is merely quiet.
+  DownloadProgress? _transferProgress({
+    required String itemId,
+    required String fileName,
+    required DownloadQuality quality,
+    required double progress,
+    required int received,
+    required int total,
+    int? reportedBytesPerSecond,
+    int? reportedEtaSeconds,
+  }) {
+    final now = DateTime.now();
+    final tracksRate = !quality.isTranscoded && total > 0;
+    if (tracksRate) {
+      _transferRates
+          .putIfAbsent(itemId, TransferRateTracker.new)
+          .add(received, now);
+      _rateRefreshTimer ??= Timer.periodic(
+        const Duration(seconds: 2),
+        (_) => _expireStaleRates(),
+      );
+    }
+    // Publish when the bar moves a visible amount or every couple of
+    // seconds, whichever comes first; large files gain less than 1% between
+    // rate refreshes and the remaining-time row must still keep moving.
+    final last = _lastPublished[itemId];
+    if (progress >= 0 &&
+        progress < 0.99 &&
+        last != null &&
+        progress - last.progress < 0.01 &&
+        now.difference(last.at) < const Duration(seconds: 2)) {
+      return null;
+    }
+    _lastPublished[itemId] = (progress: progress, at: now);
+
+    var bytesPerSecond = reportedBytesPerSecond;
+    var etaSeconds = _transcodeEtaSeconds[itemId] ?? reportedEtaSeconds;
+    if (tracksRate) {
+      final tracker = _transferRates[itemId]!;
+      bytesPerSecond ??= tracker.bytesPerSecond;
+      etaSeconds ??= tracker.etaSeconds(received, total);
+    }
+    return DownloadProgress(
+      itemId: itemId,
+      fileName: fileName,
+      progress: progress,
+      bytesReceived: received,
+      quality: quality,
+      etaSeconds: etaSeconds,
+      // Dio reports -1 when the server sent no Content-Length.
+      totalBytes: total > 0 ? total : 0,
+      bytesPerSecond: bytesPerSecond,
+    );
+  }
+
+  /// Clears the rate and remaining time of transfers that stopped receiving
+  /// bytes, so a stalled connection does not keep showing its last speed.
+  /// Progress callbacks only fire when data arrives, so this runs on a timer.
+  void _expireStaleRates() {
+    if (_transferRates.isEmpty) {
+      _rateRefreshTimer?.cancel();
+      _rateRefreshTimer = null;
+      return;
+    }
+    final now = DateTime.now();
+    var changed = false;
+    for (final MapEntry(key: itemId, value: tracker)
+        in _transferRates.entries) {
+      final current = _activeDownloads[itemId];
+      final lastSample = tracker.lastSampleAt;
+      if (current == null ||
+          current.bytesPerSecond == null ||
+          lastSample == null ||
+          now.difference(lastSample) < _rateStaleAfter) {
+        continue;
+      }
+      _activeDownloads[itemId] = current.copyWith(clearRate: true);
+      changed = true;
+    }
+    if (changed) notifyListeners();
+  }
+
   double _calculateProgress({
     required int received,
     required int total,
@@ -899,7 +1037,7 @@ class DownloadService extends ChangeNotifier {
     required String savePath,
     required Map<String, String> headers,
     required CancelToken cancelToken,
-    required void Function(int, int) onReceiveProgress,
+    required _ProgressCallback onReceiveProgress,
   }) async {
     await _coordinator!.ensureInitialized();
     final ctx = _MediaDownloadContext(
@@ -1030,7 +1168,16 @@ class DownloadService extends ChangeNotifier {
     if (progress < 0 || progress > 1) return;
     final expected = update.expectedFileSize;
     if (expected > 0) {
-      ctx.onReceiveProgress((progress * expected).round(), expected);
+      ctx.onReceiveProgress(
+        (progress * expected).round(),
+        expected,
+        bytesPerSecond: update.hasNetworkSpeed
+            ? (update.networkSpeed * 1000 * 1000).round()
+            : null,
+        etaSeconds: update.hasTimeRemaining
+            ? update.timeRemaining.inSeconds
+            : null,
+      );
     }
   }
 
@@ -1284,12 +1431,8 @@ class DownloadService extends ChangeNotifier {
     if (current == null || current.isComplete || current.error != null) {
       return;
     }
-    _activeDownloads[itemId] = DownloadProgress(
-      itemId: itemId,
-      fileName: current.fileName,
-      progress: _serverTranscodeProgress[itemId] ?? current.progress,
-      bytesReceived: current.bytesReceived,
-      quality: current.quality,
+    _activeDownloads[itemId] = current.copyWith(
+      progress: _serverTranscodeProgress[itemId],
       etaSeconds: _transcodeEtaSeconds[itemId],
     );
     notifyListeners();
@@ -1931,7 +2074,12 @@ class DownloadService extends ChangeNotifier {
         });
       }
 
-      void onReceiveProgress(int received, int total) {
+      void onReceiveProgress(
+        int received,
+        int total, {
+        int? bytesPerSecond,
+        int? etaSeconds,
+      }) {
         var rawProgress = _calculateProgress(
           received: received,
           total: total,
@@ -1943,21 +2091,19 @@ class DownloadService extends ChangeNotifier {
         if (rawProgress < 0) {
           rawProgress = _serverTranscodeProgress[item.id] ?? rawProgress;
         }
-        final progress = rawProgress >= 1.0 ? 0.99 : rawProgress;
-        if (progress >= 0 && progress < 0.99) {
-          final lastCb = _lastCallbackProgress[item.id] ?? -1.0;
-          if ((progress - lastCb) < 0.01) return;
-        }
-        _lastCallbackProgress[item.id] = progress;
-
-        _activeDownloads[item.id] = DownloadProgress(
+        final update = _transferProgress(
           itemId: item.id,
           fileName: fileName,
-          progress: progress,
-          bytesReceived: received,
           quality: quality,
-          etaSeconds: _transcodeEtaSeconds[item.id],
+          progress: rawProgress >= 1.0 ? 0.99 : rawProgress,
+          received: received,
+          total: total,
+          reportedBytesPerSecond: bytesPerSecond,
+          reportedEtaSeconds: etaSeconds,
         );
+        if (update == null) return;
+        final progress = update.progress;
+        _activeDownloads[item.id] = update;
         if (_shouldPersistProgress(item.id, progress)) {
           unawaited(
             _offlineRepo.updateDownloadStatus(
@@ -2223,7 +2369,8 @@ class DownloadService extends ChangeNotifier {
       _cancelTokens.remove(item.id);
       _lastPersistedProgress.remove(item.id);
       _lastNotifiedProgress.remove(item.id);
-      _lastCallbackProgress.remove(item.id);
+      _lastPublished.remove(item.id);
+      _transferRates.remove(item.id);
       _transcodeStatusTimers.remove(item.id)?.cancel();
       _serverTranscodeProgress.remove(item.id);
       _transcodeEtaSeconds.remove(item.id);
@@ -2983,21 +3130,26 @@ class DownloadService extends ChangeNotifier {
       displayName: row.name,
       quality: quality,
       savePath: savePath,
-      onReceiveProgress: (received, total) {
+      onReceiveProgress: (received, total, {bytesPerSecond, etaSeconds}) {
         final rawProgress = _calculateProgress(
           received: received,
           total: total,
           estimatedSize: 0,
           quality: quality,
         );
-        final progress = rawProgress >= 1.0 ? 0.99 : rawProgress;
-        _activeDownloads[itemId] = DownloadProgress(
+        final update = _transferProgress(
           itemId: itemId,
           fileName: fileName,
-          progress: progress,
-          bytesReceived: received,
           quality: quality,
+          progress: rawProgress >= 1.0 ? 0.99 : rawProgress,
+          received: received,
+          total: total,
+          reportedBytesPerSecond: bytesPerSecond,
+          reportedEtaSeconds: etaSeconds,
         );
+        if (update == null) return;
+        final progress = update.progress;
+        _activeDownloads[itemId] = update;
         if (_shouldPersistProgress(itemId, progress)) {
           unawaited(
             _offlineRepo.updateDownloadStatus(
@@ -3102,6 +3254,8 @@ class DownloadService extends ChangeNotifier {
     _prefs.removeListener(_onPreferencesChanged);
     _coordinator?.detach(statusHandler: _onTaskStatus);
     cancelAll();
+    _rateRefreshTimer?.cancel();
+    _rateRefreshTimer = null;
     _downloadDio.close();
     _errorController.close();
     super.dispose();

@@ -1374,6 +1374,16 @@ class AppLocalizationsEl extends AppLocalizations {
   }
 
   @override
+  String downloadBytesOfTotal(String received, String total) {
+    return '$received of $total';
+  }
+
+  @override
+  String downloadSpeed(String speed) {
+    return '$speed/s';
+  }
+
+  @override
   String downloadSizeTotal(String size) {
     return '$size total';
   }

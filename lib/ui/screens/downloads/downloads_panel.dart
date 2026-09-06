@@ -201,17 +201,12 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
         // and needs no button.
         leading: PlatformDetection.isTV
             ? null
-            : IconButton(
-                onPressed: _closePanel,
-                icon: const Icon(Icons.close),
-              ),
+            : IconButton(onPressed: _closePanel, icon: const Icon(Icons.close)),
         automaticallyImplyLeading: false,
         title: Text(l10n.savedMedia),
         actions: [
           const SyncIndicator(),
-          if (!PlatformDetection.isTV &&
-              _selectMode &&
-              _selected.isNotEmpty)
+          if (!PlatformDetection.isTV && _selectMode && _selected.isNotEmpty)
             IconButton(
               icon: Icon(Icons.delete, color: AppColorScheme.statusRequested),
               onPressed: _bulkDelete,
@@ -251,8 +246,7 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
           const SizedBox(height: 24),
           if (hasDownloadedItems)
             _buildItemsSection(
-              initialFocusNode:
-                  PlatformDetection.isTV && !hasActiveDownloads
+              initialFocusNode: PlatformDetection.isTV && !hasActiveDownloads
                   ? _initialContentFocusNode
                   : null,
             ),
@@ -471,9 +465,7 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
           if (expanded)
             Padding(
               padding: const EdgeInsets.only(left: 16),
-              child: Column(
-                children: group.items.map(_buildItemTile).toList(),
-              ),
+              child: Column(children: group.items.map(_buildItemTile).toList()),
             ),
         ],
       );
@@ -627,10 +619,7 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
     );
   }
 
-  Widget _buildStorageLimitSetting(
-    int currentLimitMb, {
-    FocusNode? focusNode,
-  }) {
+  Widget _buildStorageLimitSetting(int currentLimitMb, {FocusNode? focusNode}) {
     final l10n = AppLocalizations.of(context);
     if (PlatformDetection.isTV) {
       return DpadListTile(
@@ -684,10 +673,7 @@ class _DownloadsPanelState extends ConsumerState<DownloadsPanel> {
           onChanged: (value) {
             ref
                 .read(userPreferencesProvider)
-                .set(
-                  UserPreferences.downloadStorageLimitMb,
-                  value.round(),
-                );
+                .set(UserPreferences.downloadStorageLimitMb, value.round());
           },
         ),
       ],
@@ -793,6 +779,24 @@ class _ActiveDownloadsSection extends StatelessWidget {
   // Status texts must follow the tile's focus-inverted palette on TV: an
   // explicit onSurface color would vanish on the focused tile's light fill.
   // On other platforms the muted explicit color stays.
+  /// "1.2 GB of 4.6 GB • 25.3 MB/s • 2m 10s remaining" for a running
+  /// original-file transfer, omitting whatever is not known yet. Null when
+  /// nothing is, or while the item is queued or finalizing.
+  String? _transferStatusLine(AppLocalizations l10n, DownloadProgress p) {
+    if (p.isQueued || p.isFinalizing) return null;
+    final parts = <String>[
+      if (p.totalBytes > 0 && p.bytesReceived > 0)
+        l10n.downloadBytesOfTotal(
+          formatBytes(p.bytesReceived),
+          formatBytes(p.totalBytes),
+        ),
+      if (p.bytesPerSecond != null)
+        l10n.downloadSpeed(formatBytes(p.bytesPerSecond!)),
+      if (p.etaSeconds != null) l10n.timeRemaining(formatEta(p.etaSeconds!)),
+    ];
+    return parts.isEmpty ? null : parts.join(' • ');
+  }
+
   TextStyle? get _statusTextStyle => PlatformDetection.isTV
       ? null
       : TextStyle(
@@ -807,6 +811,7 @@ class _ActiveDownloadsSection extends StatelessWidget {
     }
     final service = GetIt.instance<DownloadService>();
     final l10n = AppLocalizations.of(context);
+    final statusStyle = _statusTextStyle;
 
     return ListenableBuilder(
       listenable: service,
@@ -872,8 +877,7 @@ class _ActiveDownloadsSection extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (active[index].isTranscoded &&
-                          !active[index].isQueued)
+                      if (active[index].isTranscoded && !active[index].isQueued)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 4),
                           child: Text(
@@ -882,8 +886,14 @@ class _ActiveDownloadsSection extends StatelessWidget {
                                     formatEta(active[index].etaSeconds!),
                                   )
                                 : l10n.transcodingTimeRemainingUnavailable,
-                            style: _statusTextStyle,
+                            style: statusStyle,
                           ),
+                        )
+                      else if (_transferStatusLine(l10n, active[index])
+                          case final line?)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(line, style: statusStyle),
                         ),
                       _TileTrackedProgress(
                         value: active[index].isQueued
@@ -898,16 +908,13 @@ class _ActiveDownloadsSection extends StatelessWidget {
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
                             l10n.finalizingDownload,
-                            style: _statusTextStyle,
+                            style: statusStyle,
                           ),
                         ),
                       if (active[index].isQueued)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            l10n.queuedDownload,
-                            style: _statusTextStyle,
-                          ),
+                          child: Text(l10n.queuedDownload, style: statusStyle),
                         ),
                     ],
                   ),
@@ -916,9 +923,8 @@ class _ActiveDownloadsSection extends StatelessWidget {
                     ? const Icon(Icons.close)
                     : IconButton(
                         icon: const Icon(Icons.close),
-                        onPressed: () => service.cancelDownload(
-                          active[index].itemId,
-                        ),
+                        onPressed: () =>
+                            service.cancelDownload(active[index].itemId),
                       ),
                 onTap: PlatformDetection.isTV
                     ? () => service.cancelDownload(active[index].itemId)
