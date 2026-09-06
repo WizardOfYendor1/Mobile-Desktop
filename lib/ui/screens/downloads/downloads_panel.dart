@@ -816,16 +816,19 @@ class _ActiveDownloadsSection extends StatelessWidget {
     return ListenableBuilder(
       listenable: service,
       builder: (context, _) {
-        final active = service.activeDownloads.values
-            .where((p) => !p.isComplete && p.error == null)
-            .toList();
-        // Keep transferring items above queued ones so the list reads as
-        // "running first, waiting behind".
-        active.sort((a, b) {
-          if (a.isQueued == b.isQueued) return 0;
-          return a.isQueued ? 1 : -1;
-        });
-        if (active.isEmpty) return const SizedBox.shrink();
+        // Running transfers first, then the queue in order. A series can
+        // queue hundreds of episodes; listing them all is noise and, in this
+        // non-lazy column, costly on every update, so only the head of the
+        // queue gets a tile and the rest is one summary row.
+        final running = <DownloadProgress>[];
+        final queued = <DownloadProgress>[];
+        for (final p in service.activeDownloads.values) {
+          if (p.isComplete || p.error != null) continue;
+          (p.isQueued ? queued : running).add(p);
+        }
+        if (running.isEmpty && queued.isEmpty) return const SizedBox.shrink();
+        final active = [...running, ...queued.take(_maxQueuedTiles)];
+        final hiddenQueued = queued.length - (active.length - running.length);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -930,11 +933,24 @@ class _ActiveDownloadsSection extends StatelessWidget {
                     ? () => service.cancelDownload(active[index].itemId)
                     : null,
               ),
+            if (hiddenQueued > 0)
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: PlatformDetection.isTV ? 16 : 0,
+                  vertical: 8,
+                ),
+                child: Text(
+                  l10n.queuedMoreCount(hiddenQueued),
+                  style: statusStyle,
+                ),
+              ),
           ],
         );
       },
     );
   }
+
+  static const _maxQueuedTiles = 10;
 }
 
 class _TotalStorageHeader extends StatelessWidget {

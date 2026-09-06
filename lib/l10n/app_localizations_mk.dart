@@ -1176,6 +1176,17 @@ class AppLocalizationsMk extends AppLocalizations {
   String get queuedDownload => 'Queued';
 
   @override
+  String queuedMoreCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count more queued',
+      one: '1 more queued',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get downloadAll => 'Преземете ги сите';
 
   @override

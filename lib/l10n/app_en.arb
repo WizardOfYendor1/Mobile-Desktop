@@ -1543,6 +1543,15 @@
     "description": "Status label shown while a finished download is being moved to its final location and validated"
   },
   "queuedDownload": "Queued",
+  "queuedMoreCount": "{count, plural, =1{1 more queued} other{{count} more queued}}",
+  "@queuedMoreCount": {
+    "description": "Row under the active downloads list standing in for queued items not shown individually",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "@queuedDownload": {
     "description": "Status label for a download waiting in the queue for a free download slot"
   },

@@ -440,6 +440,28 @@ void main() {
     );
   });
 
+  test('queueing a large batch coalesces listener notifications', () async {
+    await prefs.set(UserPreferences.downloadWifiOnly, true);
+    final items = List.generate(
+      200,
+      (index) => AggregatedItem(
+        id: 'movie-$index',
+        serverId: 'http://127.0.0.1:1',
+        rawData: itemData,
+      ),
+    );
+    var notifications = 0;
+    service.addListener(() => notifications++);
+
+    await service.downloadItems(items);
+    await pumpEventQueue();
+
+    // One placeholder per item plus one failure per item used to mean 400
+    // rebuilds of the downloads panel; they now collapse to a handful.
+    expect(notifications, lessThan(10));
+    expect(service.activeDownloads.length, items.length);
+  });
+
   test('a batch with an escaping failure resets its state', () async {
     await prefs.set(UserPreferences.downloadWifiOnly, true);
     final items = List.generate(

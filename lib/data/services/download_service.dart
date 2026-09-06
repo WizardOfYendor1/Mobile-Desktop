@@ -236,6 +236,33 @@ class DownloadService extends ChangeNotifier {
   Timer? _rateRefreshTimer;
   static const _rateStaleAfter = Duration(seconds: 5);
 
+  Timer? _notifyTimer;
+  DateTime? _lastNotifiedAt;
+  bool _disposed = false;
+  static const _notifyInterval = Duration(milliseconds: 80);
+
+  /// Coalesces listener notifications into at most one per
+  /// [_notifyInterval]. Queueing a whole series fires one update per episode
+  /// in a single synchronous loop and every running transfer ticks several
+  /// times a second; rebuilding the downloads panel for each of those made
+  /// the app unusable with a few hundred queued items.
+  @override
+  void notifyListeners() {
+    if (_disposed || _notifyTimer != null) return;
+    final lastAt = _lastNotifiedAt;
+    final sinceLast = lastAt == null
+        ? _notifyInterval
+        : DateTime.now().difference(lastAt);
+    final delay = sinceLast >= _notifyInterval
+        ? Duration.zero
+        : _notifyInterval - sinceLast;
+    _notifyTimer = Timer(delay, () {
+      _notifyTimer = null;
+      _lastNotifiedAt = DateTime.now();
+      if (!_disposed) super.notifyListeners();
+    });
+  }
+
   bool _cancelAllRequested = false;
 
   final Queue<_QueuedDownload> _pendingDownloads = Queue<_QueuedDownload>();
@@ -3254,6 +3281,9 @@ class DownloadService extends ChangeNotifier {
     _prefs.removeListener(_onPreferencesChanged);
     _coordinator?.detach(statusHandler: _onTaskStatus);
     cancelAll();
+    _disposed = true;
+    _notifyTimer?.cancel();
+    _notifyTimer = null;
     _rateRefreshTimer?.cancel();
     _rateRefreshTimer = null;
     _downloadDio.close();

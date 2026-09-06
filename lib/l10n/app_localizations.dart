@@ -2278,6 +2278,12 @@ abstract class AppLocalizations {
   /// **'Queued'**
   String get queuedDownload;
 
+  /// Row under the active downloads list standing in for queued items not shown individually
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 more queued} other{{count} more queued}}'**
+  String queuedMoreCount(int count);
+
   /// Action button label to download all items
   ///
   /// In en, this message translates to:
