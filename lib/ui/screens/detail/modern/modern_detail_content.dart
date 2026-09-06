@@ -199,6 +199,7 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
   final FocusNode _artistFocusNode = FocusNode(debugLabel: 'albumArtist');
   final FocusNode _audioShowAllFocusNode = FocusNode(debugLabel: 'audioShowAll');
   final FocusNode _subtitleShowAllFocusNode = FocusNode(debugLabel: 'subtitleShowAll');
+  final FocusNode _directPlayRetryFocusNode = FocusNode(debugLabel: 'directPlayRetry');
   final FocusNode _detailsTabFocusNode = FocusNode(debugLabel: 'detailsTabContent');
   final FocusNode _castFirstFocusNode = FocusNode(debugLabel: 'castFirst');
   final FocusNode _crewFirstFocusNode = FocusNode(debugLabel: 'crewFirst');
@@ -722,6 +723,7 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
     _artistFocusNode.dispose();
     _audioShowAllFocusNode.dispose();
     _subtitleShowAllFocusNode.dispose();
+    _directPlayRetryFocusNode.dispose();
     _detailsTabFocusNode.dispose();
     _castFirstFocusNode.dispose();
     _crewFirstFocusNode.dispose();
@@ -3096,6 +3098,45 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
           Text(
             l10n.checkingDirectPlay,
             style: textTheme.bodySmall?.copyWith(color: Colors.white54),
+          ),
+        ],
+      );
+    }
+
+    if (_playbackInfoFailed) {
+      return Row(
+        children: [
+          Text(
+            l10n.directPlayCapabilityLabel,
+            style: textTheme.bodyMedium?.copyWith(
+              color: Colors.white54,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Flexible(
+            child: Text(
+              l10n.failedToLoad,
+              style: textTheme.bodyMedium?.copyWith(color: Colors.white70),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          FocusableWrapper(
+            focusNode: _directPlayRetryFocusNode,
+            onSelect: () => setState(() => _playbackInfoFailed = false),
+            borderRadius: 6,
+            suppressFocusGlow: true,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              child: Text(
+                l10n.retry,
+                style: TextStyle(
+                  color: AppColorScheme.accent,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
           ),
         ],
       );
