@@ -210,6 +210,10 @@ dev_dependencies:
   plugin_platform_interface: ^2.1.8
 
 dependency_overrides:
+  # objective_c 9.3.0's build hook imports a private path out of
+  # native_toolchain_c, which stopped compiling on the Flutter 3.47 SDK and takes
+  # `flutter test` down with it. 9.4.1 drops that import.
+  objective_c: ^9.4.1
   media_kit_libs_android_video:
     path: packages/media_kit_libs_android_video_full
   # Fork of 1.0.12 keeping shinchiro's newer libmpv over the media-kit archives,
