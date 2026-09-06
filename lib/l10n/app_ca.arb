@@ -10231,5 +10231,54 @@
     "serverMessagesShowButtonSubtitle": "Afegeix un botó al menú per als missatges enviats per l'administrador del teu servidor",
     "@serverMessagesShowButtonSubtitle": {
         "description": "Explains the setting that shows or hides the messages button"
+    },
+    "showMpvStats": "Mostra les estadístiques de mpv (Shift+I)",
+    "@showMpvStats": {
+        "description": "Button in the stream info sheet that shows mpv's own statistics overlay; Shift+I is the keyboard shortcut"
+    },
+    "hideMpvStats": "Amaga les estadístiques de mpv (Shift+I)",
+    "@hideMpvStats": {
+        "description": "Button in the stream info sheet that hides mpv's own statistics overlay; Shift+I is the keyboard shortcut"
+    },
+    "hdrOutput": "Sortida HDR",
+    "@hdrOutput": {
+        "description": "Stream info label for whether HDR is reaching the display untouched"
+    },
+    "hdrOutputActive": "Actiu — {format}",
+    "@hdrOutputActive": {
+        "description": "Stream info value when HDR passthrough is running, e.g. 'Active — HDR10 (PQ, BT.2020)'",
+        "placeholders": {
+            "format": {
+                "type": "String"
+            }
+        }
+    },
+    "hdrOutputActiveTonemapped": "Actiu — amb mapatge de tons a SDR per a aquesta pantalla",
+    "@hdrOutputActiveTonemapped": {
+        "description": "Stream info value when native output is engaged but the window sits on a display without HDR, so the renderer is tone-mapping"
+    },
+    "hdrOutputDisplayNotHdr": "Inactiu — la pantalla no està en mode HDR",
+    "@hdrOutputDisplayNotHdr": {
+        "description": "Stream info value when the display has not been switched into HDR"
+    },
+    "hdrOutputContentSdr": "Inactiu — el contingut és SDR",
+    "@hdrOutputContentSdr": {
+        "description": "Stream info value when the title itself is not HDR"
+    },
+    "hdrOutputDisabled": "Inactiu — desactivat a la configuració",
+    "@hdrOutputDisabled": {
+        "description": "Stream info value when the native HDR output preference is off"
+    },
+    "hdrOutputFailed": "Inactiu — no s'ha pogut iniciar; s'utilitza la via estàndard",
+    "@hdrOutputFailed": {
+        "description": "Stream info value when the native HDR window could not be created"
+    },
+    "nativeHdrOutput": "Sortida HDR nativa",
+    "@nativeHdrOutput": {
+        "description": "Settings label for sending HDR to the display untouched"
+    },
+    "nativeHdrOutputDescription": "Envia el vídeo HDR a la pantalla sense modificar-lo en lloc de convertir-lo a SDR. Només s'utilitza quan la pantalla ja està en mode HDR i el títol és HDR.",
+    "@nativeHdrOutputDescription": {
+        "description": "Settings description for native HDR output"
     }
 }
