@@ -18,7 +18,7 @@ import '../../../data/services/download_service.dart';
 import '../../../data/services/macos_download_dir.dart';
 import '../../../data/services/storage_path_service.dart';
 import '../../../di/providers.dart';
-import '../../../platform/ios_background_refresh.dart';
+import '../../../platform/background_refresh.dart';
 import '../../../preference/user_preferences.dart';
 import '../../../util/download_utils.dart';
 import '../../../util/platform_detection.dart';
@@ -812,7 +812,7 @@ class _AutoDownloadSettingsState extends State<_AutoDownloadSettings> {
   @override
   void initState() {
     super.initState();
-    _refreshStatus = IosBackgroundRefresh.instance.refreshStatus();
+    _refreshStatus = BackgroundRefresh.instance.refreshStatus();
     // Created once: the parent rebuilds on every preference change and a
     // new stream per build would re-run the query and flicker.
     _subscriptions = widget.service.watchSubscriptions();
@@ -873,7 +873,9 @@ class _AutoDownloadSettingsState extends State<_AutoDownloadSettings> {
                   title: Text(l10n.autoDownloadBackgroundRefresh),
                   subtitle: Text(
                     denied
-                        ? l10n.autoDownloadBackgroundRefreshDenied
+                        ? (PlatformDetection.isAndroid
+                              ? l10n.autoDownloadBackgroundRestrictedAndroid
+                              : l10n.autoDownloadBackgroundRefreshDenied)
                         : l10n.autoDownloadBackgroundRefreshSubtitle,
                   ),
                   value: backgroundRefresh,
@@ -944,7 +946,7 @@ class _AutoDownloadSettingsState extends State<_AutoDownloadSettings> {
     AutoDownloadSubscription subscription,
   ) {
     final preset = DownloadQuality.fromName(subscription.qualityPreset);
-    final quality = preset.isTranscoded && PlatformDetection.isIOS
+    final quality = AutoDownloadService.isForegroundOnly(preset)
         ? '${preset.label} • ${l10n.autoDownloadForegroundOnly}'
         : preset.label;
     final checkedAt = subscription.lastCheckedAt;

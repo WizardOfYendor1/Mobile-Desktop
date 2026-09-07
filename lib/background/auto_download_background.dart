@@ -15,13 +15,25 @@ Future<bool> runAutoDownloadBackgroundRefresh(Duration budget) async {
     // setActiveServerClient; nothing registered afterwards means nobody
     // is signed in.
     if (!getIt.isRegistered<HeadlessSessionBootstrap>()) return false;
-    await getIt<HeadlessSessionBootstrap>().ensureSession();
+    // Following a series with background checks on is the user's consent
+    // to use the last account, even with auto sign-in off.
+    await getIt<HeadlessSessionBootstrap>().ensureSession(
+      ignoreDisabledLoginBehavior: true,
+    );
     if (!getIt.isRegistered<AutoDownloadService>()) return false;
   }
-  final remaining = budget - DateTime.now().difference(started);
-  final summary = await getIt<AutoDownloadService>().runCheck(
+  Duration remaining() {
+    final left = budget - DateTime.now().difference(started);
+    return left.isNegative ? Duration.zero : left;
+  }
+
+  final service = getIt<AutoDownloadService>();
+  final summary = await service.runCheck(
     trigger: AutoDownloadTrigger.backgroundRefresh,
-    deadline: remaining.isNegative ? Duration.zero : remaining,
+    deadline: remaining(),
   );
+  // The engine may be suspended or destroyed the moment this returns;
+  // queued items must be in the native engine's hands by then.
+  await service.downloader.waitForNativeHandoff(timeout: remaining());
   return summary.error == null;
 }

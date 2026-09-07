@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jellyfin_preference/jellyfin_preference.dart';
 import 'package:moonfin/data/database/offline_database.dart';
@@ -289,7 +290,9 @@ void main() {
       expect(service.isRunning, isFalse);
     });
 
-    test('background runs skip transcoded subscriptions', () async {
+    test('iOS background runs skip transcoded subscriptions', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
       await subscribe('series-1', quality: DownloadQuality.high1080p);
       await subscribe('series-2');
       downloader.episodesBySeries['series-1'] = [episode('a')];
@@ -302,6 +305,16 @@ void main() {
 
       await service.runCheck(trigger: AutoDownloadTrigger.manual);
       expect(downloader.fetched, ['series-2', 'series-1', 'series-2']);
+    });
+
+    test('Android background runs skip transcoded subscriptions too', () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      await subscribe('series-1', quality: DownloadQuality.high1080p);
+      downloader.episodesBySeries['series-1'] = [episode('a')];
+
+      await service.runCheck(trigger: AutoDownloadTrigger.backgroundRefresh);
+      expect(downloader.fetched, isEmpty);
     });
 
     test('a deadline ends the run early and marks it partial', () async {

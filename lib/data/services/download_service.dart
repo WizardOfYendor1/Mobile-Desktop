@@ -576,6 +576,40 @@ class DownloadService extends ChangeNotifier implements AutoDownloadDownloader {
   Future<bool> wifiPolicyAllowsDownload() => _checkWifiPolicy();
 
   @override
+  Future<bool> canTransferInBackground(DownloadQuality quality) async {
+    // Chunked transcodes cannot be promoted to the plugin's foreground
+    // service on Android nor held by an iOS background slot.
+    if (quality.isTranscoded) return false;
+    final root = await _storagePath.getOfflineRoot();
+    return _pluginEngineFor(
+      quality,
+      destinationOnRemovableStorage: await _storagePath.isOnRemovableStorage(
+        root.path,
+      ),
+    );
+  }
+
+  @override
+  Future<void> waitForNativeHandoff({required Duration timeout}) async {
+    final deadline = DateTime.now().add(timeout);
+    while (_preparingDownloads && DateTime.now().isBefore(deadline)) {
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+  }
+
+  /// A download that has no native task yet: still waiting for a
+  /// concurrency slot, or past that but in its metadata fetch, path setup,
+  /// or the enqueue call itself. A freshly queued item is a placeholder
+  /// until the slot drains, so leaving those out would end the wait before
+  /// the transfer even started.
+  bool get _preparingDownloads => _activeDownloads.entries.any(
+    (entry) =>
+        !entry.value.isComplete &&
+        entry.value.error == null &&
+        (_pluginContexts[entry.key]?.currentTaskId.isEmpty ?? true),
+  );
+
+  @override
   Future<int?> storageHeadroomBytes() async {
     final limitMb = _prefs.get(UserPreferences.downloadStorageLimitMb);
     if (limitMb <= 0) return null;

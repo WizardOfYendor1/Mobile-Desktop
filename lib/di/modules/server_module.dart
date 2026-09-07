@@ -66,7 +66,12 @@ void registerServerModule() {
   }
 }
 
-void setActiveServerClient(MediaServerClient client) {
+/// [background] marks a headless engine (the Android auto-download worker):
+/// it runs one check and never schedules, so it gets no scheduling binding.
+void setActiveServerClient(
+  MediaServerClient client, {
+  bool background = false,
+}) {
   // The raw client keeps serving downloads, playback, and sockets, while the
   // registered singleton is a wrapper that answers browse and read calls from
   // the downloads catalog whenever the server is unreachable.
@@ -100,7 +105,11 @@ void setActiveServerClient(MediaServerClient client) {
   _getIt.registerSingleton<DownloadService>(downloadService);
 
   if (AutoDownloadService.isSupportedPlatform) {
-    _replaceAutoDownloadService(rawClient, downloadService);
+    _replaceAutoDownloadService(
+      rawClient,
+      downloadService,
+      background: background,
+    );
   } else {
     downloadService.recoverIncompleteDownloads();
   }
@@ -110,19 +119,29 @@ void setActiveServerClient(MediaServerClient client) {
   _getIt<ServerTranscodeCapabilities>().refresh(rawClient);
 }
 
-/// The auto-download service of the signed-in account, on platforms that
-/// have the feature; nothing is registered elsewhere, so "registered" means
-/// "available" for every caller. Replaced when the account changes.
-void _replaceAutoDownloadService(
-  MediaServerClient client,
-  DownloadService downloadService,
-) {
-  _autoDownloadBinding?.detach();
+/// Sign-out: nobody is left to check for, so the auto-download service goes
+/// and the background task is cancelled. Downloads already in flight keep
+/// running on the download service, which stays registered.
+void clearAutoDownloadForSignOut() => _tearDownAutoDownload(disable: true);
+
+void _tearDownAutoDownload({required bool disable}) {
+  _autoDownloadBinding?.detach(disable: disable);
   _autoDownloadBinding = null;
   if (_getIt.isRegistered<AutoDownloadService>()) {
     _getIt<AutoDownloadService>().dispose();
     _getIt.unregister<AutoDownloadService>();
   }
+}
+
+/// The auto-download service of the signed-in account, on platforms that
+/// have the feature; nothing is registered elsewhere, so "registered" means
+/// "available" for every caller. Replaced when the account changes.
+void _replaceAutoDownloadService(
+  MediaServerClient client,
+  DownloadService downloadService, {
+  required bool background,
+}) {
+  _tearDownAutoDownload(disable: false);
   if (!AutoDownloadService.isSupportedPlatform) return;
 
   // Recovery reconciles the native task database; checks wait for it so
@@ -141,10 +160,12 @@ void _replaceAutoDownloadService(
     playingItemId: _playingItemId,
   )..start();
   _getIt.registerSingleton<AutoDownloadService>(service);
-  _autoDownloadBinding = AutoDownloadBackgroundBinding(
-    service: service,
-    prefs: _getIt<UserPreferences>(),
-  )..attach();
+  if (!background) {
+    _autoDownloadBinding = AutoDownloadBackgroundBinding(
+      service: service,
+      prefs: _getIt<UserPreferences>(),
+    )..attach();
+  }
 
   unawaited(
     recovered.whenComplete(() {

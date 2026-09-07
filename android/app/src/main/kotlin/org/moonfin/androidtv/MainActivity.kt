@@ -795,6 +795,29 @@ class MainActivity : AudioServiceActivity(), GamepadsCompatibleActivity {
             }
         }
 
+        // Shared with iOS: Dart drives the periodic auto-download check
+        // through this channel; the worker answers on the same one.
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            AutoDownloadWorker.REFRESH_CHANNEL,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "configure" -> {
+                    val enabled = call.argument<Boolean>("enabled") ?: false
+                    val wifiOnly = call.argument<Boolean>("wifiOnly") ?: false
+                    if (enabled && !isTelevision(applicationContext)) {
+                        AutoDownloadWorker.schedule(applicationContext, wifiOnly)
+                    } else {
+                        AutoDownloadWorker.cancel(applicationContext)
+                    }
+                    result.success(null)
+                }
+                "refreshStatus" ->
+                    result.success(AutoDownloadWorker.refreshStatus(applicationContext))
+                else -> result.notImplemented()
+            }
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(
                 pipReceiver,

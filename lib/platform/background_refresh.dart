@@ -1,20 +1,21 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// Bridge to the iOS `BGTaskScheduler` app-refresh task.
+/// Bridge to the platform's periodic background refresh: the iOS
+/// `BGTaskScheduler` app-refresh task or the Android WorkManager job.
 ///
-/// iOS decides when (and whether) the task runs; when it does, the native
-/// side calls `performRefresh` here with the seconds it is willing to wait
-/// and expects a bool. Until [bind] has run, the native side sees
+/// The system decides when (and whether) the task runs; when it does, the
+/// native side calls `performRefresh` here with the seconds it is willing to
+/// wait and expects a bool. Until [bind] has run, the native side sees
 /// "not implemented" and retries, which covers a launch caused by the task
 /// itself while Dart is still starting.
-class IosBackgroundRefresh {
-  IosBackgroundRefresh({MethodChannel? channel})
+class BackgroundRefresh {
+  BackgroundRefresh({MethodChannel? channel})
     : _channel = channel ?? const MethodChannel(channelName);
 
   static const channelName = 'com.moonfin/background_refresh';
 
-  static final instance = IosBackgroundRefresh();
+  static final instance = BackgroundRefresh();
 
   final MethodChannel _channel;
 
@@ -22,21 +23,27 @@ class IosBackgroundRefresh {
   /// receives the time budget iOS granted and returns whether the run
   /// succeeded.
   void bind(Future<bool> Function(Duration budget) handler) {
-    _channel.setMethodCallHandler((call) => _onCall(call, handler));
+    _channel.setMethodCallHandler((call) => _handleMethod(call, handler));
   }
 
-  /// Turns the scheduled task on or off.
-  Future<void> configure({required bool enabled}) async {
+  /// Turns the scheduled task on or off. [wifiOnly] lets Android constrain
+  /// the job to unmetered networks; iOS applies the preference per transfer
+  /// and ignores it here.
+  Future<void> configure({required bool enabled, bool wifiOnly = false}) async {
     try {
-      await _channel.invokeMethod<void>('configure', {'enabled': enabled});
+      await _channel.invokeMethod<void>('configure', {
+        'enabled': enabled,
+        'wifiOnly': wifiOnly,
+      });
     } on MissingPluginException {
-      // Not iOS, or the native side is absent: nothing to schedule.
+      // No native scheduler on this platform: nothing to schedule.
     }
   }
 
   /// `available`, `denied` (user turned Background App Refresh off for the
-  /// app), `restricted` (parental controls or Low Power Mode policy) or
-  /// `unknown` where the native side is absent.
+  /// app on iOS), `restricted` (iOS parental controls or Low Power Mode
+  /// policy; Android background usage restriction) or `unknown` where the
+  /// native side is absent.
   Future<String> refreshStatus() async {
     try {
       return await _channel.invokeMethod<String>('refreshStatus') ?? 'unknown';
@@ -45,7 +52,7 @@ class IosBackgroundRefresh {
     }
   }
 
-  Future<Object?> _onCall(
+  Future<dynamic> _handleMethod(
     MethodCall call,
     Future<bool> Function(Duration budget) handler,
   ) async {
@@ -61,7 +68,7 @@ class IosBackgroundRefresh {
       return await Future<bool>(() => handler(budget))
           .timeout(budget, onTimeout: () => false);
     } catch (e) {
-      debugPrint('Background refresh failed: $e');
+      debugPrint('[BackgroundRefresh] refresh failed: $e');
       return false;
     }
   }

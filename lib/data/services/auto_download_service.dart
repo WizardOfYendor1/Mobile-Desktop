@@ -121,10 +121,18 @@ class AutoDownloadService extends ChangeNotifier {
     );
   }
 
-  /// Auto-download ships on iOS first; other platforms hide the feature
-  /// until their background scheduling is in place.
+  /// Phones only: iOS and Android have a background scheduler for the
+  /// checks; TV and desktop hide the feature until theirs exist.
   static bool get isSupportedPlatform =>
-      PlatformDetection.isIOS && !PlatformDetection.isTV;
+      (PlatformDetection.isIOS || PlatformDetection.isAndroid) &&
+      !PlatformDetection.isTV;
+
+  /// A transcode needs the server to keep encoding for the whole transfer,
+  /// which neither an iOS background slot nor Android's download service
+  /// (chunked responses cannot be promoted to it) can promise, so such
+  /// subscriptions only run while the app is open.
+  static bool isForegroundOnly(DownloadQuality quality) =>
+      quality.isTranscoded;
 
   /// A connect or resume this soon after the last check is noise.
   static const throttle = Duration(minutes: 10);
@@ -325,7 +333,9 @@ class AutoDownloadService extends ChangeNotifier {
       _lastRun = summary;
       // Writing a preference notifies every preference listener in the
       // app, so only checks with something to report are persisted.
-      if (summary.subscriptions > 0 || summary.error != null) {
+      // A service disposed mid-check (sign-out) must not leave its summary
+      // for the next account.
+      if (!_disposed && (summary.subscriptions > 0 || summary.error != null)) {
         await _prefs.set(
           UserPreferences.autoDownloadLastRun,
           jsonEncode(summary.toJson()),
@@ -387,15 +397,16 @@ class AutoDownloadService extends ChangeNotifier {
     String? firstError;
 
     for (final subscription in subscriptions) {
+      if (_disposed) break;
       if (endBy != null && !_now().isBefore(endBy)) {
         partial = true;
         break;
       }
       final quality = DownloadQuality.fromName(subscription.qualityPreset);
-      // A transcode needs the server to keep encoding for the whole
-      // transfer, which a background slot cannot promise.
+      // A background run ends with its engine; only transfers the native
+      // engine carries on its own are worth starting.
       if (trigger == AutoDownloadTrigger.backgroundRefresh &&
-          quality.isTranscoded) {
+          !await downloader.canTransferInBackground(quality)) {
         continue;
       }
       _SeriesOutcome outcome;

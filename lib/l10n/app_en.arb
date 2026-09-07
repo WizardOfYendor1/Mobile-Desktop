@@ -10376,15 +10376,19 @@
   },
   "autoDownloadBackgroundRefresh": "Check in the background",
   "@autoDownloadBackgroundRefresh": {
-    "description": "Setting that lets iOS wake the app to check for new episodes"
+    "description": "Setting that lets the system wake the app to check for new episodes"
   },
-  "autoDownloadBackgroundRefreshSubtitle": "Allow iOS to check for new episodes periodically while Moonfin is closed",
+  "autoDownloadBackgroundRefreshSubtitle": "Allow the system to check for new episodes periodically while Moonfin is closed",
   "@autoDownloadBackgroundRefreshSubtitle": {
     "description": "Explains the background refresh setting"
   },
   "autoDownloadBackgroundRefreshDenied": "Background App Refresh is disabled for Moonfin. Enable it in iOS Settings.",
   "@autoDownloadBackgroundRefreshDenied": {
     "description": "Shown when iOS forbids background refresh for the app"
+  },
+  "autoDownloadBackgroundRestrictedAndroid": "Background usage is restricted for Moonfin in Android Settings.",
+  "@autoDownloadBackgroundRestrictedAndroid": {
+    "description": "Shown when Android restricts the app from running in the background"
   },
   "autoDownloadCheckNow": "Check now",
   "@autoDownloadCheckNow": {

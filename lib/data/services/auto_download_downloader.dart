@@ -34,4 +34,15 @@ abstract class AutoDownloadDownloader {
   /// Bytes still allowed under the storage limit, counting transfers that
   /// were admitted but have not written their file yet; null when unlimited.
   Future<int?> storageHeadroomBytes();
+
+  /// Whether a transfer in [quality] survives the engine that queued it
+  /// being suspended or destroyed. False for transcodes (the server must
+  /// keep encoding, which no background slot can hold) and for anything
+  /// the in-process legacy engine would carry.
+  Future<bool> canTransferInBackground(DownloadQuality quality);
+
+  /// Waits until every item queued so far is in the native engine's hands
+  /// or has failed, up to [timeout]. Items still waiting for a concurrency
+  /// slot are left for the next check.
+  Future<void> waitForNativeHandoff({required Duration timeout});
 }

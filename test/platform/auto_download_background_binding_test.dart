@@ -9,7 +9,7 @@ import 'package:moonfin/data/repositories/offline_repository.dart';
 import 'package:moonfin/data/services/auto_download_service.dart';
 import 'package:moonfin/background/auto_download_background.dart';
 import 'package:moonfin/platform/auto_download_background_binding.dart';
-import 'package:moonfin/platform/ios_background_refresh.dart';
+import 'package:moonfin/platform/background_refresh.dart';
 import 'package:moonfin/preference/user_preferences.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -18,7 +18,7 @@ import '../offline/auto_download_test_support.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const channel = MethodChannel(IosBackgroundRefresh.channelName);
+  const channel = MethodChannel(BackgroundRefresh.channelName);
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
@@ -47,6 +47,12 @@ void main() {
         (call.arguments as Map)['enabled'] as bool,
   ];
 
+  List<bool> configuredWifiOnly() => [
+    for (final call in nativeCalls)
+      if (call.method == 'configure')
+        (call.arguments as Map)['wifiOnly'] as bool,
+  ];
+
   Future<void> settle() =>
       Future<void>.delayed(const Duration(milliseconds: 20));
 
@@ -73,7 +79,7 @@ void main() {
     binding = AutoDownloadBackgroundBinding(
       service: service,
       prefs: prefs,
-      refresh: IosBackgroundRefresh(channel: channel),
+      refresh: BackgroundRefresh(channel: channel),
     );
   });
 
@@ -116,6 +122,18 @@ void main() {
     expect(configuredValues(), [true, false, true, false]);
   });
 
+  test('a Wi-Fi-only change re-configures the task', () async {
+    await subscribe('series-1');
+    binding.attach();
+    await settle();
+    expect(configuredWifiOnly(), [false]);
+
+    await prefs.set(UserPreferences.downloadWifiOnly, true);
+    await settle();
+    expect(configuredValues(), [true, true]);
+    expect(configuredWifiOnly(), [false, true]);
+  });
+
   test('detach stops reacting', () async {
     binding.attach();
     await settle();
@@ -123,6 +141,24 @@ void main() {
     await subscribe('series-1');
     await settle();
     expect(configuredValues(), [false]);
+  });
+
+  test('detach with disable cancels the task', () async {
+    await subscribe('series-1');
+    binding.attach();
+    await settle();
+    expect(configuredValues(), [true]);
+
+    binding.detach(disable: true);
+    await settle();
+    expect(configuredValues(), [true, false]);
+
+    binding.attach();
+    await settle();
+    binding.detach(disable: true);
+    await settle();
+    // Re-attaching schedules it again; the second disable cancels again.
+    expect(configuredValues(), [true, false, true, false]);
   });
 
   group('runAutoDownloadBackgroundRefresh', () {

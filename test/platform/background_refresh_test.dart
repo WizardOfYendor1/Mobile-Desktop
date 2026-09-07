@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:moonfin/platform/ios_background_refresh.dart';
+import 'package:moonfin/platform/background_refresh.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const channel = MethodChannel(IosBackgroundRefresh.channelName);
+  const channel = MethodChannel(BackgroundRefresh.channelName);
   const notImplemented = Object();
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
@@ -15,7 +15,7 @@ void main() {
   /// Simulates the native side calling into Dart.
   Future<Object?> callFromNative(String method, [Object? arguments]) async {
     final reply = await messenger.handlePlatformMessage(
-      IosBackgroundRefresh.channelName,
+      BackgroundRefresh.channelName,
       const StandardMethodCodec().encodeMethodCall(
         MethodCall(method, arguments),
       ),
@@ -27,7 +27,7 @@ void main() {
   }
 
   late List<MethodCall> nativeCalls;
-  late IosBackgroundRefresh refresh;
+  late BackgroundRefresh refresh;
 
   setUp(() {
     nativeCalls = [];
@@ -36,14 +36,14 @@ void main() {
       if (call.method == 'refreshStatus') return 'denied';
       return null;
     });
-    refresh = IosBackgroundRefresh(channel: channel);
+    refresh = BackgroundRefresh(channel: channel);
   });
 
   tearDown(() {
     messenger.setMockMethodCallHandler(channel, null);
-    messenger.setMockMessageHandler(IosBackgroundRefresh.channelName, null);
+    messenger.setMockMessageHandler(BackgroundRefresh.channelName, null);
     // bind() installs a handler on the channel itself, which outlives the
-    // IosBackgroundRefresh instance under test.
+    // BackgroundRefresh instance under test.
     channel.setMethodCallHandler(null);
   });
 
@@ -51,7 +51,10 @@ void main() {
     await refresh.configure(enabled: true);
     expect(nativeCalls, hasLength(1));
     expect(nativeCalls.single.method, 'configure');
-    expect(nativeCalls.single.arguments, {'enabled': true});
+    expect(nativeCalls.single.arguments, {'enabled': true, 'wifiOnly': false});
+
+    await refresh.configure(enabled: true, wifiOnly: true);
+    expect(nativeCalls.last.arguments, {'enabled': true, 'wifiOnly': true});
   });
 
   test('refreshStatus returns the native answer', () async {

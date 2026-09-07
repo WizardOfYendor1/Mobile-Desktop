@@ -348,6 +348,40 @@ void main() {
     );
   });
 
+  test(
+    'the native handoff wait covers a download still in the queue',
+    () async {
+      final itemsApi = _BlockingItemsApi();
+      service.dispose();
+      service = DownloadService(
+        _FakeClient(itemsApi),
+        DownloadNotificationService(),
+      );
+      final item = AggregatedItem(
+        id: 'movie-0',
+        serverId: 'http://127.0.0.1:1',
+        rawData: {...itemData, 'MediaSources': const []},
+      );
+
+      // A background run queues and then waits; the item is only a queued
+      // placeholder at that instant, so the wait must still hold the engine.
+      final download = service.downloadItem(item);
+      final wait = service.waitForNativeHandoff(
+        timeout: const Duration(seconds: 5),
+      );
+      var waited = false;
+      unawaited(wait.then((_) => waited = true));
+      await _waitForCalls(itemsApi, 1);
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      expect(waited, isFalse, reason: 'preparation is still in progress');
+
+      itemsApi.releaseNext();
+      await download;
+      await wait;
+      expect(service.activeDownloads['movie-0']?.error, isNotNull);
+    },
+  );
+
   test('queued downloads are listed and cancellable while waiting', () async {
     await prefs.set(UserPreferences.downloadConcurrentCount, 1);
     final itemsApi = _BlockingItemsApi();

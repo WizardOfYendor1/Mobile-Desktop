@@ -20524,7 +20524,7 @@ abstract class AppLocalizations {
   /// **'1 week after watching'**
   String get autoDownloadDeleteAfterWeek;
 
-  /// Setting that lets iOS wake the app to check for new episodes
+  /// Setting that lets the system wake the app to check for new episodes
   ///
   /// In en, this message translates to:
   /// **'Check in the background'**
@@ -20533,7 +20533,7 @@ abstract class AppLocalizations {
   /// Explains the background refresh setting
   ///
   /// In en, this message translates to:
-  /// **'Allow iOS to check for new episodes periodically while Moonfin is closed'**
+  /// **'Allow the system to check for new episodes periodically while Moonfin is closed'**
   String get autoDownloadBackgroundRefreshSubtitle;
 
   /// Shown when iOS forbids background refresh for the app
@@ -20541,6 +20541,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Background App Refresh is disabled for Moonfin. Enable it in iOS Settings.'**
   String get autoDownloadBackgroundRefreshDenied;
+
+  /// Shown when Android restricts the app from running in the background
+  ///
+  /// In en, this message translates to:
+  /// **'Background usage is restricted for Moonfin in Android Settings.'**
+  String get autoDownloadBackgroundRestrictedAndroid;
 
   /// Button that runs a subscription check immediately
   ///
