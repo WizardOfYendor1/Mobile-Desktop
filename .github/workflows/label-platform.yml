@@ -12,6 +12,12 @@ permissions:
   issues: write
   pull-requests: write
 
+# An edit and a comment can land together, and reconciling labels twice at once
+# would interleave the adds and removes.
+concurrency:
+  group: label-${{ github.event.issue.number || github.event.pull_request.number }}
+  cancel-in-progress: false
+
 jobs:
   label:
     runs-on: ubuntu-latest
