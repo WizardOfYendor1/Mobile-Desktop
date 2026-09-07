@@ -26,6 +26,8 @@
 		6F4CFEA27B18BF00FB43BC3C /* AetherEngine in Frameworks */ = {isa = PBXBuildFile; productRef = 8786E16205A7BE349F454609 /* AetherEngine */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
 		75BB266A581A876EBD204C64 /* SubtitleOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = F02C0A4E7A062AF1EFB102CC /* SubtitleOverlay.swift */; };
+		B6A0D1E2F3C4B5A69788A004 /* BackgroundRefreshSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6A0D1E2F3C4B5A69788A003 /* BackgroundRefreshSchedulerTests.swift */; };
+		B6A0D1E2F3C4B5A69788A002 /* BackgroundRefreshScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6A0D1E2F3C4B5A69788A001 /* BackgroundRefreshScheduler.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 		9116123A0992A73C3E02C73F /* AppleTvThemeMusicChannel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E1A1A31F9035F6524D87796 /* AppleTvThemeMusicChannel.swift */; };
 		94A7E6937F4F716E63C4193D /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A358ADD35E342E66555045A9 /* Pods_Runner.framework */; };
@@ -86,6 +88,8 @@
 		6A72A9663C768D316590C41E /* AssRenderer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AssRenderer.swift; path = ../../../tvos/Runner/Playback/Aether/AssRenderer.swift; sourceTree = "<group>"; };
 		74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Runner-Bridging-Header.h"; sourceTree = "<group>"; };
 		74858FAE1ED2DC5600515810 /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		B6A0D1E2F3C4B5A69788A003 /* BackgroundRefreshSchedulerTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BackgroundRefreshSchedulerTests.swift; sourceTree = "<group>"; };
+		B6A0D1E2F3C4B5A69788A001 /* BackgroundRefreshScheduler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BackgroundRefreshScheduler.swift; sourceTree = "<group>"; };
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = Flutter/ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		7C182E5551362E126A18C153 /* AetherPlayerWrapper.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = AetherPlayerWrapper.swift; path = ../../../tvos/Runner/Playback/Aether/AetherPlayerWrapper.swift; sourceTree = "<group>"; };
@@ -147,6 +151,7 @@
 			isa = PBXGroup;
 			children = (
 				331C807B294A618700263BE5 /* RunnerTests.swift */,
+				B6A0D1E2F3C4B5A69788A003 /* BackgroundRefreshSchedulerTests.swift */,
 			);
 			path = RunnerTests;
 			sourceTree = "<group>";
@@ -226,6 +231,7 @@
 				1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */,
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
+				B6A0D1E2F3C4B5A69788A001 /* BackgroundRefreshScheduler.swift */,
 				1A2B3C4D5E6F708190A1B2D0 /* SceneDelegate.swift */,
 				1A2B3C4D5E6F708190A1B2D2 /* CarPlaySceneDelegate.swift */,
 				1A2B3C4D5E6F708190A1B2D4 /* CarPlayBridge.swift */,
@@ -469,6 +475,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */,
+				B6A0D1E2F3C4B5A69788A004 /* BackgroundRefreshSchedulerTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -479,6 +486,7 @@
 				1A2B3C4D5E6F708190A1B2C5 /* AirPlayController.swift in Sources */,
 				1A2B3C4D5E6F708190A1B2C3 /* DlnaController.swift in Sources */,
 				74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */,
+				B6A0D1E2F3C4B5A69788A002 /* BackgroundRefreshScheduler.swift in Sources */,
 				1A2B3C4D5E6F708190A1B2D1 /* SceneDelegate.swift in Sources */,
 				1A2B3C4D5E6F708190A1B2D3 /* CarPlaySceneDelegate.swift in Sources */,
 				1A2B3C4D5E6F708190A1B2D5 /* CarPlayBridge.swift in Sources */,

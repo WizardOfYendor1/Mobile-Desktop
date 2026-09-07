@@ -21,6 +21,7 @@ import 'data/services/cast/airplay_command_bridge.dart';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 
+import 'background/auto_download_background.dart';
 import 'data/services/auto_download_service.dart';
 import 'data/services/background_download_coordinator.dart';
 import 'data/services/download_notification_service.dart';
@@ -45,6 +46,7 @@ import 'playback/display_hdr_probe.dart';
 import 'playback/media_browse_service.dart';
 import 'playback/mpris_service.dart';
 import 'playback/playback_lifecycle_handler.dart';
+import 'platform/ios_background_refresh.dart';
 import 'platform/web_runtime_config.dart';
 import 'preference/preference_constants.dart';
 import 'preference/user_preferences.dart';
@@ -859,6 +861,11 @@ void main() async {
 
   await configureDependencies();
   _installCrashHandlers();
+  // When iOS launches the app for the auto-download refresh task, the
+  // native side retries its call until this handler is bound.
+  if (PlatformDetection.isIOS) {
+    IosBackgroundRefresh.instance.bind(runAutoDownloadBackgroundRefresh);
+  }
 
   // Registered before runApp so a CarPlay-only launch (no window scene, no
   // widgets) can browse and start playback.

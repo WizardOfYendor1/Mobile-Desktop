@@ -18,6 +18,7 @@ import '../../../data/services/download_service.dart';
 import '../../../data/services/macos_download_dir.dart';
 import '../../../data/services/storage_path_service.dart';
 import '../../../di/providers.dart';
+import '../../../platform/ios_background_refresh.dart';
 import '../../../preference/user_preferences.dart';
 import '../../../util/download_utils.dart';
 import '../../../util/platform_detection.dart';
@@ -805,11 +806,13 @@ class _AutoDownloadSettingsState extends State<_AutoDownloadSettings> {
   /// Never, right away, a day, a week: the choices Plex offers.
   static const _deleteAfterChoices = [-1, 0, 24, 24 * 7];
 
+  late Future<String> _refreshStatus;
   late Stream<List<AutoDownloadSubscription>> _subscriptions;
 
   @override
   void initState() {
     super.initState();
+    _refreshStatus = IosBackgroundRefresh.instance.refreshStatus();
     // Created once: the parent rebuilds on every preference change and a
     // new stream per build would re-run the query and flicker.
     _subscriptions = widget.service.watchSubscriptions();
@@ -824,6 +827,9 @@ class _AutoDownloadSettingsState extends State<_AutoDownloadSettings> {
     final keep = prefs.get(UserPreferences.autoDownloadKeepUnwatched);
     final deleteAfterHours = prefs.get(
       UserPreferences.autoDownloadDeleteAfterHours,
+    );
+    final backgroundRefresh = prefs.get(
+      UserPreferences.autoDownloadBackgroundRefresh,
     );
 
     return Column(
@@ -856,8 +862,30 @@ class _AutoDownloadSettingsState extends State<_AutoDownloadSettings> {
               trailing: Text(_deleteAfterLabel(l10n, deleteAfterHours)),
               onTap: () => _pickDeleteAfter(context, deleteAfterHours),
             ),
-            AnimatedBuilder(
-              animation: service,
+            FutureBuilder<String>(
+              future: _refreshStatus,
+              builder: (context, snapshot) {
+                final denied =
+                    snapshot.data == 'denied' || snapshot.data == 'restricted';
+                return DpadSwitchListTile(
+                  useSettingsIconShell: true,
+                  secondary: const Icon(Icons.schedule),
+                  title: Text(l10n.autoDownloadBackgroundRefresh),
+                  subtitle: Text(
+                    denied
+                        ? l10n.autoDownloadBackgroundRefreshDenied
+                        : l10n.autoDownloadBackgroundRefreshSubtitle,
+                  ),
+                  value: backgroundRefresh,
+                  onChanged: (v) => prefs.set(
+                    UserPreferences.autoDownloadBackgroundRefresh,
+                    v,
+                  ),
+                );
+              },
+            ),
+            ListenableBuilder(
+              listenable: service,
               builder: (context, _) => DpadListTile(
                 useSettingsIconShell: true,
                 leading: const Icon(Icons.refresh),
