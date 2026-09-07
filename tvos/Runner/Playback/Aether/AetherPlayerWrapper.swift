@@ -635,6 +635,11 @@ final class AetherPlayerWrapper: NSObject, ObservableObject {
                 return ("unsupported_audio", message)
             case .noVideoStream, .hlsPlaylistOnRawLivePath:
                 return ("unsupported_container", message)
+            // Both come from a reload rather than a load, so neither reaches
+            // this classifier. They are here because the switch has to be
+            // exhaustive.
+            case .loadIdentityNotCorrectable, .sessionNotReloadable:
+                return ("unsupported_container", message)
             }
         }
         let description = String(describing: error)

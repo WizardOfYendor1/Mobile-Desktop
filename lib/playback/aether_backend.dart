@@ -11,6 +11,7 @@ import '../preference/user_preferences.dart';
 import '../util/platform_detection.dart';
 
 import 'device_profile_builder.dart';
+import 'engine_trust.dart';
 import 'known_defects.dart';
 import 'server_transcode_capabilities.dart';
 
@@ -57,7 +58,7 @@ class AetherBackend implements PlayerBackend {
   final _tracksChangedController = StreamController<void>.broadcast();
 
   bool _disposed = false;
-  bool? _allowUntrustedTls;
+  EngineTrust? _trust;
   Timer? _audioDelayDebounce;
 
   // A torn down session stops pushing state, so the last buffering value the
@@ -175,10 +176,12 @@ class AetherBackend implements PlayerBackend {
   /// every playback. The preference notifies on every change, so the guard
   /// keeps anything but a real change off the channel.
   void _syncAllowUntrustedTls() {
-    final enabled = _prefs.get(UserPreferences.allowSelfSignedCerts);
-    if (enabled == _allowUntrustedTls) return;
-    _allowUntrustedTls = enabled;
-    _invoke<void>('setAllowUntrustedTls', {'enabled': enabled});
+    final trust = EngineTrust.current(
+      _prefs.get(UserPreferences.allowSelfSignedCerts),
+    );
+    if (trust.matches(_trust)) return;
+    _trust = trust;
+    _invoke<void>('setAllowUntrustedTls', trust.toChannelArguments());
   }
 
   int _toInt(dynamic value) {

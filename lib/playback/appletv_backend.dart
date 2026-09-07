@@ -10,6 +10,7 @@ import '../preference/user_preferences.dart';
 import '../util/platform_detection.dart';
 
 import 'device_profile_builder.dart';
+import 'engine_trust.dart';
 import 'known_defects.dart';
 import 'server_transcode_capabilities.dart';
 
@@ -52,7 +53,7 @@ class AppleTvBackend implements PlayerBackend {
 
   bool _disposed = false;
   bool? _engineLogForwarding;
-  bool? _allowUntrustedTls;
+  EngineTrust? _trust;
   bool _playerPresented = false;
   Timer? _audioDelayDebounce;
 
@@ -246,10 +247,12 @@ class AppleTvBackend implements PlayerBackend {
   /// callback, so without this a self signed server browses fine and fails
   /// every playback.
   void _syncAllowUntrustedTls() {
-    final enabled = _prefs.get(UserPreferences.allowSelfSignedCerts);
-    if (enabled == _allowUntrustedTls) return;
-    _allowUntrustedTls = enabled;
-    _invoke<void>('setAllowUntrustedTls', {'enabled': enabled});
+    final trust = EngineTrust.current(
+      _prefs.get(UserPreferences.allowSelfSignedCerts),
+    );
+    if (trust.matches(_trust)) return;
+    _trust = trust;
+    _invoke<void>('setAllowUntrustedTls', trust.toChannelArguments());
   }
 
   int _toInt(dynamic value) {

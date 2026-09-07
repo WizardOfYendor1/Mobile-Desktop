@@ -17,6 +17,25 @@ import UIKit
 import AppKit
 #endif
 
+/// Turns the host preference into the engine's per origin trust answer.
+///
+/// The preference is one switch, but `EngineTLS` asks about the origin a
+/// handshake came from. Dart sends the hosts it is configured for, so a self
+/// signed server on the LAN is accepted without relaxing a second server that
+/// has a real certificate. An empty list means Dart did not know its hosts yet,
+/// and answering yes there is better than failing playback for someone who
+/// opted in.
+enum EngineTrustPolicy {
+    static func evaluator(from args: [String: Any])
+        -> (@Sendable (URLProtectionSpace) -> Bool)?
+    {
+        guard (args["enabled"] as? Bool) == true else { return nil }
+        let hosts = Set((args["hosts"] as? [String] ?? []).map { $0.lowercased() })
+        guard !hosts.isEmpty else { return { _ in true } }
+        return { hosts.contains($0.host.lowercased()) }
+    }
+}
+
 /// Playback channel driving the shared AetherPlayerWrapper on iOS and macOS.
 /// One wrapper lives for the app's lifetime while video surfaces attach and
 /// detach around it, so background audio and PiP survive a route pop.
@@ -128,7 +147,7 @@ final class AetherVideoChannel: NSObject, FlutterStreamHandler {
                 fontWeight: (args["fontWeight"] as? NSNumber)?.intValue,
                 verticalOffset: (args["verticalOffset"] as? NSNumber)?.doubleValue)
         case "setAllowUntrustedTls":
-            EngineTLS.allowUntrustedCertificates = (args["enabled"] as? Bool) == true
+            EngineTLS.serverTrustEvaluator = EngineTrustPolicy.evaluator(from: args)
         case "setSubtitleRendererMode":
             // The host overlay is the only subtitle renderer on this path.
             break
