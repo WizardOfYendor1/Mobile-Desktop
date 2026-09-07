@@ -145,7 +145,7 @@ echo "Unsigned iOS archive created in: $ARCHIVE_DIR"
 echo "Unsigned IPA created: $UNSIGNED_IPA_SOURCE"
 echo "Unsigned IPA copied to root: $ROOT_UNSIGNED_IPA_OUTPUT"
 
-if [ -v IOS_CODESIGN ] && [ "$IOS_CODESIGN" != "1" ]; then
+if [ "$IOS_CODESIGN" != "1" ]; then
   exit
 else
   if [ -n "$IOS_EXPORT_OPTIONS_PLIST" ]; then
