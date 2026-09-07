@@ -8,7 +8,7 @@
     "@signIn": {
         "description": "Sign in heading and button label"
     },
-    "connectingToServer": "Yhdistetään kohteeseen {serverName}",
+    "connectingToServer": "Yhdistetään palvelimeen {serverName}",
     "@connectingToServer": {
         "description": "Subtitle showing which server the user is connecting to",
         "placeholders": {
@@ -9728,7 +9728,7 @@
     "@playlistTypeBook": {
         "description": "Filter checkbox label for book playlists"
     },
-    "playlistTypePhoto": "Kuva",
+    "playlistTypePhoto": "Valokuva",
     "@playlistTypePhoto": {
         "description": "Filter checkbox label for photo playlists"
     },
