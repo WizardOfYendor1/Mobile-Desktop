@@ -10280,5 +10280,201 @@
     "nativeHdrOutputDescription": "Lähettää HDR-videon näytölle muokkaamattomana sen sijaan, että se muunnettaisiin SDR-muotoon. Käytetään vain silloin, kun näyttö on jo HDR-tilassa ja sisältö on HDR-muotoista.",
     "@nativeHdrOutputDescription": {
         "description": "Settings description for native HDR output"
+    },
+    "loadingAnimation": "Animaatio latautuu",
+    "@loadingAnimation": {
+        "description": "Setting title for custom loading animation"
+    },
+    "loadingAnimationDescription": "Mukauta Moonfin sovelluksessa käytettyjä latausanimaatioita",
+    "@loadingAnimationDescription": {
+        "description": "Description for loading animation customization settings"
+    },
+    "loadingAnimationConfiguration": "Ladataan Animaation Asetuksia",
+    "@loadingAnimationConfiguration": {
+        "description": "Subtitle header for loading animation settings"
+    },
+    "loadingAnimationImage": "Kuva",
+    "@loadingAnimationImage": {
+        "description": "Title for loading animation image selection"
+    },
+    "loadingAnimationImageMoonfinLogo": "Moonfin Logo",
+    "@loadingAnimationImageMoonfinLogo": {
+        "description": "Loading animation image option: Moonfin Logo"
+    },
+    "loadingAnimationImageSpinner": "Pyörivä",
+    "@loadingAnimationImageSpinner": {
+        "description": "Loading animation image option: Spinner"
+    },
+    "loadingAnimationImageRunner": "Juokseva",
+    "@loadingAnimationImageRunner": {
+        "description": "Loading animation image option: Runner"
+    },
+    "loadingAnimationImageMoonPhases": "Kuun Vaiheet",
+    "@loadingAnimationImageMoonPhases": {
+        "description": "Loading animation image option: Moon Phases"
+    },
+    "loadingAnimationImageMoonfinPhases": "Moonfin Sykli",
+    "@loadingAnimationImageMoonfinPhases": {
+        "description": "Loading animation image option: Moonfin Phases in brand gradient"
+    },
+    "loadingAnimationImageNeonfinPhases": "Neonfin Sykli",
+    "@loadingAnimationImageNeonfinPhases": {
+        "description": "Loading animation image option: Neonfin Phases in neon colors"
+    },
+    "loadingAnimationSize": "Animaation Koko",
+    "@loadingAnimationSize": {
+        "description": "Title for loading animation size selection"
+    },
+    "loadingAnimationSizeThumbnail": "Pikkukuva",
+    "@loadingAnimationSizeThumbnail": {
+        "description": "Loading animation size option: Thumbnail"
+    },
+    "loadingAnimationSizeSmall": "Pieni",
+    "@loadingAnimationSizeSmall": {
+        "description": "Loading animation size option: Small"
+    },
+    "loadingAnimationSizeMedium": "Keskikokoinen",
+    "@loadingAnimationSizeMedium": {
+        "description": "Loading animation size option: Medium"
+    },
+    "loadingAnimationSizeLarge": "Suuri",
+    "@loadingAnimationSizeLarge": {
+        "description": "Loading animation size option: Large"
+    },
+    "loadingAnimationPosition": "Animaation Sijainti",
+    "@loadingAnimationPosition": {
+        "description": "Title for loading animation position selection"
+    },
+    "loadingAnimationPositionTopLeft": "Ylävasen",
+    "@loadingAnimationPositionTopLeft": {
+        "description": "Loading animation position: Top-Left"
+    },
+    "loadingAnimationPositionTopCenter": "Yläosa keskellä",
+    "@loadingAnimationPositionTopCenter": {
+        "description": "Loading animation position: Top-Center"
+    },
+    "loadingAnimationPositionTopRight": "Oikeassa Yläkulmassa",
+    "@loadingAnimationPositionTopRight": {
+        "description": "Loading animation position: Top-Right"
+    },
+    "loadingAnimationPositionMiddleLeft": "Keskellä-Vasemmalla",
+    "@loadingAnimationPositionMiddleLeft": {
+        "description": "Loading animation position: Middle-Left"
+    },
+    "loadingAnimationPositionMiddle": "Keskellä",
+    "@loadingAnimationPositionMiddle": {
+        "description": "Loading animation position: Middle"
+    },
+    "loadingAnimationPositionMiddleRight": "Keskellä-Oikealla",
+    "@loadingAnimationPositionMiddleRight": {
+        "description": "Loading animation position: Middle-Right"
+    },
+    "loadingAnimationPositionBottomLeft": "Vasemmassa Alakulmassa",
+    "@loadingAnimationPositionBottomLeft": {
+        "description": "Loading animation position: Bottom-Left"
+    },
+    "loadingAnimationPositionBottomCenter": "Alhaalla-Keskellä",
+    "@loadingAnimationPositionBottomCenter": {
+        "description": "Loading animation position: Bottom-Center"
+    },
+    "loadingAnimationPositionBottomRight": "Alhaalla-Oikealla",
+    "@loadingAnimationPositionBottomRight": {
+        "description": "Loading animation position: Bottom-Right"
+    },
+    "loadingAnimationPositionBouncing": "Pomppivat",
+    "@loadingAnimationPositionBouncing": {
+        "description": "Loading animation position: Bouncing DVD screensaver style"
+    },
+    "loadingAnimationSpeed": "Animaation Nopeus",
+    "@loadingAnimationSpeed": {
+        "description": "Title for loading animation speed selection"
+    },
+    "loadingAnimationSpeedSlow": "Hidas",
+    "@loadingAnimationSpeedSlow": {
+        "description": "Loading animation speed option: Slow"
+    },
+    "loadingAnimationSpeedModerate": "Kohtalainen",
+    "@loadingAnimationSpeedModerate": {
+        "description": "Loading animation speed option: Moderate"
+    },
+    "loadingAnimationSpeedFast": "Nopea",
+    "@loadingAnimationSpeedFast": {
+        "description": "Loading animation speed option: Fast"
+    },
+    "loadingAnimationSpeedUltra": "Ultra",
+    "@loadingAnimationSpeedUltra": {
+        "description": "Loading animation speed option: Ultra"
+    },
+    "showLoadingAnimationText": "Näytetäänkö teksti?",
+    "@showLoadingAnimationText": {
+        "description": "Setting toggle for showing loading animation text"
+    },
+    "loadingAnimationPreview": "Esikatselu",
+    "@loadingAnimationPreview": {
+        "description": "Label for loading animation preview window"
+    },
+    "screensaverGeneralSettings": "Yleiset Asetukset",
+    "@screensaverGeneralSettings": {
+        "description": "Section header for screensaver general settings"
+    },
+    "screensaverVisualComponents": "Visuaaliset Komponentit",
+    "@screensaverVisualComponents": {
+        "description": "Section header for screensaver visual components"
+    },
+    "screensaverLibraryContent": "Kirjaston Sisältö",
+    "@screensaverLibraryContent": {
+        "description": "Section header for screensaver library content"
+    },
+    "screensaverBackdrop": "Tausta",
+    "@screensaverBackdrop": {
+        "description": "Setting for screensaver backdrop"
+    },
+    "screensaverBackdropBlack": "Musta",
+    "@screensaverBackdropBlack": {
+        "description": "Screensaver backdrop: Black"
+    },
+    "screensaverBackdropMoonfin": "Moonfin",
+    "@screensaverBackdropMoonfin": {
+        "description": "Screensaver backdrop: Moonfin"
+    },
+    "screensaverBackdropCalm": "Rauhallinen",
+    "@screensaverBackdropCalm": {
+        "description": "Screensaver backdrop: Calm"
+    },
+    "screensaverBackdropNeonPulse": "Neon Pulssi",
+    "@screensaverBackdropNeonPulse": {
+        "description": "Screensaver backdrop: Neon Pulse"
+    },
+    "screensaverBackdropAurora": "Aamunkoitto",
+    "@screensaverBackdropAurora": {
+        "description": "Screensaver backdrop: Aurora"
+    },
+    "screensaverAdditionalComponent": "Lisäkomponentti",
+    "@screensaverAdditionalComponent": {
+        "description": "Setting for screensaver additional component"
+    },
+    "screensaverComponentMoonfinLogo": "Moonfin Logo",
+    "@screensaverComponentMoonfinLogo": {
+        "description": "Screensaver component: Moonfin Logo"
+    },
+    "screensaverComponentRunner": "Juokseva",
+    "@screensaverComponentRunner": {
+        "description": "Screensaver component: Runner"
+    },
+    "screensaverComponentMovement": "Näytönsäästäjän liike",
+    "@screensaverComponentMovement": {
+        "description": "Setting for screensaver component movement"
+    },
+    "screensaverComponentPosition": "Komponentin Sijainti",
+    "@screensaverComponentPosition": {
+        "description": "Setting for screensaver component position"
+    },
+    "screensaverComponentSize": "Komponentin Koko",
+    "@screensaverComponentSize": {
+        "description": "Setting for screensaver component size"
+    },
+    "screensaverSourceLibrariesDefault": "Kaikki (Oletus)",
+    "@screensaverSourceLibrariesDefault": {
+        "description": "Subtitle when no source libraries are explicitly filtered in screensaver"
     }
 }
