@@ -90,6 +90,17 @@ class LogService extends ChangeNotifier {
     caseSensitive: false,
   );
 
+  // The host redaction above stops at the path, so a URL keeps the credential
+  // in its query, and these reports get pasted into public issues. The name is
+  // kept and only the value goes, since knowing auth was present still reads.
+  // A hyphenated name like X-Emby-Token is covered by the bare token branch.
+  static final _credentialRegex = RegExp(
+    r"""\b(api[_-]?key|access[_-]?token|auth[_-]?token|authorization|token)"""
+    r"""(\s*[:=]\s*"?)"""
+    r"""((?:(?:Bearer|Basic|MediaBrowser)\s+)?[^\s&"',;<>{}\[\]]+)""",
+    caseSensitive: false,
+  );
+
   static final _ipv4Regex = RegExp(
     r'\b(?:\d{1,3}\.){3}\d{1,3}\b',
   );
@@ -332,6 +343,14 @@ class LogService extends ChangeNotifier {
     if (lower.contains('://')) {
       result = result.replaceAllMapped(_redactRegex, (match) {
         return '${match.group(1)}[REDACTED]';
+      });
+    }
+
+    if (lower.contains('key') ||
+        lower.contains('token') ||
+        lower.contains('auth')) {
+      result = result.replaceAllMapped(_credentialRegex, (match) {
+        return '${match.group(1)}${match.group(2)}[REDACTED]';
       });
     }
     

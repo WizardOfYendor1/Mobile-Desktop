@@ -88,6 +88,38 @@ void main() {
       );
     });
 
+    test('redacts a credential left in a query string', () {
+      assertRedacted(
+        'GET https://my-server.com/Videos/abc/stream?MediaSourceId=abc'
+        '&ApiKey=f3eebe84a7f443569c352dd45cf4521b',
+        'MediaSourceId=abc&ApiKey=[REDACTED]',
+      );
+      assertRedacted(
+        'GET https://my-server.com/Items?api_key=deadbeefcafe&limit=10',
+        'api_key=[REDACTED]&limit=10',
+      );
+    });
+
+    test('redacts a credential sent as a header', () {
+      assertRedacted('X-Emby-Token: deadbeefcafe', 'X-Emby-Token: [REDACTED]');
+      assertRedacted(
+        'Authorization: Bearer deadbeefcafe',
+        'Authorization: [REDACTED]',
+      );
+      assertRedacted(
+        'Authorization: MediaBrowser Client="Moonfin", Token="deadbeefcafe"',
+        'Token="[REDACTED]"',
+      );
+    });
+
+    test('keeps a header name that carries no value', () {
+      assertRedacted(
+        'play http://my-server.com/Videos/abc/stream '
+        'headers=Authorization,X-Emby-Token autoPlay=true',
+        'headers=Authorization,X-Emby-Token autoPlay=true',
+      );
+    });
+
     test('redacts Dart host lookup failures', () {
       assertRedacted(
         "SocketException: Failed host lookup: 'my.host.name' (OS Error: ...)",
