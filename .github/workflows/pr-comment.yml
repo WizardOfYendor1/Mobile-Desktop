@@ -55,6 +55,7 @@ jobs:
               { platform: 'Android',       job: 'android',       artifact: 'android',              files: 'Moonfin_Android_v* + Moonfin_AndroidTV_v*' },
               { platform: 'iOS',           job: 'ios',           artifact: 'ios-ipa',              files: 'Moonfin_iOS_v*_unsigned.ipa' },
               { platform: 'macOS',         job: 'macos',         artifact: 'macos-dmg',            files: 'Moonfin_macOS_v*.dmg' },
+              { platform: 'tvOS',          job: 'tvos',          artifact: 'tvos-ipa',             files: 'Moonfin_tvOS_v*_unsigned.ipa' },
               { platform: 'Windows x64',   job: 'windows',       artifact: 'windows-exe',          files: 'Moonfin_Windows_v*.exe' },
               { platform: 'Windows ARM64', job: 'windows_arm64', artifact: 'windows-arm64-exe',    files: 'Moonfin_WindowsARM64_v*.exe' },
               { platform: 'Linux x64',     job: 'linux',         artifact: 'linux-packages-x64',   files: 'Moonfin_Linux_v* (deb/rpm/AppImage/snap/flatpak/tar.gz)' },
