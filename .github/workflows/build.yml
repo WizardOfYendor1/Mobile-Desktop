@@ -336,14 +336,38 @@ jobs:
       - name: Resolve dependencies
         run: flutter-tvos pub get
 
-      # The tool's own build stops at signing, which has not been set up yet,
-      # but by then it has written the project settings and installed the pods.
-      - name: Prepare Flutter build settings and pods
+      # This runs before the tool builds because the tool embeds the Flutter
+      # engine signed with whatever Apple Distribution identity it finds, and
+      # an unsigned engine is rejected at upload (ITMS-91065). The release path
+      # stays unsigned.
+      - name: Set up App Store signing
+        if: ${{ inputs.distribution == 'testflight' }}
+        id: signing
+        uses: ./.github/actions/apple-signing
+        with:
+          certificate-base64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
+          certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          certificate-required: 'true'
+          asc-key-base64: ${{ secrets.APPLE_ASC_API_KEY_BASE64 }}
+
+      # The tool's own build stops before the app is signed, but by then it
+      # has written the project settings and the assets.
+      - name: Prepare Flutter build settings
         run: |
           flutter-tvos build tvos --release --no-tree-shake-icons --dart-define=MOONFIN_TVOS=true || true
           test -f tvos/Flutter/Generated.xcconfig
           grep -q '^FLUTTER_ROOT=' tvos/Flutter/Generated.xcconfig \
             || echo "FLUTTER_ROOT=$HOME/flutter-tvos" >> tvos/Flutter/Generated.xcconfig
+
+      # The flutter tool writes the plugin registry without a tvos section, so
+      # the pods it names have to be put back before CocoaPods reads it, or the
+      # Runner links against nothing.
+      - name: Install pods
+        env:
+          LC_ALL: en_US.UTF-8
+        run: |
+          python3 tvos/scripts/restore_tvos_plugins.py
+          cd tvos && pod install
 
       - name: Stage flutter_assets for the Xcode copy phase
         run: |
@@ -378,16 +402,6 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_IDENTITY="" \
             build
-
-      - name: Set up App Store signing
-        if: ${{ inputs.distribution == 'testflight' }}
-        id: signing
-        uses: ./.github/actions/apple-signing
-        with:
-          certificate-base64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
-          certificate-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          certificate-required: 'true'
-          asc-key-base64: ${{ secrets.APPLE_ASC_API_KEY_BASE64 }}
 
       - name: Archive for App Store
         if: ${{ inputs.distribution == 'testflight' }}
