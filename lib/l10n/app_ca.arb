@@ -10280,5 +10280,201 @@
     "nativeHdrOutputDescription": "Envia el vídeo HDR a la pantalla sense modificar-lo en lloc de convertir-lo a SDR. Només s'utilitza quan la pantalla ja està en mode HDR i el títol és HDR.",
     "@nativeHdrOutputDescription": {
         "description": "Settings description for native HDR output"
+    },
+    "loadingAnimationConfiguration": "Configuració de l'animació de càrrega",
+    "@loadingAnimationConfiguration": {
+        "description": "Subtitle header for loading animation settings"
+    },
+    "loadingAnimationDescription": "Personalitza les animacions de càrrega que utilitza Moonfin",
+    "@loadingAnimationDescription": {
+        "description": "Description for loading animation customization settings"
+    },
+    "loadingAnimation": "Animació de càrrega",
+    "@loadingAnimation": {
+        "description": "Setting title for custom loading animation"
+    },
+    "loadingAnimationImage": "Imatge",
+    "@loadingAnimationImage": {
+        "description": "Title for loading animation image selection"
+    },
+    "loadingAnimationImageMoonfinLogo": "Logotip de Moonfin",
+    "@loadingAnimationImageMoonfinLogo": {
+        "description": "Loading animation image option: Moonfin Logo"
+    },
+    "loadingAnimationImageSpinner": "Roda de càrrega",
+    "@loadingAnimationImageSpinner": {
+        "description": "Loading animation image option: Spinner"
+    },
+    "loadingAnimationImageRunner": "Corredor",
+    "@loadingAnimationImageRunner": {
+        "description": "Loading animation image option: Runner"
+    },
+    "loadingAnimationImageMoonPhases": "Fases lunars",
+    "@loadingAnimationImageMoonPhases": {
+        "description": "Loading animation image option: Moon Phases"
+    },
+    "loadingAnimationImageNeonfinPhases": "Fases de Neonfin",
+    "@loadingAnimationImageNeonfinPhases": {
+        "description": "Loading animation image option: Neonfin Phases in neon colors"
+    },
+    "loadingAnimationImageMoonfinPhases": "Fases de Moonfin",
+    "@loadingAnimationImageMoonfinPhases": {
+        "description": "Loading animation image option: Moonfin Phases in brand gradient"
+    },
+    "loadingAnimationSize": "Mida de l'animació",
+    "@loadingAnimationSize": {
+        "description": "Title for loading animation size selection"
+    },
+    "loadingAnimationSizeThumbnail": "Miniatura",
+    "@loadingAnimationSizeThumbnail": {
+        "description": "Loading animation size option: Thumbnail"
+    },
+    "loadingAnimationSizeMedium": "Mitjana",
+    "@loadingAnimationSizeMedium": {
+        "description": "Loading animation size option: Medium"
+    },
+    "loadingAnimationSizeLarge": "Gran",
+    "@loadingAnimationSizeLarge": {
+        "description": "Loading animation size option: Large"
+    },
+    "loadingAnimationSizeSmall": "Petit",
+    "@loadingAnimationSizeSmall": {
+        "description": "Loading animation size option: Small"
+    },
+    "loadingAnimationPosition": "Posició de l'animació",
+    "@loadingAnimationPosition": {
+        "description": "Title for loading animation position selection"
+    },
+    "loadingAnimationPositionTopCenter": "Superior centre",
+    "@loadingAnimationPositionTopCenter": {
+        "description": "Loading animation position: Top-Center"
+    },
+    "loadingAnimationPositionTopLeft": "Superior esquerra",
+    "@loadingAnimationPositionTopLeft": {
+        "description": "Loading animation position: Top-Left"
+    },
+    "loadingAnimationPositionTopRight": "Superior dreta",
+    "@loadingAnimationPositionTopRight": {
+        "description": "Loading animation position: Top-Right"
+    },
+    "loadingAnimationPositionMiddleLeft": "Centre esquerra",
+    "@loadingAnimationPositionMiddleLeft": {
+        "description": "Loading animation position: Middle-Left"
+    },
+    "loadingAnimationPositionMiddle": "Al mig",
+    "@loadingAnimationPositionMiddle": {
+        "description": "Loading animation position: Middle"
+    },
+    "loadingAnimationPositionMiddleRight": "Centre dreta",
+    "@loadingAnimationPositionMiddleRight": {
+        "description": "Loading animation position: Middle-Right"
+    },
+    "loadingAnimationPositionBottomLeft": "Inferior esquerra",
+    "@loadingAnimationPositionBottomLeft": {
+        "description": "Loading animation position: Bottom-Left"
+    },
+    "loadingAnimationPositionBottomCenter": "Inferior centre",
+    "@loadingAnimationPositionBottomCenter": {
+        "description": "Loading animation position: Bottom-Center"
+    },
+    "loadingAnimationPositionBouncing": "Oscil·lant",
+    "@loadingAnimationPositionBouncing": {
+        "description": "Loading animation position: Bouncing DVD screensaver style"
+    },
+    "loadingAnimationPositionBottomRight": "Inferior dreta",
+    "@loadingAnimationPositionBottomRight": {
+        "description": "Loading animation position: Bottom-Right"
+    },
+    "loadingAnimationSpeed": "Velocitat de l'animació",
+    "@loadingAnimationSpeed": {
+        "description": "Title for loading animation speed selection"
+    },
+    "loadingAnimationSpeedSlow": "Lenta",
+    "@loadingAnimationSpeedSlow": {
+        "description": "Loading animation speed option: Slow"
+    },
+    "loadingAnimationSpeedFast": "Ràpida",
+    "@loadingAnimationSpeedFast": {
+        "description": "Loading animation speed option: Fast"
+    },
+    "loadingAnimationSpeedModerate": "Moderada",
+    "@loadingAnimationSpeedModerate": {
+        "description": "Loading animation speed option: Moderate"
+    },
+    "loadingAnimationSpeedUltra": "Ultra",
+    "@loadingAnimationSpeedUltra": {
+        "description": "Loading animation speed option: Ultra"
+    },
+    "showLoadingAnimationText": "Vols mostrar el text?",
+    "@showLoadingAnimationText": {
+        "description": "Setting toggle for showing loading animation text"
+    },
+    "loadingAnimationPreview": "Vista prèvia",
+    "@loadingAnimationPreview": {
+        "description": "Label for loading animation preview window"
+    },
+    "screensaverGeneralSettings": "Configuració general",
+    "@screensaverGeneralSettings": {
+        "description": "Section header for screensaver general settings"
+    },
+    "screensaverVisualComponents": "Components visuals",
+    "@screensaverVisualComponents": {
+        "description": "Section header for screensaver visual components"
+    },
+    "screensaverLibraryContent": "Contingut de la biblioteca",
+    "@screensaverLibraryContent": {
+        "description": "Section header for screensaver library content"
+    },
+    "screensaverBackdrop": "Teló de fons",
+    "@screensaverBackdrop": {
+        "description": "Setting for screensaver backdrop"
+    },
+    "screensaverBackdropBlack": "Negre",
+    "@screensaverBackdropBlack": {
+        "description": "Screensaver backdrop: Black"
+    },
+    "screensaverBackdropMoonfin": "Moonfin",
+    "@screensaverBackdropMoonfin": {
+        "description": "Screensaver backdrop: Moonfin"
+    },
+    "screensaverBackdropCalm": "Calma",
+    "@screensaverBackdropCalm": {
+        "description": "Screensaver backdrop: Calm"
+    },
+    "screensaverBackdropNeonPulse": "Neon Pulse",
+    "@screensaverBackdropNeonPulse": {
+        "description": "Screensaver backdrop: Neon Pulse"
+    },
+    "screensaverBackdropAurora": "Aurora",
+    "@screensaverBackdropAurora": {
+        "description": "Screensaver backdrop: Aurora"
+    },
+    "screensaverAdditionalComponent": "Component addicional",
+    "@screensaverAdditionalComponent": {
+        "description": "Setting for screensaver additional component"
+    },
+    "screensaverComponentMoonfinLogo": "Logotip de Moonfin",
+    "@screensaverComponentMoonfinLogo": {
+        "description": "Screensaver component: Moonfin Logo"
+    },
+    "screensaverComponentRunner": "Corredor",
+    "@screensaverComponentRunner": {
+        "description": "Screensaver component: Runner"
+    },
+    "screensaverComponentMovement": "Moviment del component",
+    "@screensaverComponentMovement": {
+        "description": "Setting for screensaver component movement"
+    },
+    "screensaverComponentPosition": "Posició del component",
+    "@screensaverComponentPosition": {
+        "description": "Setting for screensaver component position"
+    },
+    "screensaverComponentSize": "Mida del component",
+    "@screensaverComponentSize": {
+        "description": "Setting for screensaver component size"
+    },
+    "screensaverSourceLibrariesDefault": "Tot (predeterminat)",
+    "@screensaverSourceLibrariesDefault": {
+        "description": "Subtitle when no source libraries are explicitly filtered in screensaver"
     }
 }
