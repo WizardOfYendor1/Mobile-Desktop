@@ -82,7 +82,6 @@ jobs:
               ['tvOS', /\b(tvOS|Apple\s*TV)\b/i],
               ['Web', /\b(Web|Browser|Chrome|Firefox|Safari|Edge)\b/i],
               ['macOS', /\bmacOS\b/i],
-              ['Tizen', /\bTizen\b/i],
               ['Windows', /\bWindows\b/i],
               ['Linux', /\bLinux\b/i]
             ];

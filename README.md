@@ -16,7 +16,7 @@
 
 > **[← Back to main Moonfin project](https://github.com/Moonfin-Client)**
 
-Moonfin is a cross-platform media client built with Flutter, designed for Jellyfin and Emby users who want a modern, customizable experience across mobile, tablet, desktop, TV, and web. A single shared codebase powers phones and tablets, Windows, macOS, and Linux, Android TV and Apple TV, the browser, and experimental Samsung TV (Tizen).
+Moonfin is a cross-platform media client built with Flutter, designed for Jellyfin and Emby users who want a modern, customizable experience across mobile, tablet, desktop, TV, and web. A single shared codebase powers phones and tablets, Windows, macOS, and Linux, Android TV and Apple TV, and the browser.
 
 ## All Moonfin-Core Clients
 
@@ -49,9 +49,8 @@ Moonfin is a cross-platform media client built with Flutter, designed for Jellyf
 | **Windows** | 10 (x64 and ARM64) | Full support |
 | **Linux** | GTK 3+, CMake 3.13+ | Full support (Wayland only) |
 | **Web** | Modern browsers (installable PWA) | Full support |
-| **Tizen (Samsung TV)** | Tizen 6.0+ | Experimental |
 
-> Android TV and Apple TV ship from this same codebase with a TV-tuned interface and D-pad navigation, each on its own native backend. Web runs as an installable PWA through the Moonbase server plugin. Tizen is experimental and has real limitations, listed on the [Installation](https://github.com/Moonfin-Client/Moonfin-Core/wiki/Installation) page.
+> Android TV and Apple TV ship from this same codebase with a TV-tuned interface and D-pad navigation, each on its own native backend. Web runs as an installable PWA through the Moonbase server plugin.
 
 ## Features
 
@@ -101,7 +100,7 @@ Download platform artifacts from the [Releases page](https://github.com/Moonfin-
 
 On Arch Linux, install from the AUR with `yay -S moonfin` (or `paru`, `pamac build`).
 
-Per-platform notes and the Tizen toolchain setup are on [Installation](https://github.com/Moonfin-Client/Moonfin-Core/wiki/Installation).
+Per-platform notes are on [Installation](https://github.com/Moonfin-Client/Moonfin-Core/wiki/Installation).
 
 ## Building
 
@@ -125,7 +124,7 @@ The deeper reference material lives in the [Wiki](https://github.com/Moonfin-Cli
 | [Playback and Codecs](https://github.com/Moonfin-Client/Moonfin-Core/wiki/Playback-and-Codecs) | The backend per platform, the codec table, HDR, and audio passthrough |
 | [Downloads](https://github.com/Moonfin-Client/Moonfin-Core/wiki/Downloads) | Original and transcoded downloads, quality presets, and storage paths |
 | [Retro Games](https://github.com/Moonfin-Client/Moonfin-Core/wiki/Retro-Games) | Playing server game libraries in-app, cores, controllers, and save states |
-| [Installation](https://github.com/Moonfin-Client/Moonfin-Core/wiki/Installation) | Which release file to pick, the AUR package, and the Tizen toolchain |
+| [Installation](https://github.com/Moonfin-Client/Moonfin-Core/wiki/Installation) | Which release file to pick, and the AUR package |
 | [User Guide](https://github.com/Moonfin-Client/Moonfin-Core/wiki/User-Guide) | Keyboard shortcuts, subtitle downloads, and remote device control |
 | [Custom mpv Configuration](https://github.com/Moonfin-Client/Moonfin-Core/wiki/Custom-mpv-Configuration) | Tuning playback with your own `mpv.conf`, allowed options, and SVP on Windows |
 | [Building from Source](https://github.com/Moonfin-Client/Moonfin-Core/wiki/Building-from-Source) | Toolchain versions, quick start, and per-platform build commands |

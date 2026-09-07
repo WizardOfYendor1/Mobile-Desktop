@@ -4,15 +4,13 @@ import 'package:app_links/app_links.dart';
 
 import '../../util/platform_detection.dart';
 
-/// Routes OS-registered `moonfin://` deep links into the app. tvOS, Tizen and
-/// web are gated off, they have no app_links backend.
+/// Routes OS-registered `moonfin://` deep links into the app. tvOS and web
+/// are gated off, they have no app_links backend.
 class DeepLinkService {
   StreamSubscription<Uri>? _subscription;
 
   static bool get _enabled =>
-      !PlatformDetection.isWeb &&
-      !PlatformDetection.isTizen &&
-      !PlatformDetection.isAppleTV;
+      !PlatformDetection.isWeb && !PlatformDetection.isAppleTV;
 
   /// Starts listening for `moonfin://` links, including the one the app was
   /// launched with. [onRoute] receives an in-app route path.

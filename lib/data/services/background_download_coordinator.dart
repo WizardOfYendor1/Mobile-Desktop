@@ -24,7 +24,7 @@ class BackgroundDownloadCoordinator {
   static const String mediaGroup = 'moonfinMedia';
 
   static bool get isSupported =>
-      !kIsWeb && !PlatformDetection.isTizen && !PlatformDetection.isAppleTV;
+      !kIsWeb && !PlatformDetection.isAppleTV;
 
   Future<void>? _initFuture;
   int? _configuredMaxConcurrentDownloads;

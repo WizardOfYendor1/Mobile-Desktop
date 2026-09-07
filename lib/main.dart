@@ -819,8 +819,7 @@ void main() async {
 
   // Apple runs entirely on AetherEngine, so media_kit isn't initialized there
   // and its native libs are out of those builds.
-  if (!PlatformDetection.isTizen &&
-      !PlatformDetection.isAppleTV &&
+  if (!PlatformDetection.isAppleTV &&
       !PlatformDetection.isIOS &&
       !PlatformDetection.isMacOS) {
     MediaKit.ensureInitialized();
@@ -852,7 +851,6 @@ void main() async {
   // The issue is intermittent and goes away on re-run once the OS font cache
   // is warm, which confirms the timing root cause.
   if (PlatformDetection.isLinux ||
-      PlatformDetection.isTizen ||
       PlatformDetection.isAppleTV) {
     WidgetsBinding.instance.scheduleWarmUpFrame();
   }
