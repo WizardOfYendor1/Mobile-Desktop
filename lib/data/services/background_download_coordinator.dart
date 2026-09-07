@@ -160,9 +160,25 @@ class BackgroundDownloadCoordinator {
     FileDownloader().updates.listen(_route);
 
     await FileDownloader().start(
-      doRescheduleKilledTasks: true,
+      // The plugin would revive tasks killed with the app five seconds in,
+      // blind to whether the rest of the file still fits. DownloadService
+      // checks first and calls [rescheduleKilledTasks] for the survivors.
+      doRescheduleKilledTasks: false,
       autoCleanDatabase: true,
     );
+  }
+
+  /// Tasks the native engine still holds, across groups.
+  Future<Set<Task>> nativeTasks() async =>
+      (await FileDownloader().allTasks(allGroups: true)).toSet();
+
+  /// Re-enqueues tasks whose records outlived their native task. Records
+  /// deleted beforehand stay dead.
+  Future<void> rescheduleKilledTasks() async {
+    if (!isSupported) return;
+    try {
+      await FileDownloader().rescheduleKilledTasks();
+    } catch (_) {}
   }
 
   void _route(TaskUpdate update) {

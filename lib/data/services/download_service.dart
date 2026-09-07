@@ -3315,6 +3315,7 @@ class DownloadService extends ChangeNotifier implements AutoDownloadDownloader {
     // finished while the app was dead, still be running natively, or have
     // been rescheduled by the plugin at startup.
     var pluginRecords = <String, bgd.TaskRecord>{};
+    final refused = <String>{};
     if (_pluginEngineSupported) {
       try {
         await _coordinator!.ensureInitialized();
@@ -3326,12 +3327,14 @@ class DownloadService extends ChangeNotifier implements AutoDownloadDownloader {
             if (_itemIdForTask(record.task) != null)
               _itemIdForTask(record.task)!: record,
         };
+        refused.addAll(await _refuseKilledTasksThatCannotFit(pluginRecords));
       } catch (_) {}
     }
 
     final allItems = await _offlineRepo.getItems();
 
     for (final item in allItems) {
+      if (refused.contains(item.itemId)) continue;
       if (item.downloadStatus == 1) {
         final record = pluginRecords[item.itemId];
         if (record != null && await _recoverFromTaskRecord(item, record)) {
@@ -3375,6 +3378,11 @@ class DownloadService extends ChangeNotifier implements AutoDownloadDownloader {
       }
     }
 
+    // Killed transfers that still fit come back now; the plugin no longer
+    // revives them on its own (see BackgroundDownloadCoordinator).
+    if (_pluginEngineSupported) {
+      unawaited(_coordinator!.rescheduleKilledTasks());
+    }
     unawaited(sweepStagingDir());
   }
 
@@ -3460,6 +3468,43 @@ class DownloadService extends ChangeNotifier implements AutoDownloadDownloader {
         );
         return false;
     }
+  }
+
+  /// Transfers the plugin would revive after a kill, refused now when the
+  /// rest of the file cannot fit, so no "Downloading" ever shows for them.
+  /// Returns the item ids refused; their rows are marked failed.
+  Future<Set<String>> _refuseKilledTasksThatCannotFit(
+    Map<String, bgd.TaskRecord> records,
+  ) async {
+    final refused = <String>{};
+    if (records.isEmpty) return refused;
+    final native = await _coordinator!.nativeTasks();
+    for (final entry in records.entries) {
+      final record = entry.value;
+      final killed =
+          (record.status == bgd.TaskStatus.enqueued ||
+              record.status == bgd.TaskStatus.running) &&
+          !native.contains(record.task);
+      if (!killed) continue;
+      final remaining = remainingTransferBytes(
+        expectedFileSize: record.expectedFileSize,
+        progress: record.progress,
+      );
+      if (remaining == null) continue;
+      final refusal = await _storageRefusal(remaining);
+      if (refusal == null) continue;
+      await bgd.FileDownloader().database.deleteRecordWithId(
+        record.task.taskId,
+      );
+      await _offlineRepo.updateDownloadStatus(entry.key, 3, error: refusal);
+      final label = record.task.displayName;
+      _emitError('$label: $refusal');
+      unawaited(
+        _notificationService.showError(itemName: label, error: refusal),
+      );
+      refused.add(entry.key);
+    }
+    return refused;
   }
 
   /// Re-attaches in-memory state to a native task that is still alive

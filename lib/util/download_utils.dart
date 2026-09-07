@@ -65,6 +65,17 @@ String formatEta(int seconds) {
   return '${seconds}s';
 }
 
+/// Bytes a partly transferred file still needs on disk, or null when its
+/// size was never known.
+int? remainingTransferBytes({
+  required int expectedFileSize,
+  required double progress,
+}) {
+  if (expectedFileSize <= 0) return null;
+  final done = (expectedFileSize * progress.clamp(0.0, 1.0)).round();
+  return expectedFileSize - done;
+}
+
 String formatBytes(int bytes) {
   if (bytes < 1024) return '$bytes B';
   if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
