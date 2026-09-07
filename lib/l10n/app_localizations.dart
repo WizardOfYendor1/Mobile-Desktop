@@ -16786,6 +16786,48 @@ abstract class AppLocalizations {
   /// **'mpv (legacy)'**
   String get settingsPlaybackEngineMpvLegacy;
 
+  /// No description provided for @settingsRedetectDisplay.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-detect display'**
+  String get settingsRedetectDisplay;
+
+  /// No description provided for @settingsRedetectDisplayDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask the TV again what HDR formats it supports. Use this if Dolby Vision or HDR10 titles are being transcoded after the TV or receiver was powered on late.'**
+  String get settingsRedetectDisplayDescription;
+
+  /// No description provided for @settingsDisplayIsSdr.
+  ///
+  /// In en, this message translates to:
+  /// **'My TV is not HDR'**
+  String get settingsDisplayIsSdr;
+
+  /// No description provided for @settingsDisplayIsSdrDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop advertising HDR support for this display. Use this only if detection keeps reporting HDR your TV can\'t actually show.'**
+  String get settingsDisplayIsSdrDescription;
+
+  /// No description provided for @settingsDisplayRedetected.
+  ///
+  /// In en, this message translates to:
+  /// **'Display re-detected: {formats}'**
+  String settingsDisplayRedetected(String formats);
+
+  /// No description provided for @settingsDisplayNoHdrDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'No HDR formats detected'**
+  String get settingsDisplayNoHdrDetected;
+
+  /// No description provided for @settingsDisplayMarkedSdr.
+  ///
+  /// In en, this message translates to:
+  /// **'Display saved as SDR'**
+  String get settingsDisplayMarkedSdr;
+
   /// No description provided for @settingsDolbyVisionFallback.
   ///
   /// In en, this message translates to:

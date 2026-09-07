@@ -8893,6 +8893,16 @@
   "settingsPlaybackEngineAndroidTvDescription": "Choose the default playback engine on Android TV devices. Changes apply to the next playback session.",
   "settingsPlaybackEngineMedia3Recommended": "Media3 (recommended)",
   "settingsPlaybackEngineMpvLegacy": "mpv (legacy)",
+  "settingsRedetectDisplay": "Re-detect display",
+  "settingsRedetectDisplayDescription": "Ask the TV again what HDR formats it supports. Use this if Dolby Vision or HDR10 titles are being transcoded after the TV or receiver was powered on late.",
+  "settingsDisplayIsSdr": "My TV is not HDR",
+  "settingsDisplayIsSdrDescription": "Stop advertising HDR support for this display. Use this only if detection keeps reporting HDR your TV can't actually show.",
+  "settingsDisplayRedetected": "Display re-detected: {formats}",
+  "@settingsDisplayRedetected": {
+    "placeholders": { "formats": { "type": "String" } }
+  },
+  "settingsDisplayNoHdrDetected": "No HDR formats detected",
+  "settingsDisplayMarkedSdr": "Display saved as SDR",
   "settingsDolbyVisionFallback": "Dolby Vision Fallback",
   "settingsDolbyVisionFallbackDescription": "Behavior for Dolby Vision titles on devices without Dolby Vision decoding.",
   "settingsAskEachTime": "Ask each time",

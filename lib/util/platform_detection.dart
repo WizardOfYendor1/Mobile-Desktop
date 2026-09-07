@@ -82,10 +82,18 @@ class PlatformDetection {
       <String, dynamic>{};
   static final Map<String, dynamic> _deviceMemory = <String, dynamic>{};
   static final Map<String, dynamic> _audioCapabilities = <String, dynamic>{};
+  static bool _hasDisplayHdrCapabilities = false;
   static bool _hasDolbyVisionCodecCapabilities = false;
   static bool _supportsDoViProfile5 = false;
   static bool _supportsDoViProfile7 = false;
   static bool _supportsDoViProfile8 = false;
+
+  /// Whether the display has ever answered the HDR probe. Without this a
+  /// panel that reported no HDR is indistinguishable from one that was
+  /// never asked.
+  static bool get hasDisplayHdrCapabilities => _hasDisplayHdrCapabilities;
+  static List<String> get displayHdrTypesSnapshot =>
+      List<String>.unmodifiable(_displayHdrTypes);
 
   static bool get supportsAnyHdr => _displayHdrTypes.isNotEmpty;
   static bool get supportsDolbyVision =>
@@ -206,6 +214,7 @@ class PlatformDetection {
   static String? get deviceSocModel => _capabilityString('deviceSocModel');
 
   static void setDisplayHdrTypes(Iterable<String>? values) {
+    _hasDisplayHdrCapabilities = values != null;
     _displayHdrTypes
       ..clear()
       ..addAll(

@@ -39,6 +39,7 @@ import 'playback/audio_capability_probe.dart';
 import 'playback/audio_handler.dart';
 import 'playback/codec_caps_repair.dart';
 import 'playback/device_capability_cache.dart';
+import 'playback/display_hdr_probe.dart';
 import 'playback/media_browse_service.dart';
 import 'playback/mpris_service.dart';
 import 'playback/playback_lifecycle_handler.dart';
@@ -320,11 +321,11 @@ Future<void> _seedCapabilitiesFromCache() async {
       PlatformDetection.setDeviceMemory(memory);
     }
   }
-  if (PlatformDetection.isAndroid && PlatformDetection.isTV) {
-    final hdrTypes = await DeviceCapabilityCache.readStringList(
-      DeviceCapabilityCache.displayHdrKey,
-    );
-    if (hdrTypes != null && hdrTypes.isNotEmpty) {
+  if (DisplayHdrProbe.isSupported) {
+    // Null means the display has never answered. An empty list means it
+    // answered and named nothing, which is a real result worth seeding.
+    final hdrTypes = await DisplayHdrProbe.seedFromCache();
+    if (hdrTypes != null) {
       PlatformDetection.setDisplayHdrTypes(hdrTypes);
     }
   }
@@ -344,25 +345,6 @@ Future<bool> _retryOffLaunchPath(Future<bool> Function() attempt) async {
     } catch (_) {}
   }
   return false;
-}
-
-/// One display probe: applies and persists a non-empty answer. Returns false
-/// on an empty one and throws when the channel does.
-Future<bool> _probeDisplayHdrOnce() async {
-  const channel = MethodChannel('org.moonfin.androidtv/platform');
-  final hdrTypes = await channel.invokeMethod<List<dynamic>>('displayHdrTypes');
-  final types = (hdrTypes ?? const [])
-      .map((value) => value.toString())
-      .toList(growable: false);
-  if (types.isEmpty) return false;
-  PlatformDetection.setDisplayHdrTypes(types);
-  unawaited(
-    DeviceCapabilityCache.writeStringList(
-      DeviceCapabilityCache.displayHdrKey,
-      types,
-    ),
-  );
-  return true;
 }
 
 /// How much RAM this device has. Fixed for the life of the device, so one
@@ -390,31 +372,26 @@ Future<void> _detectAndSetDeviceMemory() async {
   } catch (_) {}
 }
 
+/// Runs before the first frame, so only the single attempt is awaited here.
+/// The retries and the listener are deliberately left to run on their own: a
+/// box whose TV is still asleep would otherwise hold the launch for the whole
+/// half-minute retry window.
 Future<void> _detectAndSetDisplayCapabilities() async {
-  if (!(PlatformDetection.isAndroid && PlatformDetection.isTV)) return;
+  if (!DisplayHdrProbe.isSupported) return;
+  // Its own try/catch for the same reason the memory probe has one: this runs
+  // inside a Future.wait, which gives up on every sibling the moment one
+  // throws.
   try {
-    if (await _probeDisplayHdrOnce()) return;
+    final snapshot = await DisplayHdrProbe.query(trigger: 'launch');
+    DisplayHdrProbe.apply(snapshot);
+    if (snapshot == null ||
+        snapshot.verdict == DisplayHdrVerdict.cannotAnswer) {
+      unawaited(DisplayHdrProbe.queryWithRetry().then(DisplayHdrProbe.apply));
+    }
+    // A chain that is still asleep when the retries run out heals from here
+    // instead of waiting for the app to be restarted.
+    DisplayHdrProbe.listenForDisplayChanges();
   } catch (_) {}
-  // An empty list from a TV is a probe that ran before the display was up,
-  // not an SDR panel, so the cached seed stays in place while the retries
-  // run. Only a whole run of empty answers is believed.
-  unawaited(_retryDisplayHdrOffLaunchPath());
-}
-
-/// When every retry still reports nothing, that emptiness is accepted as a
-/// genuinely SDR display and the cache is cleared, which is how a box moved
-/// to an SDR TV stops advertising HDR. A run where the channel only ever
-/// threw proves nothing about the panel, so the seed stays.
-Future<void> _retryDisplayHdrOffLaunchPath() async {
-  var answered = false;
-  final found = await _retryOffLaunchPath(() async {
-    if (await _probeDisplayHdrOnce()) return true;
-    answered = true;
-    return false;
-  });
-  if (found || !answered) return;
-  PlatformDetection.setDisplayHdrTypes(const []);
-  await DeviceCapabilityCache.remove(DeviceCapabilityCache.displayHdrKey);
 }
 
 Future<Map<String, dynamic>?> _queryCodecCaps(MethodChannel channel) async {
@@ -697,10 +674,8 @@ class _CapabilityRefreshObserver with WidgetsBindingObserver {
   }
 
   Future<void> _refresh() async {
-    if (PlatformDetection.isAndroid && PlatformDetection.isTV) {
-      try {
-        await _probeDisplayHdrOnce();
-      } catch (_) {}
+    if (DisplayHdrProbe.isSupported) {
+      DisplayHdrProbe.apply(await DisplayHdrProbe.query(trigger: 'resume'));
     }
     // The launch retries all run inside the first half minute, which covers
     // a slow enumeration but not an engine that had no Activity to answer

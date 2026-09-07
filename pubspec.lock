@@ -140,8 +140,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "1e39e0c0c66d06483acc01208bc5cbb5e707de69"
-      resolved-ref: "1e39e0c0c66d06483acc01208bc5cbb5e707de69"
+      ref: e4d6fe85387195b972ff9d79a907d540f294b4e7
+      resolved-ref: e4d6fe85387195b972ff9d79a907d540f294b4e7
       url: "https://github.com/RadicalMuffinMan/background_downloader.git"
     source: git
     version: "9.6.0"

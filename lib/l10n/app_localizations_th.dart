@@ -9345,6 +9345,31 @@ class AppLocalizationsTh extends AppLocalizations {
   String get settingsPlaybackEngineMpvLegacy => 'mpv (ดั้งเดิม)';
 
   @override
+  String get settingsRedetectDisplay => 'Re-detect display';
+
+  @override
+  String get settingsRedetectDisplayDescription =>
+      'Ask the TV again what HDR formats it supports. Use this if Dolby Vision or HDR10 titles are being transcoded after the TV or receiver was powered on late.';
+
+  @override
+  String get settingsDisplayIsSdr => 'My TV is not HDR';
+
+  @override
+  String get settingsDisplayIsSdrDescription =>
+      'Stop advertising HDR support for this display. Use this only if detection keeps reporting HDR your TV can\'t actually show.';
+
+  @override
+  String settingsDisplayRedetected(String formats) {
+    return 'Display re-detected: $formats';
+  }
+
+  @override
+  String get settingsDisplayNoHdrDetected => 'No HDR formats detected';
+
+  @override
+  String get settingsDisplayMarkedSdr => 'Display saved as SDR';
+
+  @override
   String get settingsDolbyVisionFallback => 'Dolby Vision ทางเลือกสำรอง';
 
   @override

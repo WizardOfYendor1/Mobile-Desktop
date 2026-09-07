@@ -99,7 +99,12 @@ class PlaybackManager implements AudioOwnable {
     PlayerBackend currentBackend,
   )?
   _backendSelector;
-  bool Function(StreamResolutionResult resolution)? _transcodeSelector;
+  /// Returns the reason this client refused direct play, or null to let
+  /// the resolution stand. A reason is needed because a client-side
+  /// refusal leaves the server's transcodingReasons empty, so a report
+  /// otherwise shows a transcode nobody admits to asking for.
+  String? Function(StreamResolutionResult resolution)? _transcodeSelector;
+  String? _clientTranscodeReason;
   Duration Function(dynamic item, Duration startPosition)?
   _startPositionAdjuster;
   Future<PlaybackStartupRecoveryDecision> Function(
@@ -631,7 +636,7 @@ class PlaybackManager implements AudioOwnable {
   }
 
   void setTranscodeSelector(
-    bool Function(StreamResolutionResult resolution)? selector,
+    String? Function(StreamResolutionResult resolution)? selector,
   ) {
     _transcodeSelector = selector;
   }
@@ -660,6 +665,7 @@ class PlaybackManager implements AudioOwnable {
   void _resetBackendSelectionLock() {
     _backendSelectionLockedForSession = false;
     _sessionLockedBackend = null;
+    _clientTranscodeReason = null;
   }
 
   Future<bool> Function(TransportAction action, {Duration? position})?
@@ -1435,16 +1441,22 @@ class PlaybackManager implements AudioOwnable {
         enableDirectPlay &&
         enableDirectStream &&
         enableTranscoding &&
-        resolution.playMethod != StreamPlayMethod.transcode &&
-        transcodeSelector(resolution)) {
-      await _playCurrentItem(
-        startPosition: startPosition,
-        enableDirectPlay: false,
-        enableDirectStream: false,
-        enableTranscoding: true,
-        allowStartupRecovery: allowStartupRecovery,
-      );
-      return;
+        resolution.playMethod != StreamPlayMethod.transcode) {
+      // Every fresh evaluation overwrites the stash, so a reason recorded
+      // before a mid-session capability change can't outlive it. The forced
+      // second pass skips this whole block, which is what carries the reason
+      // through to the decision logger.
+      _clientTranscodeReason = transcodeSelector(resolution);
+      if (_clientTranscodeReason != null) {
+        await _playCurrentItem(
+          startPosition: startPosition,
+          enableDirectPlay: false,
+          enableDirectStream: false,
+          enableTranscoding: true,
+          allowStartupRecovery: allowStartupRecovery,
+        );
+        return;
+      }
     }
 
     bool needsReResolve = false;
@@ -1616,6 +1628,9 @@ class PlaybackManager implements AudioOwnable {
             maxStreamingBitrate: maxBitrate,
             audioStreamIndex: _audioStreamIndex,
             subtitleStreamIndex: _subtitleStreamIndex,
+            clientTranscodeReason:
+                _clientTranscodeReason ??
+                (_forceTranscodeForQueue ? 'callerDisabledDirectPlay' : null),
           ),
         );
       } catch (_) {}
@@ -3146,6 +3161,10 @@ class PlaybackDecisionContext {
   final int? audioStreamIndex;
   final int? subtitleStreamIndex;
 
+  /// Which client-side gate refused direct play, when one did. Server-side
+  /// refusals arrive in [StreamResolutionResult.transcodingReasons] instead.
+  final String? clientTranscodeReason;
+
   const PlaybackDecisionContext({
     required this.mediaItem,
     required this.resolution,
@@ -3154,6 +3173,7 @@ class PlaybackDecisionContext {
     required this.maxStreamingBitrate,
     this.audioStreamIndex,
     this.subtitleStreamIndex,
+    this.clientTranscodeReason,
   });
 }
 

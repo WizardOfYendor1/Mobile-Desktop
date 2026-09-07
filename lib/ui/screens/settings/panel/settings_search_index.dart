@@ -1207,6 +1207,17 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
       ),
     if (PlatformDetection.isAndroid && PlatformDetection.isTV) ...[
       video.leaf(
+        'redetect_display',
+        l10n.settingsRedetectDisplay,
+        subtitle: l10n.settingsRedetectDisplayDescription,
+        keywords: ['hdr', 'dolby vision', 'detect', 'edid', 'transcode'],
+      ),
+      video.leaf(
+        'display_is_sdr',
+        l10n.settingsDisplayIsSdr,
+        keywords: ['hdr', 'sdr', 'dolby vision'],
+      ),
+      video.leaf(
         'dolby_vision_fallback_behavior',
         l10n.settingsDolbyVisionFallback,
         keywords: ['hdr'],
