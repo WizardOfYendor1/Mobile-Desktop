@@ -15,6 +15,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:server_core/server_core.dart' hide ImageType;
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../data/services/auto_download_service.dart';
 import '../../../data/services/plugin_sync_service.dart';
 import '../../../data/services/custom_external_lists_service.dart';
 import '../../../data/models/media_segment.dart';

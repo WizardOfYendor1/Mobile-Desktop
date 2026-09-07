@@ -1461,6 +1461,35 @@ List<_SettingsSearchEntry> _buildSettingsSearchIndex({
         keywords: ['parallel', 'simultaneous'],
       ),
       downloads.leaf('download_storage_limit_mb', l10n.storageLimit),
+      if (AutoDownloadService.isSupportedPlatform) ...[
+        downloads.leaf(
+          'auto_download_enabled',
+          l10n.autoDownloadEnable,
+          subtitle: l10n.autoDownloadEnableSubtitle,
+          keywords: ['follow', 'series', 'subscription'],
+          header: l10n.autoDownloadSection,
+        ),
+        downloads.leaf(
+          'auto_download_keep_unwatched',
+          l10n.autoDownloadKeepUnwatched,
+          keywords: ['episodes', 'limit'],
+          header: l10n.autoDownloadSection,
+        ),
+        downloads.leaf(
+          'auto_download_delete_after_hours',
+          l10n.autoDownloadDelete,
+          subtitle: l10n.autoDownloadDeleteSubtitle,
+          keywords: ['watched', 'remove'],
+          header: l10n.autoDownloadSection,
+        ),
+        downloads.leaf(
+          'auto_download_background_refresh',
+          l10n.autoDownloadBackgroundRefresh,
+          subtitle: l10n.autoDownloadBackgroundRefreshSubtitle,
+          keywords: ['background', 'periodic'],
+          header: l10n.autoDownloadSection,
+        ),
+      ],
       downloads.leaf('download_custom_path', l10n.downloadLocation, keywords: [
         'folder',
         'path',

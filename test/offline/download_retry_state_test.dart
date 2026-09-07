@@ -8,6 +8,7 @@ import 'package:get_it/get_it.dart';
 import 'package:jellyfin_preference/jellyfin_preference.dart';
 import 'package:moonfin/data/database/offline_database.dart';
 import 'package:moonfin/data/models/aggregated_item.dart';
+import 'package:moonfin/data/models/download_source.dart';
 import 'package:moonfin/data/repositories/offline_repository.dart';
 import 'package:moonfin/data/services/download_notification_service.dart';
 import 'package:moonfin/data/services/download_service.dart';
@@ -554,6 +555,117 @@ void main() {
       expect(libraryService.activeDownloads.keys.toSet(), {'ep-2', 'ep-3'});
     });
   });
+
+  group('batch queueing', () {
+    late _BlockingItemsApi api;
+    late _CompletedRowsRepository repo;
+    late DownloadService batchService;
+
+    AggregatedItem movie(String id) => AggregatedItem(
+      id: id,
+      serverId: 'http://127.0.0.1:1',
+      rawData: _sizedItemData(id, 1024),
+    );
+
+    setUp(() {
+      api = _BlockingItemsApi();
+      repo = _CompletedRowsRepository(db);
+      GetIt.instance.unregister<OfflineRepository>();
+      GetIt.instance.registerSingleton<OfflineRepository>(repo);
+      batchService = DownloadService(
+        _FakeClient(api),
+        DownloadNotificationService(),
+      );
+    });
+
+    tearDown(() => batchService.dispose());
+
+    test('queueDownloads skips downloaded and in-flight items', () async {
+      repo.completedIds.add('done');
+      final inFlight = batchService.downloadItem(movie('running'));
+      await _waitForCalls(api, 1);
+
+      final batch = await batchService.queueDownloads([
+        movie('running'),
+        movie('done'),
+        movie('fresh'),
+        movie('fresh'),
+      ]);
+
+      expect(batch.queued.map((i) => i.id), ['fresh']);
+      expect(batchService.totalQueued, 1);
+      expect(batchService.inFlightItemIds, {'running', 'fresh'});
+
+      await _waitForCalls(api, 2);
+      api.releaseNext();
+      api.releaseNext();
+      await inFlight.catchError((_) {});
+      await batch.done;
+      expect(batchService.totalQueued, 0);
+    });
+
+    test(
+      'concurrent batches share one count until the last finishes',
+      () async {
+        await prefs.set(UserPreferences.downloadConcurrentCount, 3);
+        final first = await batchService.queueDownloads([
+          movie('a'),
+          movie('b'),
+        ]);
+        expect(batchService.totalQueued, 2);
+        expect(batchService.isBatchDownloading, isTrue);
+
+        final second = await batchService.queueDownloads([movie('c')]);
+        expect(batchService.totalQueued, 3, reason: 'counts are additive');
+
+        await _waitForCalls(api, 3);
+        api.releaseNext();
+        api.releaseNext();
+        await first.done;
+        expect(
+          batchService.totalQueued,
+          3,
+          reason: 'the count holds while another batch is still open',
+        );
+
+        api.releaseNext();
+        await second.done;
+        expect(batchService.totalQueued, 0);
+        expect(batchService.completedCount, 0);
+        expect(batchService.isBatchDownloading, isFalse);
+      },
+    );
+
+    test('an auto batch stamps its rows with the auto source', () async {
+      final batch = await batchService.queueDownloads([
+        movie('auto-1'),
+      ], source: DownloadSource.auto);
+      await _waitForCalls(api, 1);
+      api.releaseNext();
+      await batch.done;
+
+      expect(repo.upserts.single.downloadSource.value, 'auto');
+    });
+  });
+}
+
+/// Reports [completedIds] as finished downloads and records every upsert.
+class _CompletedRowsRepository extends _FakeOfflineRepository {
+  _CompletedRowsRepository(super.db);
+
+  final Set<String> completedIds = {};
+  final List<DownloadedItemsCompanion> upserts = [];
+
+  @override
+  Future<void> upsertItem(DownloadedItemsCompanion item) async {
+    upserts.add(item);
+  }
+
+  @override
+  Future<List<DownloadRef>> getDownloadRefs() async => [
+    for (final id in completedIds)
+      (itemId: id, downloadStatus: 2, downloadSource: 'manual'),
+  ];
 }
 
 Future<void> _waitForCalls(_BlockingItemsApi api, int expected) async {

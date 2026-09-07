@@ -5,6 +5,7 @@ import '../../widgets/bounded_network_image.dart';
 import '../../widgets/offline_aware_image.dart';
 import '../../widgets/identify_dialog.dart';
 import '../../widgets/focus/context_action.dart' show canIdentifyItemType;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +20,7 @@ import '../../../data/repositories/item_mutation_repository.dart';
 import '../../../data/repositories/mdblist_repository.dart';
 import '../../../data/repositories/tmdb_repository.dart';
 import '../../../data/services/background_service.dart';
+import '../../../data/services/auto_download_service.dart';
 import '../../../data/services/download_service.dart';
 import '../../../data/models/download_quality.dart';
 import '../../../data/database/offline_database.dart';
@@ -10390,6 +10392,20 @@ class _DownloadButtonState extends State<_DownloadButton> {
   static bool _isBatchType(String? type) =>
       type == 'Season' || type == 'Series' || type == 'BoxSet';
 
+  /// One line of context under a sheet title.
+  Widget _sheetNote(BuildContext sheetContext, String text) => Padding(
+    padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+    child: Text(
+      text,
+      style: TextStyle(
+        fontSize: 13,
+        color: PlatformDetection.isTV
+            ? null
+            : Colors.white.withValues(alpha: 0.6),
+      ),
+    ),
+  );
+
   Widget _sheetTitle(BuildContext sheetContext, String text) => Padding(
     padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
     child: Text(
@@ -10443,6 +10459,16 @@ class _DownloadButtonState extends State<_DownloadButton> {
             return null;
           },
         );
+
+    final autoDownloads =
+        item.type == 'Series' &&
+            GetIt.instance.isRegistered<AutoDownloadService>()
+        ? GetIt.instance<AutoDownloadService>()
+        : null;
+
+    // Set by the auto-download row before it closes the sheet.
+    var autoChosen = false;
+    AutoDownloadSubscription? subscription;
 
     final chosen =
         await showFocusRestoringModalBottomSheet<List<AggregatedItem>>(
@@ -10511,6 +10537,16 @@ class _DownloadButtonState extends State<_DownloadButton> {
                       );
                     },
                   ),
+                  if (autoDownloads != null)
+                    _autoDownloadRow(
+                      sheetContext,
+                      autoDownloads,
+                      onSubscription: (current) => subscription = current,
+                      onTap: () {
+                        autoChosen = true;
+                        Navigator.pop(sheetContext);
+                      },
+                    ),
                   const SizedBox(height: 8),
                 ],
               ),
@@ -10519,8 +10555,95 @@ class _DownloadButtonState extends State<_DownloadButton> {
         );
     // Opened only after the scope sheet is gone, so the quality picker
     // restores focus to the Download button rather than to a disposed row.
-    if (chosen == null || !mounted) return;
+    if (!mounted) return;
+    if (autoChosen) {
+      await _toggleAutoDownload(autoDownloads!, existing: subscription);
+      return;
+    }
+    if (chosen == null) return;
     _showQualityPicker(this.context, service, items: chosen);
+  }
+
+  /// Follows or unfollows the series. Following asks for a quality first so
+  /// the subscription records one.
+  Future<void> _toggleAutoDownload(
+    AutoDownloadService autoDownloads, {
+    required AutoDownloadSubscription? existing,
+  }) async {
+    final item = widget.item;
+    final l10n = AppLocalizations.of(context);
+    if (existing != null) {
+      await autoDownloads.unsubscribe(item.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.autoDownloadStoppedFor(item.name))),
+      );
+      return;
+    }
+    final quality = await _pickQuality(
+      context,
+      title: l10n.autoDownloadQualityTitle,
+      // iOS background checks skip transcoded subscriptions; Android's
+      // worker can run them, so the note is an iOS matter.
+      note: PlatformDetection.isIOS
+          ? l10n.autoDownloadTranscodedForegroundNote
+          : null,
+    );
+    if (quality == null || !mounted) return;
+    unawaited(autoDownloads.subscribe(item, quality: quality));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.autoDownloadEnabledFor(item.name))),
+    );
+  }
+
+  /// Third row of a series' scope sheet: subscribe to new episodes, or stop.
+  /// Reports the current subscription through [onSubscription] so the
+  /// caller knows which of the two [onTap] meant.
+  Widget _autoDownloadRow(
+    BuildContext sheetContext,
+    AutoDownloadService autoDownloads, {
+    required void Function(AutoDownloadSubscription?) onSubscription,
+    required VoidCallback onTap,
+  }) {
+    final l10n = AppLocalizations.of(sheetContext);
+    final isTV = PlatformDetection.isTV;
+    final keep = GetIt.instance<UserPreferences>().get(
+      UserPreferences.autoDownloadKeepUnwatched,
+    );
+    return StreamBuilder<AutoDownloadSubscription?>(
+      stream: autoDownloads.watchSubscription(widget.item.id),
+      builder: (_, snapshot) {
+        final subscription = snapshot.data;
+        onSubscription(subscription);
+        final quality = subscription == null
+            ? null
+            : DownloadQuality.fromName(subscription.qualityPreset);
+        return DpadListTile(
+          autofocus: false,
+          leading: AdaptiveIcon(
+            subscription == null ? Icons.autorenew : Icons.stop_circle_outlined,
+            color: isTV ? null : Colors.white70,
+          ),
+          title: Text(
+            subscription == null
+                ? l10n.autoDownloadNewEpisodes
+                : l10n.autoDownloadStop,
+            style: isTV ? null : const TextStyle(color: Colors.white),
+          ),
+          subtitle: Text(
+            subscription == null
+                ? l10n.autoDownloadKeepUnwatchedSubtitle(keep)
+                : quality!.isTranscoded && PlatformDetection.isIOS
+                ? '${l10n.autoDownloadStopSubtitle(quality.label)} • ${l10n.autoDownloadForegroundOnly}'
+                : l10n.autoDownloadStopSubtitle(quality.label),
+            style: isTV
+                ? null
+                : TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+          ),
+          onTap: onTap,
+        );
+      },
+    );
   }
 
   Widget _scopeRow(
@@ -10564,28 +10687,51 @@ class _DownloadButtonState extends State<_DownloadButton> {
     );
   }
 
-  /// Shows the quality picker. For series, seasons and collections [items] is
-  /// the list resolved by the scope picker and drives both the size estimate
-  /// and what gets queued.
-  void _showQualityPicker(
+  /// Shows the quality picker and queues the download. For series, seasons
+  /// and collections [items] is the list resolved by the scope picker and
+  /// drives both the size estimate and what gets queued.
+  Future<void> _showQualityPicker(
     BuildContext context,
     DownloadService service, {
     List<AggregatedItem>? items,
-  }) {
+  }) async {
     final item = widget.item;
     final isMulti = _isBatchType(item.type);
-    final supportsTranscoding =
-        item.type == 'Movie' ||
-        item.type == 'Episode' ||
-        item.type == 'MusicVideo' ||
-        item.type == 'Video' ||
-        isMulti;
-    final batchItems = items ?? const <AggregatedItem>[];
-
-    if (!isMulti && !supportsTranscoding) {
+    if (!isMulti && !_supportsTranscoding(item.type)) {
       _startDownload(context, service, DownloadQuality.original);
       return;
     }
+    final quality = await _pickQuality(
+      context,
+      title: isMulti
+          ? AppLocalizations.of(context).downloadAllQuality
+          : AppLocalizations.of(context).downloadQuality,
+      items: items ?? const [],
+    );
+    if (quality == null || !mounted) return;
+    _startDownload(this.context, service, quality, items: items);
+  }
+
+  static bool _supportsTranscoding(String? type) =>
+      type == 'Movie' ||
+      type == 'Episode' ||
+      type == 'MusicVideo' ||
+      type == 'Video';
+
+  /// Lets the user pick a quality for [widget.item]; size estimates cover
+  /// [items] for batches. Null when the sheet is dismissed.
+  /// [note] is shown once under the title, for callers where the choice has
+  /// a consequence worth stating.
+  Future<DownloadQuality?> _pickQuality(
+    BuildContext context, {
+    required String title,
+    List<AggregatedItem> items = const [],
+    String? note,
+  }) {
+    final item = widget.item;
+    final isMulti = _isBatchType(item.type);
+    final supportsTranscoding = isMulti || _supportsTranscoding(item.type);
+    final batchItems = items;
 
     final sourceWidth = isMulti
         ? (() {
@@ -10617,12 +10763,8 @@ class _DownloadButtonState extends State<_DownloadButton> {
           batchItems: batchItems,
         ),
     };
-    final title = isMulti
-        ? AppLocalizations.of(context).downloadAllQuality
-        : AppLocalizations.of(context).downloadQuality;
-
     if (PlatformDetection.isTV) {
-      showFocusRestoringModalBottomSheet(
+      return showFocusRestoringModalBottomSheet<DownloadQuality>(
         context: context,
         isScrollControlled: true,
         backgroundColor: const Color(0xFF1E1E1E),
@@ -10639,6 +10781,7 @@ class _DownloadButtonState extends State<_DownloadButton> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _sheetTitle(sheetContext, title),
+                if (note != null) _sheetNote(sheetContext, note),
                 Flexible(
                   child: ListView(
                     shrinkWrap: true,
@@ -10655,15 +10798,7 @@ class _DownloadButtonState extends State<_DownloadButton> {
                         ),
                         title: Text(quality.label),
                         subtitle: Text(subtitles[quality]!),
-                        onTap: () {
-                          Navigator.pop(sheetContext);
-                          _startDownload(
-                            context,
-                            service,
-                            quality,
-                            items: items,
-                          );
-                        },
+                        onTap: () => Navigator.pop(sheetContext, quality),
                       );
                     }).toList(),
                   ),
@@ -10673,10 +10808,9 @@ class _DownloadButtonState extends State<_DownloadButton> {
           ),
         ),
       );
-      return;
     }
 
-    showFocusRestoringModalBottomSheet(
+    return showFocusRestoringModalBottomSheet<DownloadQuality>(
       context: context,
       backgroundColor: const Color(0xFF1E1E1E),
       shape: const RoundedRectangleBorder(
@@ -10688,6 +10822,7 @@ class _DownloadButtonState extends State<_DownloadButton> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _sheetTitle(context, title),
+            if (note != null) _sheetNote(context, note),
             ...availableQualities.map(
               (quality) => ListTile(
                 leading: AdaptiveIcon(
@@ -10704,10 +10839,7 @@ class _DownloadButtonState extends State<_DownloadButton> {
                   subtitles[quality]!,
                   style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
                 ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _startDownload(context, service, quality, items: items);
-                },
+                onTap: () => Navigator.pop(context, quality),
               ),
             ),
             const SizedBox(height: 8),

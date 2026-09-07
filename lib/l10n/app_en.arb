@@ -10269,5 +10269,177 @@
   "serverMessagesShowButtonSubtitle": "Adds a button to the menu for messages sent by your server admin",
   "@serverMessagesShowButtonSubtitle": {
     "description": "Explains the setting that shows or hides the messages button"
+  },
+  "autoDownloadNewEpisodes": "Auto-download new episodes",
+  "@autoDownloadNewEpisodes": {
+    "description": "Row in the download sheet of a series that subscribes it to automatic downloads"
+  },
+  "autoDownloadStop": "Stop auto-download",
+  "@autoDownloadStop": {
+    "description": "Row in the download sheet of a series that is already subscribed; tapping removes the subscription"
+  },
+  "autoDownloadKeepUnwatchedSubtitle": "{count, plural, =0{Downloads every new episode as it arrives} =1{Downloads new episodes, keeping 1 unwatched} other{Downloads new episodes, keeping up to {count} unwatched}}",
+  "@autoDownloadKeepUnwatchedSubtitle": {
+    "description": "Subtitle under the auto-download row explaining the keep-unwatched rule",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "autoDownloadStopSubtitle": "On • {quality}",
+  "@autoDownloadStopSubtitle": {
+    "description": "Subtitle under the stop auto-download row showing the subscription's quality",
+    "placeholders": {
+      "quality": {
+        "type": "String"
+      }
+    }
+  },
+  "autoDownloadTranscodedForegroundNote": "Transcoded qualities are only fetched while Moonfin is open. Original also works in the background.",
+  "@autoDownloadTranscodedForegroundNote": {
+    "description": "Shown under transcoded options when choosing the quality of an auto-download subscription"
+  },
+  "autoDownloadTranscodedRunningNote": "Automatic download in a transcoded quality: it cannot resume after a connection drop and starts over. Original quality can.",
+  "@autoDownloadTranscodedRunningNote": {
+    "description": "Shown under a running transcoded download that a subscription queued"
+  },
+  "autoDownloadForegroundOnly": "Only while the app is open",
+  "@autoDownloadForegroundOnly": {
+    "description": "Short note next to a followed series in a transcoded quality"
+  },
+  "autoDownloadQualityTitle": "Auto-download quality",
+  "@autoDownloadQualityTitle": {
+    "description": "Title of the quality sheet when it is opened to create an auto-download subscription"
+  },
+  "autoDownloadEnabledFor": "Auto-download enabled for {title}",
+  "@autoDownloadEnabledFor": {
+    "description": "Snackbar after subscribing a series",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "autoDownloadStoppedFor": "Auto-download stopped for {title}",
+  "@autoDownloadStoppedFor": {
+    "description": "Snackbar after unsubscribing a series",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "autoDownloadSection": "Automatic downloads",
+  "@autoDownloadSection": {
+    "description": "Settings section header for auto-download subscriptions"
+  },
+  "autoDownloadEnable": "Enable automatic downloads",
+  "@autoDownloadEnable": {
+    "description": "Master switch for auto-download subscriptions"
+  },
+  "autoDownloadEnableSubtitle": "Downloads episodes that arrive after you follow a series. Older episodes stay with the manual download options",
+  "@autoDownloadEnableSubtitle": {
+    "description": "Explains the master switch"
+  },
+  "autoDownloadKeepUnwatched": "Keep unwatched episodes",
+  "@autoDownloadKeepUnwatched": {
+    "description": "Setting that caps how many unwatched episodes per series stay downloaded"
+  },
+  "autoDownloadKeepAll": "All",
+  "@autoDownloadKeepAll": {
+    "description": "Option meaning no cap on kept unwatched episodes"
+  },
+  "autoDownloadDelete": "Delete downloaded episodes",
+  "@autoDownloadDelete": {
+    "description": "Setting that picks how soon an auto-downloaded episode is removed after it was watched"
+  },
+  "autoDownloadDeleteSubtitle": "Choose how quickly episodes you downloaded automatically are removed once you have watched them",
+  "@autoDownloadDeleteSubtitle": {
+    "description": "Explains the delete-after-watching setting"
+  },
+  "autoDownloadDeleteNever": "Never",
+  "@autoDownloadDeleteNever": {
+    "description": "Delete-after-watching option: keep episodes"
+  },
+  "autoDownloadDeleteImmediately": "Right after watching",
+  "@autoDownloadDeleteImmediately": {
+    "description": "Delete-after-watching option: remove at the next check once played"
+  },
+  "autoDownloadDeleteAfterDay": "1 day after watching",
+  "@autoDownloadDeleteAfterDay": {
+    "description": "Delete-after-watching option"
+  },
+  "autoDownloadDeleteAfterWeek": "1 week after watching",
+  "@autoDownloadDeleteAfterWeek": {
+    "description": "Delete-after-watching option"
+  },
+  "autoDownloadBackgroundRefresh": "Check in the background",
+  "@autoDownloadBackgroundRefresh": {
+    "description": "Setting that lets iOS wake the app to check for new episodes"
+  },
+  "autoDownloadBackgroundRefreshSubtitle": "Lets iOS wake Moonfin now and then to look for new episodes",
+  "@autoDownloadBackgroundRefreshSubtitle": {
+    "description": "Explains the background refresh setting"
+  },
+  "autoDownloadBackgroundRefreshDenied": "Background App Refresh is turned off for Moonfin in iOS Settings",
+  "@autoDownloadBackgroundRefreshDenied": {
+    "description": "Shown when iOS forbids background refresh for the app"
+  },
+  "autoDownloadCheckNow": "Check now",
+  "@autoDownloadCheckNow": {
+    "description": "Button that runs a subscription check immediately"
+  },
+  "autoDownloadChecking": "Checking...",
+  "@autoDownloadChecking": {
+    "description": "Subtitle while a subscription check is running"
+  },
+  "autoDownloadNeverChecked": "Not checked yet",
+  "@autoDownloadNeverChecked": {
+    "description": "Subtitle when no subscription check has run"
+  },
+  "autoDownloadLastCheck": "Last check {when}: {queued, plural, =0{nothing new} =1{1 episode queued} other{{queued} episodes queued}}",
+  "@autoDownloadLastCheck": {
+    "description": "Subtitle summarising the last subscription check",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "queued": {
+        "type": "int"
+      }
+    }
+  },
+  "autoDownloadLastCheckFailed": "Last check {when} failed: {error}",
+  "@autoDownloadLastCheckFailed": {
+    "description": "Subtitle when the last subscription check hit an error",
+    "placeholders": {
+      "when": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "autoDownloadFollowedSeries": "Followed series",
+  "@autoDownloadFollowedSeries": {
+    "description": "Settings section header listing the series with auto-download on"
+  },
+  "autoDownloadNoSubscriptions": "Open a series and choose \"Auto-download new episodes\" from the download button",
+  "@autoDownloadNoSubscriptions": {
+    "description": "Shown in settings when no series is followed"
+  },
+  "autoDownloadRemove": "Stop following",
+  "@autoDownloadRemove": {
+    "description": "Tooltip on the button that removes a followed series"
+  },
+  "autoDownloadStorageFull": "Storage limit reached",
+  "@autoDownloadStorageFull": {
+    "description": "Appended to the last-check summary when the storage limit stopped queueing"
+  },
+  "autoDownloadWaitingForWifi": "Waiting for WiFi",
+  "@autoDownloadWaitingForWifi": {
+    "description": "Last-check summary when Wi-Fi only is on and the device was on mobile data"
   }
 }

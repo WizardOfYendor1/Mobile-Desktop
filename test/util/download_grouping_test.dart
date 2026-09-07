@@ -24,6 +24,7 @@ DownloadedItem _saved(
   playbackPositionTicks: 0,
   progressSynced: true,
   qualityPreset: 'original',
+  downloadSource: 'manual',
   seriesId: seriesId,
   seriesName: seriesName,
   indexNumber: episode,

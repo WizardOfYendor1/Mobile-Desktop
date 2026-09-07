@@ -18,8 +18,10 @@ import 'data/models/aggregated_item.dart';
 import 'background/watch_next_background.dart' as watch_next_bg;
 import 'data/services/carplay_service.dart';
 import 'data/services/cast/airplay_command_bridge.dart';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 
+import 'data/services/auto_download_service.dart';
 import 'data/services/background_download_coordinator.dart';
 import 'data/services/download_notification_service.dart';
 import 'data/services/push_messaging_service.dart';
@@ -641,6 +643,17 @@ void _sweepImageCache(UserPreferences prefs, {bool throttle = false}) {
   unawaited(enforceGameArtworkCacheBudget(throttle: throttle));
 }
 
+/// Runs an auto-download check when the app comes back to the foreground;
+/// the service throttles resumes that follow a recent check.
+class _AutoDownloadResumeObserver with WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    if (!GetIt.instance.isRegistered<AutoDownloadService>()) return;
+    GetIt.instance<AutoDownloadService>().onAppResumed();
+  }
+}
+
 class _ImageCacheSweepObserver with WidgetsBindingObserver {
   _ImageCacheSweepObserver(this._prefs);
 
@@ -864,6 +877,7 @@ void main() async {
   WidgetsBinding.instance.addObserver(_PreferenceWriteFlushObserver(prefs));
   WidgetsBinding.instance.addObserver(_ImageCacheSweepObserver(prefs));
   WidgetsBinding.instance.addObserver(_CapabilityRefreshObserver());
+  WidgetsBinding.instance.addObserver(_AutoDownloadResumeObserver());
   WidgetsBinding.instance.addPostFrameCallback((_) => _sweepImageCache(prefs));
 
   GetIt.instance<PlaybackManager>().queueService.queueChangedStream.listen((_) {

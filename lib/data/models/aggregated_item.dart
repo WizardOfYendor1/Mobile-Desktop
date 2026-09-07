@@ -196,6 +196,18 @@ class AggregatedItem {
     return v != null ? DateTime.tryParse(v) : null;
   }
 
+  /// When the user last played the item, per the server.
+  DateTime? get lastPlayedDate {
+    final v = _userData?['LastPlayedDate'] as String?;
+    return v != null ? DateTime.tryParse(v) : null;
+  }
+
+  /// When the server added the item to its library.
+  DateTime? get dateCreated {
+    final v = rawData['DateCreated'] as String?;
+    return v != null ? DateTime.tryParse(v) : null;
+  }
+
   DateTime? get endDate {
     final v = rawData['EndDate'] as String?;
     return v != null ? DateTime.tryParse(v) : null;

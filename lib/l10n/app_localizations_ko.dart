@@ -11101,4 +11101,139 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get serverMessagesShowButtonSubtitle =>
       'Adds a button to the menu for messages sent by your server admin';
+
+  @override
+  String get autoDownloadNewEpisodes => 'Auto-download new episodes';
+
+  @override
+  String get autoDownloadStop => 'Stop auto-download';
+
+  @override
+  String autoDownloadKeepUnwatchedSubtitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Downloads new episodes, keeping up to $count unwatched',
+      one: 'Downloads new episodes, keeping 1 unwatched',
+      zero: 'Downloads every new episode as it arrives',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String autoDownloadStopSubtitle(String quality) {
+    return 'On • $quality';
+  }
+
+  @override
+  String get autoDownloadTranscodedForegroundNote =>
+      'Transcoded qualities are only fetched while Moonfin is open. Original also works in the background.';
+
+  @override
+  String get autoDownloadTranscodedRunningNote =>
+      'Automatic download in a transcoded quality: it cannot resume after a connection drop and starts over. Original quality can.';
+
+  @override
+  String get autoDownloadForegroundOnly => 'Only while the app is open';
+
+  @override
+  String get autoDownloadQualityTitle => 'Auto-download quality';
+
+  @override
+  String autoDownloadEnabledFor(String title) {
+    return 'Auto-download enabled for $title';
+  }
+
+  @override
+  String autoDownloadStoppedFor(String title) {
+    return 'Auto-download stopped for $title';
+  }
+
+  @override
+  String get autoDownloadSection => 'Automatic downloads';
+
+  @override
+  String get autoDownloadEnable => 'Enable automatic downloads';
+
+  @override
+  String get autoDownloadEnableSubtitle =>
+      'Downloads episodes that arrive after you follow a series. Older episodes stay with the manual download options';
+
+  @override
+  String get autoDownloadKeepUnwatched => 'Keep unwatched episodes';
+
+  @override
+  String get autoDownloadKeepAll => 'All';
+
+  @override
+  String get autoDownloadDelete => 'Delete downloaded episodes';
+
+  @override
+  String get autoDownloadDeleteSubtitle =>
+      'Choose how quickly episodes you downloaded automatically are removed once you have watched them';
+
+  @override
+  String get autoDownloadDeleteNever => 'Never';
+
+  @override
+  String get autoDownloadDeleteImmediately => 'Right after watching';
+
+  @override
+  String get autoDownloadDeleteAfterDay => '1 day after watching';
+
+  @override
+  String get autoDownloadDeleteAfterWeek => '1 week after watching';
+
+  @override
+  String get autoDownloadBackgroundRefresh => 'Check in the background';
+
+  @override
+  String get autoDownloadBackgroundRefreshSubtitle =>
+      'Lets iOS wake Moonfin now and then to look for new episodes';
+
+  @override
+  String get autoDownloadBackgroundRefreshDenied =>
+      'Background App Refresh is turned off for Moonfin in iOS Settings';
+
+  @override
+  String get autoDownloadCheckNow => 'Check now';
+
+  @override
+  String get autoDownloadChecking => 'Checking...';
+
+  @override
+  String get autoDownloadNeverChecked => 'Not checked yet';
+
+  @override
+  String autoDownloadLastCheck(String when, int queued) {
+    String _temp0 = intl.Intl.pluralLogic(
+      queued,
+      locale: localeName,
+      other: '$queued episodes queued',
+      one: '1 episode queued',
+      zero: 'nothing new',
+    );
+    return 'Last check $when: $_temp0';
+  }
+
+  @override
+  String autoDownloadLastCheckFailed(String when, String error) {
+    return 'Last check $when failed: $error';
+  }
+
+  @override
+  String get autoDownloadFollowedSeries => 'Followed series';
+
+  @override
+  String get autoDownloadNoSubscriptions =>
+      'Open a series and choose \"Auto-download new episodes\" from the download button';
+
+  @override
+  String get autoDownloadRemove => 'Stop following';
+
+  @override
+  String get autoDownloadStorageFull => 'Storage limit reached';
+
+  @override
+  String get autoDownloadWaitingForWifi => 'Waiting for WiFi';
 }

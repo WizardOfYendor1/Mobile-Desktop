@@ -9,8 +9,10 @@ import 'package:get_it/get_it.dart';
 import 'package:moonfin_design/moonfin_design.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../../data/database/offline_database.dart';
 import '../../../data/models/download_quality.dart';
 import '../../../data/providers/offline_providers.dart';
+import '../../../data/services/auto_download_service.dart';
 import '../../../data/services/background_download_coordinator.dart';
 import '../../../data/services/download_service.dart';
 import '../../../data/services/macos_download_dir.dart';
@@ -19,6 +21,7 @@ import '../../../di/providers.dart';
 import '../../../preference/user_preferences.dart';
 import '../../../util/download_utils.dart';
 import '../../../util/platform_detection.dart';
+import '../../../util/relative_time_label.dart';
 import '../../../util/tv_image_cache_stub.dart'
     if (dart.library.io) '../../../util/tv_image_cache_io.dart';
 import '../../../l10n/app_localizations.dart';
@@ -124,6 +127,13 @@ class DownloadSettingsScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            if (GetIt.instance.isRegistered<AutoDownloadService>()) ...[
+              _Section(title: l10n.autoDownloadSection),
+              _AutoDownloadSettings(
+                prefs: prefs,
+                service: GetIt.instance<AutoDownloadService>(),
+              ),
+            ],
             _Section(title: l10n.storage),
             adaptiveListSection(
               children: [
@@ -771,6 +781,242 @@ class _Section extends StatelessWidget {
           fontSize: 14,
           fontWeight: FontWeight.w600,
           color: Theme.of(context).colorScheme.primary,
+        ),
+      ),
+    );
+  }
+}
+
+/// The auto-download group: global rules, background refresh, a manual check
+/// with the last result, and the followed series.
+class _AutoDownloadSettings extends StatefulWidget {
+  const _AutoDownloadSettings({required this.prefs, required this.service});
+
+  final UserPreferences prefs;
+  final AutoDownloadService service;
+
+  @override
+  State<_AutoDownloadSettings> createState() => _AutoDownloadSettingsState();
+}
+
+class _AutoDownloadSettingsState extends State<_AutoDownloadSettings> {
+  static const _keepChoices = [1, 2, 3, 5, 10, 0];
+
+  /// Never, right away, a day, a week: the choices Plex offers.
+  static const _deleteAfterChoices = [-1, 0, 24, 24 * 7];
+
+  late Stream<List<AutoDownloadSubscription>> _subscriptions;
+
+  @override
+  void initState() {
+    super.initState();
+    // Created once: the parent rebuilds on every preference change and a
+    // new stream per build would re-run the query and flicker.
+    _subscriptions = widget.service.watchSubscriptions();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final prefs = widget.prefs;
+    final service = widget.service;
+    final enabled = prefs.get(UserPreferences.autoDownloadEnabled);
+    final keep = prefs.get(UserPreferences.autoDownloadKeepUnwatched);
+    final deleteAfterHours = prefs.get(
+      UserPreferences.autoDownloadDeleteAfterHours,
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        adaptiveListSection(
+          children: [
+            DpadSwitchListTile(
+              useSettingsIconShell: true,
+              secondary: const Icon(Icons.autorenew),
+              title: Text(l10n.autoDownloadEnable),
+              subtitle: Text(l10n.autoDownloadEnableSubtitle),
+              value: enabled,
+              onChanged: (v) =>
+                  prefs.set(UserPreferences.autoDownloadEnabled, v),
+            ),
+            DpadListTile(
+              useSettingsIconShell: true,
+              leading: const Icon(Icons.filter_list),
+              title: Text(l10n.autoDownloadKeepUnwatched),
+              subtitle: Text(l10n.autoDownloadKeepUnwatchedSubtitle(keep)),
+              trailing: Text(keep == 0 ? l10n.autoDownloadKeepAll : '$keep'),
+              onTap: () => _pickKeepUnwatched(context, keep),
+            ),
+            DpadListTile(
+              useSettingsIconShell: true,
+              leading: const Icon(Icons.delete_sweep_outlined),
+              title: Text(l10n.autoDownloadDelete),
+              subtitle: Text(l10n.autoDownloadDeleteSubtitle),
+              trailing: Text(_deleteAfterLabel(l10n, deleteAfterHours)),
+              onTap: () => _pickDeleteAfter(context, deleteAfterHours),
+            ),
+            AnimatedBuilder(
+              animation: service,
+              builder: (context, _) => DpadListTile(
+                useSettingsIconShell: true,
+                leading: const Icon(Icons.refresh),
+                title: Text(l10n.autoDownloadCheckNow),
+                subtitle: Text(
+                  service.isRunning
+                      ? l10n.autoDownloadChecking
+                      : _lastRunLabel(l10n, service.lastRun),
+                ),
+                enabled: enabled && !service.isRunning,
+                onTap: () =>
+                    service.runCheck(trigger: AutoDownloadTrigger.manual),
+              ),
+            ),
+          ],
+        ),
+        _Section(title: l10n.autoDownloadFollowedSeries),
+        StreamBuilder<List<AutoDownloadSubscription>>(
+          stream: _subscriptions,
+          builder: (context, snapshot) {
+            final subscriptions = snapshot.data ?? const [];
+            if (subscriptions.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Text(
+                  l10n.autoDownloadNoSubscriptions,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              );
+            }
+            return adaptiveListSection(
+              children: [
+                for (final subscription in subscriptions)
+                  DpadListTile(
+                    useSettingsIconShell: true,
+                    leading: const Icon(Icons.tv),
+                    title: Text(subscription.seriesName),
+                    subtitle: Text(_subscriptionLabel(l10n, subscription)),
+                    trailing: IconButton(
+                      tooltip: l10n.autoDownloadRemove,
+                      icon: const Icon(Icons.close),
+                      onPressed: () =>
+                          service.unsubscribe(subscription.seriesId),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  String _subscriptionLabel(
+    AppLocalizations l10n,
+    AutoDownloadSubscription subscription,
+  ) {
+    final preset = DownloadQuality.fromName(subscription.qualityPreset);
+    final quality = preset.isTranscoded && PlatformDetection.isIOS
+        ? '${preset.label} • ${l10n.autoDownloadForegroundOnly}'
+        : preset.label;
+    final checkedAt = subscription.lastCheckedAt;
+    if (checkedAt == null) return '$quality • ${l10n.autoDownloadNeverChecked}';
+    final check = _checkLabel(
+      l10n,
+      at: checkedAt,
+      queued: subscription.lastQueuedCount,
+      error: subscription.lastError,
+    );
+    return '$quality • $check';
+  }
+
+  String _lastRunLabel(AppLocalizations l10n, AutoDownloadRunSummary? run) {
+    if (run == null) return l10n.autoDownloadNeverChecked;
+    final label = _checkLabel(
+      l10n,
+      at: run.at,
+      queued: run.queued,
+      error: run.error,
+    );
+    if (run.waitingForWifi) {
+      return '$label • ${l10n.autoDownloadWaitingForWifi}';
+    }
+    if (run.storageFull) return '$label • ${l10n.autoDownloadStorageFull}';
+    return label;
+  }
+
+  String _checkLabel(
+    AppLocalizations l10n, {
+    required DateTime at,
+    required int queued,
+    required String? error,
+  }) {
+    final when = relativeTimeLabel(l10n, at);
+    return error != null
+        ? l10n.autoDownloadLastCheckFailed(when, error)
+        : l10n.autoDownloadLastCheck(when, queued);
+  }
+
+  String _deleteAfterLabel(AppLocalizations l10n, int hours) => switch (hours) {
+    < 0 => l10n.autoDownloadDeleteNever,
+    0 => l10n.autoDownloadDeleteImmediately,
+    < 24 * 7 => l10n.autoDownloadDeleteAfterDay,
+    _ => l10n.autoDownloadDeleteAfterWeek,
+  };
+
+  void _pickDeleteAfter(BuildContext context, int current) {
+    final l10n = AppLocalizations.of(context);
+    showFocusRestoringModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: DpadRadioGroup<int>(
+          groupValue: current,
+          onChanged: (v) {
+            if (v != null) {
+              widget.prefs.set(UserPreferences.autoDownloadDeleteAfterHours, v);
+            }
+            Navigator.pop(ctx);
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final hours in _deleteAfterChoices)
+                DpadRadioListTile<int>(
+                  autofocus: hours == current,
+                  title: Text(_deleteAfterLabel(l10n, hours)),
+                  value: hours,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _pickKeepUnwatched(BuildContext context, int current) {
+    final l10n = AppLocalizations.of(context);
+    showFocusRestoringModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: DpadRadioGroup<int>(
+          groupValue: current,
+          onChanged: (v) {
+            if (v != null) {
+              widget.prefs.set(UserPreferences.autoDownloadKeepUnwatched, v);
+            }
+            Navigator.pop(ctx);
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final n in _keepChoices)
+                DpadRadioListTile<int>(
+                  autofocus: n == current,
+                  title: Text(n == 0 ? l10n.autoDownloadKeepAll : '$n'),
+                  value: n,
+                ),
+            ],
+          ),
         ),
       ),
     );

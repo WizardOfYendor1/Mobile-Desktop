@@ -20397,6 +20397,210 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Adds a button to the menu for messages sent by your server admin'**
   String get serverMessagesShowButtonSubtitle;
+
+  /// Row in the download sheet of a series that subscribes it to automatic downloads
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-download new episodes'**
+  String get autoDownloadNewEpisodes;
+
+  /// Row in the download sheet of a series that is already subscribed; tapping removes the subscription
+  ///
+  /// In en, this message translates to:
+  /// **'Stop auto-download'**
+  String get autoDownloadStop;
+
+  /// Subtitle under the auto-download row explaining the keep-unwatched rule
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{Downloads every new episode as it arrives} =1{Downloads new episodes, keeping 1 unwatched} other{Downloads new episodes, keeping up to {count} unwatched}}'**
+  String autoDownloadKeepUnwatchedSubtitle(int count);
+
+  /// Subtitle under the stop auto-download row showing the subscription's quality
+  ///
+  /// In en, this message translates to:
+  /// **'On • {quality}'**
+  String autoDownloadStopSubtitle(String quality);
+
+  /// Shown under transcoded options when choosing the quality of an auto-download subscription
+  ///
+  /// In en, this message translates to:
+  /// **'Transcoded qualities are only fetched while Moonfin is open. Original also works in the background.'**
+  String get autoDownloadTranscodedForegroundNote;
+
+  /// Shown under a running transcoded download that a subscription queued
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic download in a transcoded quality: it cannot resume after a connection drop and starts over. Original quality can.'**
+  String get autoDownloadTranscodedRunningNote;
+
+  /// Short note next to a followed series in a transcoded quality
+  ///
+  /// In en, this message translates to:
+  /// **'Only while the app is open'**
+  String get autoDownloadForegroundOnly;
+
+  /// Title of the quality sheet when it is opened to create an auto-download subscription
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-download quality'**
+  String get autoDownloadQualityTitle;
+
+  /// Snackbar after subscribing a series
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-download enabled for {title}'**
+  String autoDownloadEnabledFor(String title);
+
+  /// Snackbar after unsubscribing a series
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-download stopped for {title}'**
+  String autoDownloadStoppedFor(String title);
+
+  /// Settings section header for auto-download subscriptions
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic downloads'**
+  String get autoDownloadSection;
+
+  /// Master switch for auto-download subscriptions
+  ///
+  /// In en, this message translates to:
+  /// **'Enable automatic downloads'**
+  String get autoDownloadEnable;
+
+  /// Explains the master switch
+  ///
+  /// In en, this message translates to:
+  /// **'Downloads episodes that arrive after you follow a series. Older episodes stay with the manual download options'**
+  String get autoDownloadEnableSubtitle;
+
+  /// Setting that caps how many unwatched episodes per series stay downloaded
+  ///
+  /// In en, this message translates to:
+  /// **'Keep unwatched episodes'**
+  String get autoDownloadKeepUnwatched;
+
+  /// Option meaning no cap on kept unwatched episodes
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get autoDownloadKeepAll;
+
+  /// Setting that picks how soon an auto-downloaded episode is removed after it was watched
+  ///
+  /// In en, this message translates to:
+  /// **'Delete downloaded episodes'**
+  String get autoDownloadDelete;
+
+  /// Explains the delete-after-watching setting
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how quickly episodes you downloaded automatically are removed once you have watched them'**
+  String get autoDownloadDeleteSubtitle;
+
+  /// Delete-after-watching option: keep episodes
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get autoDownloadDeleteNever;
+
+  /// Delete-after-watching option: remove at the next check once played
+  ///
+  /// In en, this message translates to:
+  /// **'Right after watching'**
+  String get autoDownloadDeleteImmediately;
+
+  /// Delete-after-watching option
+  ///
+  /// In en, this message translates to:
+  /// **'1 day after watching'**
+  String get autoDownloadDeleteAfterDay;
+
+  /// Delete-after-watching option
+  ///
+  /// In en, this message translates to:
+  /// **'1 week after watching'**
+  String get autoDownloadDeleteAfterWeek;
+
+  /// Setting that lets iOS wake the app to check for new episodes
+  ///
+  /// In en, this message translates to:
+  /// **'Check in the background'**
+  String get autoDownloadBackgroundRefresh;
+
+  /// Explains the background refresh setting
+  ///
+  /// In en, this message translates to:
+  /// **'Lets iOS wake Moonfin now and then to look for new episodes'**
+  String get autoDownloadBackgroundRefreshSubtitle;
+
+  /// Shown when iOS forbids background refresh for the app
+  ///
+  /// In en, this message translates to:
+  /// **'Background App Refresh is turned off for Moonfin in iOS Settings'**
+  String get autoDownloadBackgroundRefreshDenied;
+
+  /// Button that runs a subscription check immediately
+  ///
+  /// In en, this message translates to:
+  /// **'Check now'**
+  String get autoDownloadCheckNow;
+
+  /// Subtitle while a subscription check is running
+  ///
+  /// In en, this message translates to:
+  /// **'Checking...'**
+  String get autoDownloadChecking;
+
+  /// Subtitle when no subscription check has run
+  ///
+  /// In en, this message translates to:
+  /// **'Not checked yet'**
+  String get autoDownloadNeverChecked;
+
+  /// Subtitle summarising the last subscription check
+  ///
+  /// In en, this message translates to:
+  /// **'Last check {when}: {queued, plural, =0{nothing new} =1{1 episode queued} other{{queued} episodes queued}}'**
+  String autoDownloadLastCheck(String when, int queued);
+
+  /// Subtitle when the last subscription check hit an error
+  ///
+  /// In en, this message translates to:
+  /// **'Last check {when} failed: {error}'**
+  String autoDownloadLastCheckFailed(String when, String error);
+
+  /// Settings section header listing the series with auto-download on
+  ///
+  /// In en, this message translates to:
+  /// **'Followed series'**
+  String get autoDownloadFollowedSeries;
+
+  /// Shown in settings when no series is followed
+  ///
+  /// In en, this message translates to:
+  /// **'Open a series and choose \"Auto-download new episodes\" from the download button'**
+  String get autoDownloadNoSubscriptions;
+
+  /// Tooltip on the button that removes a followed series
+  ///
+  /// In en, this message translates to:
+  /// **'Stop following'**
+  String get autoDownloadRemove;
+
+  /// Appended to the last-check summary when the storage limit stopped queueing
+  ///
+  /// In en, this message translates to:
+  /// **'Storage limit reached'**
+  String get autoDownloadStorageFull;
+
+  /// Last-check summary when Wi-Fi only is on and the device was on mobile data
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for WiFi'**
+  String get autoDownloadWaitingForWifi;
 }
 
 class _AppLocalizationsDelegate
