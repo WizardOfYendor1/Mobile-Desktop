@@ -18,38 +18,89 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const isIssue = !!context.payload.issue;
-            const body = isIssue
-              ? context.payload.issue.body || ''
-              : context.payload.pull_request.body || '';
-            const number = isIssue
-              ? context.payload.issue.number
-              : context.payload.pull_request.number;
+            // Only the Platform section is read. Scanning the whole body matched
+            // the platform names in the PR template's own unticked checkboxes,
+            // which put every label on every PR.
 
-            const currentLabels = isIssue
-              ? (context.payload.issue.labels || []).map(l => l.name)
-              : (context.payload.pull_request.labels || []).map(l => l.name);
+            const target = context.payload.issue || context.payload.pull_request;
+            const body = target.body || '';
+            const number = target.number;
 
-            const platforms = {
-              'Android': /Android/i,
-              'Android TV': /\b(Android\s*TV|Google\s*TV|Fire\s*TV)\b/i,
-              'iOS': /\biOS\b/i,
-              'tvOS': /\b(tvOS|Apple\s*TV)\b/i,
-              'Web': /\b(Web|Browser|Chrome|Firefox|Safari|Edge)\b/i,
-              'macOS': /\bmacOS\b/i,
-              'Tizen': /\bTizen\b/i,
-              'Windows': /\bWindows\b/i,
-              'Linux': /\bLinux\b/i
-            };
+            const HEADING = /^\s{0,3}#{1,6}\s+(.*?)\s*#*\s*$/;
+            const CHECKBOX = /^\s*[-*]\s*\[([ xX])\]\s*(.*)$/;
 
-            const addLabels = [];
-            const removeLabels = [];
-
-            for (const [label, regex] of Object.entries(platforms)) {
-              const found = regex.test(body);
-              if (found && !currentLabels.includes(label)) addLabels.push(label);
-              if (!found && currentLabels.includes(label)) removeLabels.push(label);
+            function platformSection(text) {
+              const lines = text.split(/\r?\n/);
+              let start = -1;
+              for (let i = 0; i < lines.length; i++) {
+                const m = lines[i].match(HEADING);
+                if (m && /^platform(\(s\))?\b/i.test(m[1].trim())) {
+                  start = i + 1;
+                  break;
+                }
+              }
+              if (start === -1) return null;
+              const out = [];
+              for (let i = start; i < lines.length; i++) {
+                if (HEADING.test(lines[i])) break;
+                out.push(lines[i]);
+              }
+              return out;
             }
+
+            const section = platformSection(body);
+            if (!section) {
+              core.info('No Platform section found, leaving labels alone.');
+              return;
+            }
+
+            // The PR template uses checkboxes, so only ticked ones count. Issue
+            // form dropdowns have none and print the answer as plain lines.
+            const hasCheckboxes = section.some(l => CHECKBOX.test(l));
+            const picked = (hasCheckboxes
+              ? section
+                  .map(l => l.match(CHECKBOX))
+                  .filter(m => m && m[1].toLowerCase() === 'x')
+                  .map(m => m[2].trim())
+              : section.map(l => l.trim()).filter(Boolean)
+            ).join('\n');
+
+            const platforms = [
+              // The lookahead stops "Android TV" counting as plain Android too.
+              ['Android', /\bAndroid\b(?!\s*TV)/i],
+              ['Android TV', /\b(Android\s*TV|Google\s*TV|Fire\s*TV)\b/i],
+              ['iOS', /\biOS\b/i],
+              ['tvOS', /\b(tvOS|Apple\s*TV)\b/i],
+              ['Web', /\b(Web|Browser|Chrome|Firefox|Safari|Edge)\b/i],
+              ['macOS', /\bmacOS\b/i],
+              ['Tizen', /\bTizen\b/i],
+              ['Windows', /\bWindows\b/i],
+              ['Linux', /\bLinux\b/i]
+            ];
+
+            // "All / Shared code" means no single platform owns it, so clear the
+            // labels instead of applying all nine.
+            const isAll = /^all\b/im.test(picked);
+
+            const wanted = new Set();
+            if (!isAll) {
+              for (const [label, regex] of platforms) {
+                if (regex.test(picked)) wanted.add(label);
+              }
+            }
+
+            const { data: existing } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: number,
+              per_page: 100
+            });
+            const current = new Set(existing.map(l => l.name));
+
+            const addLabels = [...wanted].filter(l => !current.has(l));
+            const removeLabels = platforms
+              .map(([label]) => label)
+              .filter(l => current.has(l) && !wanted.has(l));
 
             if (addLabels.length) {
               await github.rest.issues.addLabels({
@@ -69,6 +120,6 @@ jobs:
                   name: label
                 });
               } catch (e) {
-                // Label might not exist yet
+                if (e.status !== 404) throw e;
               }
             }
