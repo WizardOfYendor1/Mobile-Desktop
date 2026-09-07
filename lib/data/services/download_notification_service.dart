@@ -41,6 +41,25 @@ class DownloadNotificationService {
     }
   }
 
+  bool _permissionRequested = false;
+
+  /// Asks iOS for notification permission the first time a download starts,
+  /// so the prompt appears next to the action it explains. Android asks at
+  /// start-up above. The plugin and this service both post through the
+  /// notification center, so one grant covers every download notification.
+  Future<void> requestPermissionIfNeeded() async {
+    if (!_initialized || _permissionRequested) return;
+    _permissionRequested = true;
+    if (!PlatformDetection.isIOS) return;
+    try {
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+    } catch (_) {}
+  }
+
   Future<void> showProgress({
     required String itemName,
     required double progress,

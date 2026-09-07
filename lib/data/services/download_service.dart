@@ -2268,6 +2268,10 @@ class DownloadService extends ChangeNotifier implements AutoDownloadDownloader {
 
       final initialProgress = _initialProgressForQuality(quality);
 
+      // Before the first transfer: iOS drops notifications, the plugin's
+      // included, until the user has answered the permission prompt.
+      await _notificationService.requestPermissionIfNeeded();
+
       _activeDownloads[item.id] = DownloadProgress(
         itemId: item.id,
         fileName: fileName,
