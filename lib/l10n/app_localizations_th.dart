@@ -9366,7 +9366,7 @@ class AppLocalizationsTh extends AppLocalizations {
       'ควบคุมว่า Dolby Vision สตรีมเลเยอร์การปรับปรุงโปรไฟล์ 7 ควรควบคุมการเล่นหรือไม่';
 
   @override
-  String get settingsAutoAftkrtEnabled => 'อัตโนมัติ (เปิดใช้งาน AFTKRT)';
+  String get settingsAutoAftkrtEnabled => 'อัตโนมัติ';
 
   @override
   String get settingsEnabledOnThisDevice => 'เปิดใช้งานบนอุปกรณ์นี้แล้ว';

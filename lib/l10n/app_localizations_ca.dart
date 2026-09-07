@@ -1723,10 +1723,10 @@ class AppLocalizationsCa extends AppLocalizations {
   String get playbackInformation => 'Informació de reproducció';
 
   @override
-  String get showMpvStats => 'Show mpv Statistics (Shift+I)';
+  String get showMpvStats => 'Mostra les estadístiques de mpv (Shift+I)';
 
   @override
-  String get hideMpvStats => 'Hide mpv Statistics (Shift+I)';
+  String get hideMpvStats => 'Amaga les estadístiques de mpv (Shift+I)';
 
   @override
   String get playback => 'Reproducció';
@@ -1765,36 +1765,37 @@ class AppLocalizationsCa extends AppLocalizations {
   String get hdr => 'HDR';
 
   @override
-  String get hdrOutput => 'HDR output';
+  String get hdrOutput => 'Sortida HDR';
 
   @override
   String hdrOutputActive(String format) {
-    return 'Active — $format';
+    return 'Actiu — $format';
   }
 
   @override
   String get hdrOutputActiveTonemapped =>
-      'Active — tone-mapped to SDR for this display';
+      'Actiu — amb mapatge de tons a SDR per a aquesta pantalla';
 
   @override
-  String get hdrOutputDisplayNotHdr => 'Inactive — display is not in HDR mode';
+  String get hdrOutputDisplayNotHdr =>
+      'Inactiu — la pantalla no està en mode HDR';
 
   @override
-  String get hdrOutputContentSdr => 'Inactive — content is SDR';
+  String get hdrOutputContentSdr => 'Inactiu — el contingut és SDR';
 
   @override
-  String get hdrOutputDisabled => 'Inactive — turned off in settings';
+  String get hdrOutputDisabled => 'Inactiu — desactivat a la configuració';
 
   @override
   String get hdrOutputFailed =>
-      'Inactive — could not start, using the standard path';
+      'Inactiu — no s\'ha pogut iniciar; s\'utilitza la via estàndard';
 
   @override
-  String get nativeHdrOutput => 'Native HDR output';
+  String get nativeHdrOutput => 'Sortida HDR nativa';
 
   @override
   String get nativeHdrOutputDescription =>
-      'Sends HDR video to the display untouched instead of converting it to SDR. Used only when the display is already in HDR mode and the title is HDR.';
+      'Envia el vídeo HDR a la pantalla sense modificar-lo en lloc de convertir-lo a SDR. Només s\'utilitza quan la pantalla ja està en mode HDR i el títol és HDR.';
 
   @override
   String get codec => 'Còdec';

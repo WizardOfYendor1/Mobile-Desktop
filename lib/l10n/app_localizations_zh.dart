@@ -14677,7 +14677,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get requestMore => '請求更多';
 
   @override
-  String get request => '要求';
+  String get request => '請求';
 
   @override
   String get cancelRequest => '取消請求';
@@ -14782,7 +14782,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   }
 
   @override
-  String get noRequests => '沒有要求';
+  String get noRequests => '沒有請求';
 
   @override
   String get pendingStatus => '待辦的';
@@ -14800,7 +14800,7 @@ class AppLocalizationsZhHant extends AppLocalizationsZh {
   String get approvedStatus => '得到正式認可的';
 
   @override
-  String get notRequestedStatus => '未要求';
+  String get notRequestedStatus => '未請求';
 
   @override
   String get blocklistedStatus => '列入黑名單';

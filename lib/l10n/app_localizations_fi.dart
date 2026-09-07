@@ -178,25 +178,25 @@ class AppLocalizationsFi extends AppLocalizations {
       'Käytä paikalliseen kirjastoon perustuvaa Moonfin suosittelee -algoritmia tai TMDb:n verkossa toimivia samankaltaisuusmittareita. Huomaa: verkkosuositukset vaativat Seerr-integraation.';
 
   @override
-  String get recommendationSystemMoonfin => 'Moonfin suositukset';
+  String get recommendationSystemMoonfin => 'Moonfin Suositukset';
 
   @override
-  String get recommendationSystemTmdb => 'TMDb-samankaltaisuus';
+  String get recommendationSystemTmdb => 'TMDb Samankaltaisuus';
 
   @override
   String get recommendationsApplyParentalRatingCap =>
-      'Rajoitetaanko ikärajan mukaan?';
+      'Käytetäänkö Ikärajaluokitusta?';
 
   @override
   String get recommendationsApplyParentalRatingCapSubtitle =>
-      'Rajoita Moonfin suosittelee -ehdotuksia kohdemedian ikärajan mukaan';
+      'Rajoita Moonfin suosittelee ehdotuksia kohdemedian ikärajan mukaan';
 
   @override
   String get interfaceStyle => 'Käyttöliittymätyyli';
 
   @override
   String get interfaceStyleSubtitle =>
-      'Automaattinen mukautuu laitteeseesi. Valitse Apple tai Material pakottaaksesi tietyn ulkoasun.';
+      'Automaattinen-toiminto mukautuu laitteeseesi. Valitse Apple tai Material, jos haluat määrittää ulkoasun manuaalisesti.';
 
   @override
   String get interfaceStyleAutomatic => 'Automaattinen';
@@ -2102,11 +2102,11 @@ class AppLocalizationsFi extends AppLocalizations {
   String get noScheduledRecordings => 'Ei ajoitettuja tallennuksia';
 
   @override
-  String get cancelRecording => 'Keskeytä  tallennus?';
+  String get cancelRecording => 'Keskeytä tallennus?';
 
   @override
   String cancelScheduledRecordingOf(String name) {
-    return 'Keskeytä  \"$name\" ajoitettu nauhoitus?';
+    return 'Peruuta ajastetun ohjelman tallennus \"$name\"?';
   }
 
   @override
@@ -2116,7 +2116,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get yesCancel => 'Kyllä, keskeytä';
 
   @override
-  String get failedToCancelRecording => 'Tallennuksen keskeytys  epäonnistui';
+  String get failedToCancelRecording => 'Tallennuksen keskeytys epäonnistui';
 
   @override
   String get failedToLoadSeriesRecordings =>
@@ -4226,10 +4226,10 @@ class AppLocalizationsFi extends AppLocalizations {
   String get genresAndTags => 'Genret ja tunnisteet';
 
   @override
-  String get seerrDiscoveryRows => 'Seerr-löytörivit';
+  String get seerrDiscoveryRows => 'Seerr Suositusrivit';
 
   @override
-  String get yourWatchlist => 'Aktiivilistalla';
+  String get yourWatchlist => 'Aktiivilistallasi';
 
   @override
   String get resetRowsToDefaults => 'Palauta rivit oletusarvoihin';
@@ -4499,7 +4499,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get requested4k => 'Pyydetään 4K-tarkkuutta';
 
   @override
-  String get cancelRequest => 'Keskeytä  pyyntö';
+  String get cancelRequest => 'Keskeytä pyyntö';
 
   @override
   String get cancelRequest4k => 'Keskeytä 4K-pyyntö';
@@ -8835,7 +8835,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get trackActionAddToPlaylist => 'Lisää soittolistaan';
 
   @override
-  String get trackActionCancelDownload => 'Keskeytä  lataus';
+  String get trackActionCancelDownload => 'Keskeytä lataus';
 
   @override
   String get trackActionDeleteFromPlaylist => 'Poista soittolistasta';
@@ -9295,20 +9295,20 @@ class AppLocalizationsFi extends AppLocalizations {
   String get settingsJoinTheDiscord => 'Liity Discordiin';
 
   @override
-  String get settingsSupportMoonfin => 'Tue Moonfin';
+  String get settingsSupportMoonfin => 'Tue Moonfin:ä';
 
   @override
-  String get settingsSupportMoonfinSubtitle => 'Lahjoita kahvi kehittäjälle';
+  String get settingsSupportMoonfinSubtitle => 'Tarjoa kahvi kehittäjälle';
 
   @override
-  String get settingsLegal => 'LAKI';
+  String get settingsLegal => 'OIKEUDELLISET JUTUT';
 
   @override
   String get settingsLicenses => 'Lisenssit';
 
   @override
   String get settingsOpenSourceLicenseNotices =>
-      'Avoimen lähdekoodin lisenssiilmoitukset';
+      'Avoimen lähdekoodin lisenssi-ilmoitukset';
 
   @override
   String get settingsPrivacyPolicy => 'Tietosuojakäytäntö';
@@ -9325,7 +9325,7 @@ class AppLocalizationsFi extends AppLocalizations {
       'Tarkista viimeisin Moonfin-julkaisu';
 
   @override
-  String get settingsPoweredByFlutter => 'Voimanlähteenä Flutter';
+  String get settingsPoweredByFlutter => 'Toteutettu Flutter-alustalla';
 
   @override
   String settingsLicenseNoticesCount(int count) {
@@ -11217,22 +11217,22 @@ class AppLocalizationsFi extends AppLocalizations {
   String get groupByTitle => 'Ryhmittele';
 
   @override
-  String get groupByDecade => 'Vuosikymmen (vuosi)';
+  String get groupByDecade => 'Vuosikymmenittäin (vuosi)';
 
   @override
-  String get groupByParentalRating => 'Vanhempien luokitus';
+  String get groupByParentalRating => 'Ikäluokituksen mukaan';
 
   @override
   String get groupByStudio => 'Studio';
 
   @override
-  String get showAlphabeticalFilters => 'Näytä aakkoset';
+  String get showAlphabeticalFilters => 'Näytä aakkosittain';
 
   @override
-  String get personalRatingStyle => 'Henkilökohtainen arviointityyli';
+  String get personalRatingStyle => 'Oma arviointyyli';
 
   @override
-  String get personalRatingThumbs => 'Tykkää / ei tykkää';
+  String get personalRatingThumbs => 'Pidän/ En Pidä';
 
   @override
   String get personalRatingStars => '5 tähteä';
