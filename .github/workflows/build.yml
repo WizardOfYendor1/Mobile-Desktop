@@ -731,12 +731,123 @@ jobs:
             ${{ matrix.artifact_prefix }}_v*.flatpak
           if-no-files-found: error
 
+  # Analyzer and every test suite, the app plus each package that has one.
+  # The platform builds above compile only reachable code, so a broken file
+  # nothing imports and a failing test are invisible to them. This job is
+  # what the PR comment reads its Tests line from.
+  tests:
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_all }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+
+      - name: Run analyzer and tests
+        run: |
+          mkdir -p /tmp/test-results
+          status=0
+          packages="custom_tv_text_field_fork design rar_fork server_core server_emby server_jellyfin"
+
+          flutter pub get
+          for pkg in $packages; do
+            (cd "packages/$pkg" && flutter pub get >/dev/null)
+          done
+
+          # Only error lines gate the job, the tree carries longstanding infos.
+          dart analyze 2>&1 | grep -E " error - " >> /tmp/test-results/analyzer.txt || true
+          for pkg in $packages; do
+            (cd "packages/$pkg" && dart analyze 2>&1 || true) | grep -E " error - " >> /tmp/test-results/analyzer.txt || true
+          done
+
+          flutter test --reporter json > /tmp/test-results/app.jsonl || status=1
+          for pkg in $packages; do
+            (cd "packages/$pkg" && flutter test --reporter json > "/tmp/test-results/pkg-$pkg.jsonl") || status=1
+          done
+
+          echo "$status" > /tmp/test-results/run-status
+
+      - name: Summarize results
+        if: always()
+        run: |
+          python3 - <<'EOF'
+          import glob
+          import json
+          import os
+
+          passed = failed = 0
+          failures = []
+          for path in sorted(glob.glob('/tmp/test-results/*.jsonl')):
+              suite = os.path.basename(path)[:-6]
+              names = {}
+              for line in open(path):
+                  line = line.strip()
+                  if not line.startswith('{'):
+                      continue
+                  try:
+                      event = json.loads(line)
+                  except ValueError:
+                      continue
+                  if event.get('type') == 'testStart':
+                      names[event['test']['id']] = event['test'].get('name', '?')
+                  elif event.get('type') == 'testDone' and not event.get('hidden'):
+                      if event.get('result') == 'success':
+                          passed += 1
+                      else:
+                          failed += 1
+                          failures.append(f"{suite}: {names.get(event.get('testID'), '?')}")
+
+          analyzer = []
+          try:
+              analyzer = [l.rstrip() for l in open('/tmp/test-results/analyzer.txt') if l.strip()]
+          except FileNotFoundError:
+              pass
+
+          try:
+              run_status = int(open('/tmp/test-results/run-status').read().strip())
+          except (FileNotFoundError, ValueError):
+              run_status = 1
+
+          out = {
+              'passed': passed,
+              'failed': failed,
+              'failures': failures[:50],
+              'more_failures': max(0, len(failures) - 50),
+              'analyzer_errors': len(analyzer),
+              'analyzer_sample': analyzer[:10],
+              'run_status': run_status,
+          }
+          with open('/tmp/test-results/test-results.json', 'w') as f:
+              json.dump(out, f)
+          print(json.dumps({k: v for k, v in out.items() if k not in ('failures', 'analyzer_sample')}))
+          EOF
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: /tmp/test-results/test-results.json
+
+      - name: Gate on failures
+        if: always()
+        run: |
+          python3 - <<'EOF'
+          import json
+          import sys
+          results = json.load(open('/tmp/test-results/test-results.json'))
+          bad = results['failed'] or results['analyzer_errors'] or results['run_status']
+          sys.exit(1 if bad else 0)
+          EOF
+
   # What the PR Comment workflow reads to build its comment. always() keeps this
   # running when a platform job fails, which is the case the comment most needs
   # to report.
   save-pr-results:
     if: always() && github.event_name == 'pull_request'
-    needs: [android, ios, macos, tvos, windows, windows-arm64, linux]
+    needs: [android, ios, macos, tvos, windows, windows-arm64, linux, tests]
     runs-on: ubuntu-latest
     steps:
       - name: Write outcomes.json
@@ -751,7 +862,8 @@ jobs:
             "tvos": "${{ needs.tvos.result }}",
             "windows": "${{ needs.windows.result }}",
             "windows_arm64": "${{ needs.windows-arm64.result }}",
-            "linux": "${{ needs.linux.result }}"
+            "linux": "${{ needs.linux.result }}",
+            "tests": "${{ needs.tests.result }}"
           }
           EOF
 
