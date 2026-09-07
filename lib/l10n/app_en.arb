@@ -10445,5 +10445,105 @@
   "autoDownloadWaitingForWifi": "Waiting for WiFi",
   "@autoDownloadWaitingForWifi": {
     "description": "Last-check summary when Wi-Fi only is on and the device was on mobile data"
+  },
+  "downloadNotificationRunning": "Downloading",
+  "@downloadNotificationRunning": {
+    "description": "System notification title while a download transfers"
+  },
+  "downloadNotificationRunningBatch": "Downloading ({done}/{total})",
+  "@downloadNotificationRunningBatch": {
+    "description": "System notification title while a batch transfers; done is the 1-based position of the current item",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadNotificationProgress": "{name} — {percent}%",
+  "@downloadNotificationProgress": {
+    "description": "System notification body with the item label (for example Series S1E1) and its percentage",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadNotificationStarting": "{name}...",
+  "@downloadNotificationStarting": {
+    "description": "System notification body before the size of a download is known",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadNotificationCompleteTitle": "{count, plural, =1{Download complete} other{Downloads complete}}",
+  "@downloadNotificationCompleteTitle": {
+    "description": "System notification title once a download or a batch has finished",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadNotificationSaved": "{name} saved for offline",
+  "@downloadNotificationSaved": {
+    "description": "System notification body for one finished download; name is the item label (for example Series S1E1)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadNotificationSavedCount": "{count, plural, =1{1 item saved for offline} other{{count} items saved for offline}}",
+  "@downloadNotificationSavedCount": {
+    "description": "System notification body for a finished batch of mixed items",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadNotificationSeriesEpisodes": "{series}: {count, plural, =1{1 episode} other{{count} episodes}}",
+  "@downloadNotificationSeriesEpisodes": {
+    "description": "System notification body for a finished batch that all belongs to one series",
+    "placeholders": {
+      "series": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadNotificationFailedTitle": "Download failed",
+  "@downloadNotificationFailedTitle": {
+    "description": "System notification title for a failed download"
+  },
+  "downloadNotificationFailedBody": "{name}: {error}",
+  "@downloadNotificationFailedBody": {
+    "description": "System notification body for a failed download",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serverMessagesNotificationTitle": "Remote message",
+  "@serverMessagesNotificationTitle": {
+    "description": "System notification title for a message sent by the server when it carries no header"
+  },
+  "serverMessagesNotificationReceived": "Message received",
+  "@serverMessagesNotificationReceived": {
+    "description": "System notification body for a server message with empty text"
   }
 }

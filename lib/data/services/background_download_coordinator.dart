@@ -4,6 +4,7 @@ import 'package:background_downloader/background_downloader.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 
+import '../../l10n/current_app_localizations.dart';
 import '../../preference/user_preferences.dart';
 import '../../util/platform_detection.dart';
 import 'storage_path_service.dart';
@@ -138,11 +139,20 @@ class BackgroundDownloadCoordinator {
     );
     _configuredMaxConcurrentDownloads = maxConcurrent;
 
+    // Read once at start-up: a language change applies to the plugin's
+    // notifications from the next launch.
+    final l10n = currentAppLocalizations();
     FileDownloader().configureNotificationForGroup(
       mediaGroup,
-      running: const TaskNotification('Downloading', '{displayName}'),
+      running: TaskNotification(
+        l10n.downloadNotificationRunning,
+        '{displayName}',
+      ),
       complete: null,
-      error: const TaskNotification('Download failed', '{displayName}'),
+      error: TaskNotification(
+        l10n.downloadNotificationFailedTitle,
+        '{displayName}',
+      ),
       progressBar: true,
       groupNotificationId: 'moonfinMediaDownloads',
     );

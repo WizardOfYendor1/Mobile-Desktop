@@ -20607,6 +20607,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Waiting for WiFi'**
   String get autoDownloadWaitingForWifi;
+
+  /// System notification title while a download transfers
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading'**
+  String get downloadNotificationRunning;
+
+  /// System notification title while a batch transfers; done is the 1-based position of the current item
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading ({done}/{total})'**
+  String downloadNotificationRunningBatch(int done, int total);
+
+  /// System notification body with the item label (for example Series S1E1) and its percentage
+  ///
+  /// In en, this message translates to:
+  /// **'{name} — {percent}%'**
+  String downloadNotificationProgress(String name, int percent);
+
+  /// System notification body before the size of a download is known
+  ///
+  /// In en, this message translates to:
+  /// **'{name}...'**
+  String downloadNotificationStarting(String name);
+
+  /// System notification title once a download or a batch has finished
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Download complete} other{Downloads complete}}'**
+  String downloadNotificationCompleteTitle(int count);
+
+  /// System notification body for one finished download; name is the item label (for example Series S1E1)
+  ///
+  /// In en, this message translates to:
+  /// **'{name} saved for offline'**
+  String downloadNotificationSaved(String name);
+
+  /// System notification body for a finished batch of mixed items
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 item saved for offline} other{{count} items saved for offline}}'**
+  String downloadNotificationSavedCount(int count);
+
+  /// System notification body for a finished batch that all belongs to one series
+  ///
+  /// In en, this message translates to:
+  /// **'{series}: {count, plural, =1{1 episode} other{{count} episodes}}'**
+  String downloadNotificationSeriesEpisodes(String series, int count);
+
+  /// System notification title for a failed download
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed'**
+  String get downloadNotificationFailedTitle;
+
+  /// System notification body for a failed download
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: {error}'**
+  String downloadNotificationFailedBody(String name, String error);
+
+  /// System notification title for a message sent by the server when it carries no header
+  ///
+  /// In en, this message translates to:
+  /// **'Remote message'**
+  String get serverMessagesNotificationTitle;
+
+  /// System notification body for a server message with empty text
+  ///
+  /// In en, this message translates to:
+  /// **'Message received'**
+  String get serverMessagesNotificationReceived;
 }
 
 class _AppLocalizationsDelegate
