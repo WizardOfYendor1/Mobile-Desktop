@@ -331,6 +331,12 @@ class Media3PlayerBackend extends PlayerBackend {
           level: LogLevel.warning,
         );
         _onAudioSinkError();
+      case 'passthroughSilenceRecovery':
+        _diag(
+          'Media3: bitstream audio went silent (${map['reason']}), '
+          'rebuilding the track in place at ${_toInt(map['positionMs'])}ms',
+          level: LogLevel.warning,
+        );
       case 'audioClockRecovery':
         _diag(
           'Media3: audio clock corrupted by a playback head reset '

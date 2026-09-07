@@ -104,6 +104,7 @@ private class MoonfinRenderersFactory(
     private val preferSoftwareAv1Renderer: Boolean,
     private val passthroughPolicy: AudioPassthroughPolicy,
     private val stereoDownmixRequested: () -> Boolean,
+    private val onPassthroughRecoveryNeeded: (String) -> Unit,
 ) : DefaultRenderersFactory(context) {
     override fun buildVideoRenderers(
         context: Context,
@@ -220,11 +221,22 @@ private class MoonfinRenderersFactory(
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
             .build()
-        // Auto keeps the bare sink so the platform probe stays authoritative.
+        // Some TV HALs never resume a paused bitstream track and hand back a
+        // dead replacement when one is rebuilt too quickly. The recovery
+        // wrapper watches for that and rebuilds with a short write hold, and
+        // it stays inert until a dead track has actually been seen.
+        val recovering = PassthroughRecoveryAudioSink(
+            delegate = sink,
+            recovery = PassthroughSilenceRecovery(),
+            onRecoveryNeeded = onPassthroughRecoveryNeeded,
+        )
+        // Auto skips the policy veto so the platform's own format probe
+        // stays authoritative. The recovery wrapper forwards every probe
+        // call untouched, so it rides along in every mode.
         if (passthroughPolicy.mode == PassthroughMode.AUTO) {
-            return sink
+            return recovering
         }
-        return PassthroughPolicyAudioSink(sink, passthroughPolicy)
+        return PassthroughPolicyAudioSink(recovering, passthroughPolicy)
     }
 
     private fun buildAv1ExtensionRenderer(
@@ -1621,6 +1633,25 @@ class Media3VideoView(
         }
     }
 
+    // The sink proved its bitstream track dead, so rebuild it from the
+    // player's thread with an in-place seek. The renderer flushes the sink on
+    // the way through, and the write hold the detector armed keeps the new
+    // track from opening before the dead one is released.
+    private fun recoverPassthroughSilence(reason: String) {
+        mainHandler.post {
+            if (isDisposed || isPlayerReleased) return@post
+            val resumeMs = player.currentPosition
+            Media3Bridge.emitEvent(
+                mapOf(
+                    "event" to "passthroughSilenceRecovery",
+                    "positionMs" to resumeMs,
+                    "reason" to reason,
+                ),
+            )
+            player.seekTo(resumeMs)
+        }
+    }
+
     private fun createPlayer(): ExoPlayer {
         Media3LogRelay.install()
         playerCreatedAtMs = SystemClock.elapsedRealtime()
@@ -1642,6 +1673,7 @@ class Media3VideoView(
             preferSoftwareAv1Renderer = !hasHardwareAv1Decoder,
             passthroughPolicy = passthroughPolicy,
             stereoDownmixRequested = ::effectiveStereoDownmix,
+            onPassthroughRecoveryNeeded = ::recoverPassthroughSilence,
         ).apply {
             setEnableDecoderFallback(true)
             setExtensionRendererMode(extensionRendererModeFor(passthroughPolicy))
