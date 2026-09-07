@@ -1,10 +1,12 @@
-name: Auto-label platform
+name: Auto-label platform, type and template gaps
 
 on:
   issues:
     types: [opened, edited]
   pull_request_target:
     types: [opened, edited]
+  issue_comment:
+    types: [created, edited]
 
 permissions:
   issues: write
@@ -13,28 +15,34 @@ permissions:
 jobs:
   label:
     runs-on: ubuntu-latest
+    # Comments matter only because a screenshot can arrive as one, so skip
+    # comments on issues and anything another bot said.
+    if: >-
+      github.event_name != 'issue_comment' ||
+      (github.event.issue.pull_request && github.event.comment.user.type != 'Bot')
     steps:
-      - name: Apply platform labels
+      - name: Apply platform, type and evidence labels
         uses: actions/github-script@v7
         with:
           script: |
-            // Only the Platform section is read. Scanning the whole body matched
+            // Only the relevant section is read. Scanning the whole body matched
             // the platform names in the PR template's own unticked checkboxes,
             // which put every label on every PR.
 
             const target = context.payload.issue || context.payload.pull_request;
             const body = target.body || '';
             const number = target.number;
+            const isPR = !!(target.pull_request || context.payload.pull_request);
 
             const HEADING = /^\s{0,3}#{1,6}\s+(.*?)\s*#*\s*$/;
             const CHECKBOX = /^\s*[-*]\s*\[([ xX])\]\s*(.*)$/;
 
-            function platformSection(text) {
+            function section(text, title) {
               const lines = text.split(/\r?\n/);
               let start = -1;
               for (let i = 0; i < lines.length; i++) {
                 const m = lines[i].match(HEADING);
-                if (m && /^platform(\(s\))?\b/i.test(m[1].trim())) {
+                if (m && title.test(m[1].trim())) {
                   start = i + 1;
                   break;
                 }
@@ -48,24 +56,19 @@ jobs:
               return out;
             }
 
-            const section = platformSection(body);
-            if (!section) {
-              core.info('No Platform section found, leaving labels alone.');
-              return;
-            }
-
             // The PR template uses checkboxes, so only ticked ones count. Issue
             // form dropdowns have none and print the answer as plain lines.
-            const hasCheckboxes = section.some(l => CHECKBOX.test(l));
-            const picked = (hasCheckboxes
-              ? section
-                  .map(l => l.match(CHECKBOX))
-                  .filter(m => m && m[1].toLowerCase() === 'x')
-                  .map(m => m[2].trim())
-              : section.map(l => l.trim()).filter(Boolean)
-            ).join('\n');
+            function selected(lines) {
+              const hasCheckboxes = lines.some(l => CHECKBOX.test(l));
+              return hasCheckboxes
+                ? lines
+                    .map(l => l.match(CHECKBOX))
+                    .filter(m => m && m[1].toLowerCase() === 'x')
+                    .map(m => m[2].trim())
+                : lines.map(l => l.trim()).filter(Boolean);
+            }
 
-            const platforms = [
+            const PLATFORMS = [
               // The lookahead stops "Android TV" counting as plain Android too.
               ['Android', /\bAndroid\b(?!\s*TV)/i],
               ['Android TV', /\b(Android\s*TV|Google\s*TV|Fire\s*TV)\b/i],
@@ -78,15 +81,80 @@ jobs:
               ['Linux', /\bLinux\b/i]
             ];
 
-            // "All / Shared code" means no single platform owns it, so clear the
-            // labels instead of applying all nine.
-            const isAll = /^all\b/im.test(picked);
+            const TYPES = [
+              ['Bug', /\bBug\s*fix\b/i],
+              ['Feature Request', /\bNew\s*feature\b/i],
+              ['Refactor', /\bRefactor\b/i],
+              ['Performance', /\bPerformance\b/i],
+              ['UI', /\bUI\s*\/\s*UX\b/i],
+              ['Documentation', /\bDocumentation\b/i],
+              ['Build', /\bBuild\s*\/\s*CI\b/i]
+            ];
+
+            const VISUAL = [
+              /!\[[^\]]*\]\(\s*https?:\/\/\S+/i,
+              /<img\s[^>]*src\s*=/i,
+              /<video\s/i,
+              /https:\/\/github\.com\/user-attachments\/assets\/\S+/i,
+              /https:\/\/user-images\.githubusercontent\.com\/\S+/i,
+              /https?:\/\/\S+\.(png|jpe?g|gif|webp|heic|bmp|mp4|mov|webm|m4v)(\?\S*)?/i
+            ];
 
             const wanted = new Set();
-            if (!isAll) {
-              for (const [label, regex] of platforms) {
-                if (regex.test(picked)) wanted.add(label);
+            const managed = new Set();
+
+            // A group is reconciled only when its own section is present, so the
+            // labels the issue forms apply survive on issues.
+            function apply(table, items) {
+              for (const [label] of table) managed.add(label);
+              for (const item of items) {
+                for (const [label, regex] of table) {
+                  if (regex.test(item)) wanted.add(label);
+                }
               }
+            }
+
+            const platformLines = section(body, /^platform(\(s\))?\b/i);
+            if (platformLines) {
+              const items = selected(platformLines);
+              // "All / Shared code" means no single platform owns it, so clear
+              // the labels instead of applying all nine.
+              const isAll = items.some(i => /^all\b/i.test(i));
+              apply(PLATFORMS, isAll ? [] : items);
+            }
+
+            const typeLines = section(body, /^type of change\b/i);
+            if (typeLines) {
+              // "Other" carries whatever the author typed after it, which would
+              // otherwise match the categories by accident.
+              apply(TYPES, selected(typeLines).filter(i => !/^other\b/i.test(i)));
+            }
+
+            async function hasVisual() {
+              if (VISUAL.some(re => re.test(body))) return true;
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: number,
+                per_page: 100
+              });
+              return comments.some(c =>
+                c.user.type !== 'Bot' && VISUAL.some(re => re.test(c.body || '')));
+            }
+
+            // These two are left alone on issues, where require-bug-evidence
+            // reconciles them. Both workflows owning a label would flip it on
+            // and off against each other.
+            if (isPR) {
+              managed.add('Missing Template');
+              managed.add('Missing Screenshot');
+              if (!platformLines && !typeLines) wanted.add('Missing Template');
+              if (wanted.has('UI') && !(await hasVisual())) wanted.add('Missing Screenshot');
+            }
+
+            if (!managed.size) {
+              core.info('No Platform or Type of Change section found, leaving labels alone.');
+              return;
             }
 
             const { data: existing } = await github.rest.issues.listLabelsOnIssue({
@@ -98,9 +166,7 @@ jobs:
             const current = new Set(existing.map(l => l.name));
 
             const addLabels = [...wanted].filter(l => !current.has(l));
-            const removeLabels = platforms
-              .map(([label]) => label)
-              .filter(l => current.has(l) && !wanted.has(l));
+            const removeLabels = [...managed].filter(l => current.has(l) && !wanted.has(l));
 
             if (addLabels.length) {
               await github.rest.issues.addLabels({
