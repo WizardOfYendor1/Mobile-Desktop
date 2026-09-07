@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' show min;
 
 import 'package:background_downloader/background_downloader.dart' as bgd;
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -13,6 +14,8 @@ import 'package:path/path.dart' as p;
 import 'package:server_core/server_core.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../l10n/current_app_localizations.dart';
+import '../../platform/device_storage.dart';
 import '../../platform/ios_storage.dart';
 import '../../playback/subtitle_formats.dart';
 import '../../preference/user_preferences.dart';
@@ -629,16 +632,66 @@ class DownloadService extends ChangeNotifier implements AutoDownloadDownloader {
         (_pluginContexts[entry.key]?.currentTaskId.isEmpty ?? true),
   );
 
+  /// Kept free on the device, so a download never fills the volume.
+  static const _freeSpaceMargin = 200 * 1024 * 1024;
+
+  /// Bytes admitted but not yet committed count against every budget, or
+  /// several concurrently starting downloads could each pass the check
+  /// against the same baseline and overshoot together.
+  int get _reservedBytes =>
+      _reservedStorageBytes.values.fold<int>(0, (sum, bytes) => sum + bytes);
+
+  Future<int?> _deviceFreeBytes() async {
+    try {
+      final root = await _storagePath.getOfflineRoot();
+      final free = await DeviceStorage.instance.freeBytes(root.path);
+      debugPrint('[DownloadService] free space at ${root.path}: $free');
+      return free;
+    } catch (e) {
+      debugPrint('[DownloadService] free space unknown: $e');
+      return null;
+    }
+  }
+
+  /// Room for new downloads: under the storage limit when one is set, and
+  /// on the device itself when the platform reports its free space.
   @override
   Future<int?> storageHeadroomBytes() async {
+    final reserved = _reservedBytes;
+    int? headroom;
     final limitMb = _prefs.get(UserPreferences.downloadStorageLimitMb);
-    if (limitMb <= 0) return null;
-    final used = await _offlineRepo.getTotalStorageUsed();
-    final reserved = _reservedStorageBytes.values.fold<int>(
-      0,
-      (sum, bytes) => sum + bytes,
+    if (limitMb > 0) {
+      final used = await _offlineRepo.getTotalStorageUsed();
+      headroom = limitMb * 1024 * 1024 - used - reserved;
+    }
+    final free = await _deviceFreeBytes();
+    if (free != null) {
+      final onDevice = free - _freeSpaceMargin - reserved;
+      headroom = headroom == null ? onDevice : min(headroom, onDevice);
+    }
+    debugPrint(
+      '[DownloadService] headroom: limit=${limitMb}MB free=$free '
+      'reserved=$reserved -> $headroom',
     );
-    return (limitMb * 1024 * 1024 - used - reserved).clamp(0, 1 << 62);
+    return headroom?.clamp(0, 1 << 62);
+  }
+
+  /// Why [estimatedBytes] more cannot be downloaded right now, or null.
+  Future<String?> _storageRefusal(int estimatedBytes) async {
+    final l10n = currentAppLocalizations();
+    if (!await _checkStorageLimit(estimatedBytes)) {
+      return l10n.downloadStorageLimitReached;
+    }
+    final free = await _deviceFreeBytes();
+    debugPrint('[DownloadService] admit ${formatBytes(estimatedBytes)}? free=$free');
+    if (free != null &&
+        estimatedBytes + _reservedBytes + _freeSpaceMargin > free) {
+      return l10n.downloadNotEnoughStorage(
+        formatBytes(estimatedBytes),
+        formatBytes(free),
+      );
+    }
+    return null;
   }
 
   Future<bool> _checkWifiPolicy() async {
@@ -652,14 +705,7 @@ class DownloadService extends ChangeNotifier implements AutoDownloadDownloader {
     final limitMb = _prefs.get(UserPreferences.downloadStorageLimitMb);
     if (limitMb <= 0) return true;
     final used = await _offlineRepo.getTotalStorageUsed();
-    // Bytes admitted but not yet committed count against the limit, or
-    // several concurrently starting downloads could each pass the check
-    // against the same baseline and overshoot the cap together.
-    final reserved = _reservedStorageBytes.values.fold<int>(
-      0,
-      (sum, bytes) => sum + bytes,
-    );
-    return (used + reserved + estimatedBytes) <= limitMb * 1024 * 1024;
+    return (used + _reservedBytes + estimatedBytes) <= limitMb * 1024 * 1024;
   }
 
   StoragePathService get _storagePath => GetIt.instance<StoragePathService>();
@@ -2128,15 +2174,22 @@ class DownloadService extends ChangeNotifier implements AutoDownloadDownloader {
       final fullItem = await _ensureFullItem(item);
       if (preparationCancelled()) return;
       final estimatedSize = estimateDownloadSizeBytes(fullItem, quality);
-      if (!await _checkStorageLimit(estimatedSize)) {
+      final refusal = await _storageRefusal(estimatedSize);
+      if (refusal != null) {
         _activeDownloads[item.id] = DownloadProgress(
           itemId: item.id,
           fileName: item.name,
-          error: 'Storage limit reached. Free up space or increase the limit.',
+          error: refusal,
           quality: quality,
         );
-        _emitError(
-          '${item.name}: Storage limit reached. Free up space or increase the limit.',
+        _emitError('${item.name}: $refusal');
+        // Nothing reaches the native engine, so no notification would
+        // come from there; say it here, for a queue nobody is watching.
+        unawaited(
+          _notificationService.showError(
+            itemName: _notificationLabel(item),
+            error: refusal,
+          ),
         );
         notifyListeners();
         return;

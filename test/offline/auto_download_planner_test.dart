@@ -114,6 +114,17 @@ void main() {
     expect(_ids(result.toQueue), ['e1', 'unnumbered']);
   });
 
+  test('episodes held back by the budget are reported in order', () {
+    final result = _plan([
+      episode('e1', number: 1, size: 100),
+      episode('e2', number: 2, size: 100),
+      episode('e3', number: 3, size: 100),
+    ], budget: 150);
+    expect(result.toQueue.map((e) => e.id), ['e1']);
+    expect(result.blocked.map((e) => e.id), ['e2', 'e3']);
+    expect(result.storageFull, isTrue);
+  });
+
   test('stops at the storage budget without skipping ahead', () {
     final result = _plan([
       episode('e1', number: 1, size: 60),

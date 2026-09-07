@@ -250,6 +250,53 @@ void main() {
       expect(summary.storageFull, isTrue);
     });
 
+    test('a storage shortage is announced once until it clears', () async {
+      final notices = <List<String>>[];
+      service.dispose();
+      service = AutoDownloadService(
+        repository: repo,
+        downloader: downloader,
+        prefs: prefs,
+        serverId: server,
+        userId: user,
+        now: () => now,
+        onStorageFull: (blocked) =>
+            notices.add([for (final b in blocked) b.episode.id]),
+      );
+      // No keep cap, so only space decides what is queued.
+      await prefs.set(UserPreferences.autoDownloadKeepUnwatched, 0);
+      // Nothing fits, so the same episodes are held back check after check.
+      downloader.headroomBytes = 50;
+      await subscribe('series-1');
+      downloader.episodesBySeries['series-1'] = [
+        episode('e1', number: 1, size: 100),
+        episode('e2', number: 2, size: 100),
+      ];
+
+      await service.runCheck(trigger: AutoDownloadTrigger.manual);
+      await service.runCheck(trigger: AutoDownloadTrigger.manual);
+      // Another episode arriving while the phone is full stays quiet.
+      downloader.episodesBySeries['series-1']!.add(
+        episode('e3', number: 3, size: 100),
+      );
+      await service.runCheck(trigger: AutoDownloadTrigger.manual);
+      expect(notices, [
+        ['e1', 'e2'],
+      ]);
+
+      // Space freed: everything fits, which resets the notice. The next
+      // shortage is announced again.
+      downloader.headroomBytes = 1000;
+      await service.runCheck(trigger: AutoDownloadTrigger.manual);
+      downloader.headroomBytes = 50;
+      downloader.episodesBySeries['series-1']!.add(
+        episode('e4', number: 4, size: 100),
+      );
+      await service.runCheck(trigger: AutoDownloadTrigger.manual);
+      expect(notices, hasLength(2));
+      expect(notices.last, contains('e4'));
+    });
+
     test('a failing series is recorded and does not stop the others', () async {
       await subscribe('series-1');
       await subscribe('series-2');

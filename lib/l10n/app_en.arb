@@ -10438,7 +10438,7 @@
   "@autoDownloadRemove": {
     "description": "Tooltip on the button that removes a followed series"
   },
-  "autoDownloadStorageFull": "Storage limit reached",
+  "autoDownloadStorageFull": "Not enough storage",
   "@autoDownloadStorageFull": {
     "description": "Appended to the last-check summary when the storage limit stopped queueing"
   },
@@ -10545,5 +10545,40 @@
   "serverMessagesNotificationReceived": "Message received",
   "@serverMessagesNotificationReceived": {
     "description": "System notification body for a server message with empty text"
+  },
+  "downloadStorageLimitReached": "Storage limit reached. Free up space or increase the limit.",
+  "@downloadStorageLimitReached": {
+    "description": "Error shown when a download would exceed the storage limit set in the download settings"
+  },
+  "downloadNotEnoughStorage": "Not enough storage: {needed} needed, {free} free",
+  "@downloadNotEnoughStorage": {
+    "description": "Error shown when a download would not fit on the device; needed and free are formatted sizes",
+    "placeholders": {
+      "needed": {
+        "type": "String"
+      },
+      "free": {
+        "type": "String"
+      }
+    }
+  },
+  "autoDownloadStorageFullTitle": "Not enough storage for new episodes",
+  "@autoDownloadStorageFullTitle": {
+    "description": "System notification title when the automatic check has to hold new episodes back"
+  },
+  "autoDownloadStorageFullBody": "{count, plural, =1{{name} needs {size}.} other{{count} episodes are waiting for space.}} Free up space or raise the download limit.",
+  "@autoDownloadStorageFullBody": {
+    "description": "System notification body when the automatic check has to hold new episodes back; name is the label of the first one (for example Series S1E1) and size its formatted size",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
   }
 }

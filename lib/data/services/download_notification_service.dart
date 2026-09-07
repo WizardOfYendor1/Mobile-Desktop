@@ -13,6 +13,7 @@ class DownloadNotificationService {
   static const _progressNotificationId = 1000;
   static const _completionNotificationId = 1001;
   static const _remoteMessageNotificationId = 1002;
+  static const _storageNotificationId = 1003;
 
   FlutterLocalNotificationsPlugin get _plugin =>
       LocalNotificationBootstrap.instance.plugin;
@@ -121,6 +122,21 @@ class DownloadNotificationService {
       _completionNotificationId,
       l10n.downloadNotificationFailedTitle,
       l10n.downloadNotificationFailedBody(itemName, error),
+    );
+  }
+
+  /// The automatic check held new episodes back for lack of space.
+  Future<void> showStorageFull({
+    required int count,
+    required String firstLabel,
+    required String firstSize,
+  }) async {
+    if (!_initialized) return;
+    final l10n = currentAppLocalizations();
+    await _showSimple(
+      _storageNotificationId,
+      l10n.autoDownloadStorageFullTitle,
+      l10n.autoDownloadStorageFullBody(count, firstLabel, firstSize),
     );
   }
 

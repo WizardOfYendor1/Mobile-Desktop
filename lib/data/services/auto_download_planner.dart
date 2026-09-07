@@ -7,7 +7,7 @@ class AutoDownloadPlan {
   const AutoDownloadPlan({
     this.toQueue = const [],
     this.toDelete = const [],
-    this.storageFull = false,
+    this.blocked = const [],
   });
 
   /// Unwatched episodes to download, oldest first.
@@ -16,8 +16,12 @@ class AutoDownloadPlan {
   /// Auto-downloaded episodes the user has since watched.
   final List<AggregatedItem> toDelete;
 
-  /// The storage limit left no room for the next episode in line.
-  final bool storageFull;
+  /// Episodes that were in line but did not fit the storage budget, in
+  /// order; nothing after the first misfit is queued, so the order holds.
+  final List<AggregatedItem> blocked;
+
+  /// The storage budget left no room for the next episode in line.
+  bool get storageFull => blocked.isNotEmpty;
 }
 
 /// Decides what an auto-download subscription should queue and delete.
@@ -85,23 +89,24 @@ AutoDownloadPlan planAutoDownload({
       ? queueable.length
       : (keepUnwatched - held).clamp(0, queueable.length);
 
+  final wanted = queueable.take(slots).toList();
   final toQueue = <AggregatedItem>[];
-  var storageFull = false;
+  var blocked = const <AggregatedItem>[];
   var budget = storageBudgetBytes;
-  for (final episode in queueable.take(slots)) {
-    final size = sizeOf(episode);
+  for (var i = 0; i < wanted.length; i++) {
+    final size = sizeOf(wanted[i]);
     if (budget != null && size > budget) {
-      storageFull = true;
+      blocked = wanted.sublist(i);
       break;
     }
     if (budget != null) budget -= size;
-    toQueue.add(episode);
+    toQueue.add(wanted[i]);
   }
 
   return AutoDownloadPlan(
     toQueue: toQueue,
     toDelete: toDelete,
-    storageFull: storageFull,
+    blocked: blocked,
   );
 }
 

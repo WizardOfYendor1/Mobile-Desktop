@@ -11653,7 +11653,7 @@ class AppLocalizationsLv extends AppLocalizations {
   String get autoDownloadRemove => 'Stop following';
 
   @override
-  String get autoDownloadStorageFull => 'Storage limit reached';
+  String get autoDownloadStorageFull => 'Not enough storage';
 
   @override
   String get autoDownloadWaitingForWifi => 'Waiting for WiFi';
@@ -11727,4 +11727,28 @@ class AppLocalizationsLv extends AppLocalizations {
 
   @override
   String get serverMessagesNotificationReceived => 'Message received';
+
+  @override
+  String get downloadStorageLimitReached =>
+      'Storage limit reached. Free up space or increase the limit.';
+
+  @override
+  String downloadNotEnoughStorage(String needed, String free) {
+    return 'Not enough storage: $needed needed, $free free';
+  }
+
+  @override
+  String get autoDownloadStorageFullTitle =>
+      'Not enough storage for new episodes';
+
+  @override
+  String autoDownloadStorageFullBody(int count, String name, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count episodes are waiting for space.',
+      one: '$name needs $size.',
+    );
+    return '$_temp0 Free up space or raise the download limit.';
+  }
 }

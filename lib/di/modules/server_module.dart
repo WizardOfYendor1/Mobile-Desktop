@@ -20,6 +20,8 @@ import '../../data/services/socket_handler.dart';
 import '../../data/services/storage_path_service.dart';
 import '../../platform/auto_download_background_binding.dart';
 import '../../playback/server_transcode_capabilities.dart';
+import '../../util/download_grouping.dart' show downloadNotificationLabel;
+import '../../util/download_utils.dart' show formatBytes;
 import '../../preference/user_preferences.dart';
 
 final _getIt = GetIt.instance;
@@ -158,6 +160,7 @@ void _replaceAutoDownloadService(
         : null,
     ready: recovered,
     playingItemId: _playingItemId,
+    onStorageFull: _notifyStorageFull,
   )..start();
   _getIt.registerSingleton<AutoDownloadService>(service);
   if (!background) {
@@ -172,6 +175,22 @@ void _replaceAutoDownloadService(
       // The account may have changed again while recovery ran.
       if (!service.isDisposed) service.onServerConnected();
     }),
+  );
+}
+
+void _notifyStorageFull(List<BlockedEpisode> blocked) {
+  final first = blocked.first.episode;
+  unawaited(
+    _getIt<DownloadNotificationService>().showStorageFull(
+      count: blocked.length,
+      firstLabel: downloadNotificationLabel(
+        name: first.name,
+        seriesName: first.seriesName,
+        season: first.parentIndexNumber,
+        episode: first.indexNumber,
+      ),
+      firstSize: formatBytes(blocked.first.bytes),
+    ),
   );
 }
 

@@ -91,8 +91,16 @@ class AutoDownloadRunSummary {
   }
 }
 
+/// An episode a check could not queue for lack of space, with the size
+/// the check budgeted for it.
+typedef BlockedEpisode = ({AggregatedItem episode, int bytes});
+
 /// What one series contributed to a check.
-typedef _SeriesOutcome = ({int queued, int deleted, bool storageFull});
+typedef _SeriesOutcome = ({
+  int queued,
+  int deleted,
+  List<BlockedEpisode> blocked,
+});
 
 /// Keeps followed series downloaded: on every trigger it fetches each
 /// subscribed series, asks [planAutoDownload] what to queue or delete, and
@@ -111,6 +119,7 @@ class AutoDownloadService extends ChangeNotifier {
     this.socketEvents,
     this.ready,
     this.playingItemId,
+    this.onStorageFull,
     DateTime Function()? now,
     this.socketDebounce = const Duration(seconds: 30),
   }) : _repository = repository,
@@ -148,6 +157,10 @@ class AutoDownloadService extends ChangeNotifier {
 
   /// The item playing right now, which a check must not delete.
   final String? Function()? playingItemId;
+
+  /// Told once when a full check starts holding episodes back for lack
+  /// of space, and again only after a check that fit everything.
+  final void Function(List<BlockedEpisode> blocked)? onStorageFull;
   final DateTime Function() _now;
   final String serverId;
   final String userId;
@@ -392,7 +405,7 @@ class AutoDownloadService extends ChangeNotifier {
 
     var queued = 0;
     var deleted = 0;
-    var storageFull = false;
+    final blocked = <BlockedEpisode>[];
     var partial = false;
     String? firstError;
 
@@ -424,11 +437,11 @@ class AutoDownloadService extends ChangeNotifier {
       } catch (e) {
         error = e.toString();
         firstError ??= error;
-        outcome = (queued: 0, deleted: 0, storageFull: false);
+        outcome = (queued: 0, deleted: 0, blocked: const []);
       }
       queued += outcome.queued;
       deleted += outcome.deleted;
-      storageFull |= outcome.storageFull;
+      blocked.addAll(outcome.blocked);
       await _repository.updateSubscriptionCheck(
         seriesId: subscription.seriesId,
         serverId: serverId,
@@ -439,16 +452,27 @@ class AutoDownloadService extends ChangeNotifier {
       );
     }
 
+    if (onlySeriesId == null && !_disposed) await _reportBlocked(blocked);
+
     return AutoDownloadRunSummary(
       at: startedAt,
       trigger: trigger,
       subscriptions: subscriptions.length,
       queued: queued,
       deleted: deleted,
-      storageFull: storageFull,
+      storageFull: blocked.isNotEmpty,
       partial: partial,
       error: firstError,
     );
+  }
+
+  /// Announces a shortage once: later checks that still hold episodes
+  /// back stay quiet, and a check that fits everything resets the memory.
+  Future<void> _reportBlocked(List<BlockedEpisode> blocked) async {
+    final shown = _prefs.get(UserPreferences.autoDownloadStorageNoticeShown);
+    if (blocked.isEmpty == !shown) return;
+    await _prefs.set(UserPreferences.autoDownloadStorageNoticeShown, !shown);
+    if (blocked.isNotEmpty) onStorageFull?.call(blocked);
   }
 
   Future<_SeriesOutcome> _checkSeries(
@@ -497,7 +521,10 @@ class AutoDownloadService extends ChangeNotifier {
     return (
       queued: plan.toQueue.length,
       deleted: deleted,
-      storageFull: plan.storageFull,
+      blocked: [
+        for (final episode in plan.blocked)
+          (episode: episode, bytes: sizeOf(episode)),
+      ],
     );
   }
 

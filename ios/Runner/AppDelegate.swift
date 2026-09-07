@@ -263,8 +263,34 @@ private final class NativeAirPlayEventStreamHandler: NSObject, FlutterStreamHand
     }
   }
 
+  /// Free space on the volume holding the downloads, for the checks that
+  /// refuse an episode that would not fit.
+  private func setUpDeviceStorageChannel(messenger: FlutterBinaryMessenger) {
+    let channel = FlutterMethodChannel(
+      name: "com.moonfin/device_storage",
+      binaryMessenger: messenger
+    )
+    channel.setMethodCallHandler { call, result in
+      guard call.method == "freeBytes" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      let args = call.arguments as? [String: Any]
+      let path = args?["path"] as? String ?? NSHomeDirectory()
+      let values = try? URL(fileURLWithPath: path).resourceValues(
+        forKeys: [.volumeAvailableCapacityForImportantUsageKey]
+      )
+      if let free = values?.volumeAvailableCapacityForImportantUsage {
+        result(Int(free))
+      } else {
+        result(nil)
+      }
+    }
+  }
+
   private func setUpPlatformChannels(messenger: FlutterBinaryMessenger) {
     setUpBackgroundRefreshChannel(messenger: messenger)
+    setUpDeviceStorageChannel(messenger: messenger)
 
     let storageChannel = FlutterMethodChannel(
       name: "com.moonfin/ios_storage",

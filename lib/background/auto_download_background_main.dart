@@ -3,6 +3,9 @@ import 'package:flutter/widgets.dart';
 
 import 'package:server_core/server_core.dart';
 
+import 'package:get_it/get_it.dart';
+
+import '../data/services/download_notification_service.dart';
 import '../di/injection.dart';
 import '../di/modules/server_module.dart';
 import '../playback/headless_session_bootstrap.dart';
@@ -39,6 +42,11 @@ Future<void> autoDownloadBackgroundMain() async {
     permanent = client == null;
     if (client != null) {
       setActiveServerClient(client, background: true);
+      // Storage and failure notices come from Dart here; the plugin only
+      // posts for transfers it runs.
+      try {
+        await GetIt.instance<DownloadNotificationService>().initialize();
+      } catch (_) {}
       ok = await runAutoDownloadBackgroundRefresh(
         Duration(seconds: budgetSeconds),
       );

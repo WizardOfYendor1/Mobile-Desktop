@@ -20599,7 +20599,7 @@ abstract class AppLocalizations {
   /// Appended to the last-check summary when the storage limit stopped queueing
   ///
   /// In en, this message translates to:
-  /// **'Storage limit reached'**
+  /// **'Not enough storage'**
   String get autoDownloadStorageFull;
 
   /// Last-check summary when Wi-Fi only is on and the device was on mobile data
@@ -20679,6 +20679,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Message received'**
   String get serverMessagesNotificationReceived;
+
+  /// Error shown when a download would exceed the storage limit set in the download settings
+  ///
+  /// In en, this message translates to:
+  /// **'Storage limit reached. Free up space or increase the limit.'**
+  String get downloadStorageLimitReached;
+
+  /// Error shown when a download would not fit on the device; needed and free are formatted sizes
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough storage: {needed} needed, {free} free'**
+  String downloadNotEnoughStorage(String needed, String free);
+
+  /// System notification title when the automatic check has to hold new episodes back
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough storage for new episodes'**
+  String get autoDownloadStorageFullTitle;
+
+  /// System notification body when the automatic check has to hold new episodes back; name is the label of the first one (for example Series S1E1) and size its formatted size
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{name} needs {size}.} other{{count} episodes are waiting for space.}} Free up space or raise the download limit.'**
+  String autoDownloadStorageFullBody(int count, String name, String size);
 }
 
 class _AppLocalizationsDelegate

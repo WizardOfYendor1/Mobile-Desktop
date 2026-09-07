@@ -2941,6 +2941,15 @@ class UserPreferences extends ChangeNotifier {
     defaultValue: '',
   );
 
+  /// Whether the "not enough storage" notice is out: set when a check
+  /// first holds episodes back, cleared by a check that fits everything,
+  /// so a full phone is announced once rather than every few hours.
+  /// Written by AutoDownloadService.
+  static final autoDownloadStorageNoticeShown = Preference(
+    key: 'auto_download_storage_notice_shown',
+    defaultValue: false,
+  );
+
   // Android TV only: the detail page keeps its download, delete, and
   // download-all actions hidden until the user opts in from
   // Settings -> Playback -> Offline Downloads. Other platforms offer
