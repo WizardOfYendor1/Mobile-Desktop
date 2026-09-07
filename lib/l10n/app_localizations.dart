@@ -20413,7 +20413,7 @@ abstract class AppLocalizations {
   /// Subtitle under the auto-download row explaining the keep-unwatched rule
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =0{Downloads every new episode as it arrives} =1{Downloads new episodes, keeping 1 unwatched} other{Downloads new episodes, keeping up to {count} unwatched}}'**
+  /// **'{count, plural, =0{Downloads every new episode} =1{Downloads new episodes, up to 1 unwatched at a time} other{Downloads new episodes, up to {count} unwatched at a time}}'**
   String autoDownloadKeepUnwatchedSubtitle(int count);
 
   /// Subtitle under the stop auto-download row showing the subscription's quality
@@ -20425,19 +20425,19 @@ abstract class AppLocalizations {
   /// Shown under transcoded options when choosing the quality of an auto-download subscription
   ///
   /// In en, this message translates to:
-  /// **'Transcoded qualities are only fetched while Moonfin is open. Original also works in the background.'**
+  /// **'Transcoded qualities only download while Moonfin is open. Original quality also downloads in the background.'**
   String get autoDownloadTranscodedForegroundNote;
 
   /// Shown under a running transcoded download that a subscription queued
   ///
   /// In en, this message translates to:
-  /// **'Automatic download in a transcoded quality: it cannot resume after a connection drop and starts over. Original quality can.'**
+  /// **'Transcoded downloads can\'t resume after an interruption and start over from the beginning. Original quality can resume.'**
   String get autoDownloadTranscodedRunningNote;
 
   /// Short note next to a followed series in a transcoded quality
   ///
   /// In en, this message translates to:
-  /// **'Only while the app is open'**
+  /// **'Downloads only while Moonfin is open'**
   String get autoDownloadForegroundOnly;
 
   /// Title of the quality sheet when it is opened to create an auto-download subscription
@@ -20473,7 +20473,7 @@ abstract class AppLocalizations {
   /// Explains the master switch
   ///
   /// In en, this message translates to:
-  /// **'Downloads episodes that arrive after you follow a series. Older episodes stay with the manual download options'**
+  /// **'Downloads new episodes of the series you follow. Existing episodes can still be downloaded manually.'**
   String get autoDownloadEnableSubtitle;
 
   /// Setting that caps how many unwatched episodes per series stay downloaded
@@ -20497,7 +20497,7 @@ abstract class AppLocalizations {
   /// Explains the delete-after-watching setting
   ///
   /// In en, this message translates to:
-  /// **'Choose how quickly episodes you downloaded automatically are removed once you have watched them'**
+  /// **'When to remove automatically downloaded episodes after you watch them'**
   String get autoDownloadDeleteSubtitle;
 
   /// Delete-after-watching option: keep episodes
@@ -20533,13 +20533,13 @@ abstract class AppLocalizations {
   /// Explains the background refresh setting
   ///
   /// In en, this message translates to:
-  /// **'Lets iOS wake Moonfin now and then to look for new episodes'**
+  /// **'Allow iOS to check for new episodes periodically while Moonfin is closed'**
   String get autoDownloadBackgroundRefreshSubtitle;
 
   /// Shown when iOS forbids background refresh for the app
   ///
   /// In en, this message translates to:
-  /// **'Background App Refresh is turned off for Moonfin in iOS Settings'**
+  /// **'Background App Refresh is disabled for Moonfin. Enable it in iOS Settings.'**
   String get autoDownloadBackgroundRefreshDenied;
 
   /// Button that runs a subscription check immediately
@@ -20581,7 +20581,7 @@ abstract class AppLocalizations {
   /// Shown in settings when no series is followed
   ///
   /// In en, this message translates to:
-  /// **'Open a series and choose \"Auto-download new episodes\" from the download button'**
+  /// **'Open a series and choose \"Auto-download new episodes\" from its download menu'**
   String get autoDownloadNoSubscriptions;
 
   /// Tooltip on the button that removes a followed series

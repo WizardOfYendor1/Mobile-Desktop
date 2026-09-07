@@ -11113,9 +11113,9 @@ class AppLocalizationsKo extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Downloads new episodes, keeping up to $count unwatched',
-      one: 'Downloads new episodes, keeping 1 unwatched',
-      zero: 'Downloads every new episode as it arrives',
+      other: 'Downloads new episodes, up to $count unwatched at a time',
+      one: 'Downloads new episodes, up to 1 unwatched at a time',
+      zero: 'Downloads every new episode',
     );
     return '$_temp0';
   }
@@ -11127,14 +11127,15 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get autoDownloadTranscodedForegroundNote =>
-      'Transcoded qualities are only fetched while Moonfin is open. Original also works in the background.';
+      'Transcoded qualities only download while Moonfin is open. Original quality also downloads in the background.';
 
   @override
   String get autoDownloadTranscodedRunningNote =>
-      'Automatic download in a transcoded quality: it cannot resume after a connection drop and starts over. Original quality can.';
+      'Transcoded downloads can\'t resume after an interruption and start over from the beginning. Original quality can resume.';
 
   @override
-  String get autoDownloadForegroundOnly => 'Only while the app is open';
+  String get autoDownloadForegroundOnly =>
+      'Downloads only while Moonfin is open';
 
   @override
   String get autoDownloadQualityTitle => 'Auto-download quality';
@@ -11157,7 +11158,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get autoDownloadEnableSubtitle =>
-      'Downloads episodes that arrive after you follow a series. Older episodes stay with the manual download options';
+      'Downloads new episodes of the series you follow. Existing episodes can still be downloaded manually.';
 
   @override
   String get autoDownloadKeepUnwatched => 'Keep unwatched episodes';
@@ -11170,7 +11171,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get autoDownloadDeleteSubtitle =>
-      'Choose how quickly episodes you downloaded automatically are removed once you have watched them';
+      'When to remove automatically downloaded episodes after you watch them';
 
   @override
   String get autoDownloadDeleteNever => 'Never';
@@ -11189,11 +11190,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get autoDownloadBackgroundRefreshSubtitle =>
-      'Lets iOS wake Moonfin now and then to look for new episodes';
+      'Allow iOS to check for new episodes periodically while Moonfin is closed';
 
   @override
   String get autoDownloadBackgroundRefreshDenied =>
-      'Background App Refresh is turned off for Moonfin in iOS Settings';
+      'Background App Refresh is disabled for Moonfin. Enable it in iOS Settings.';
 
   @override
   String get autoDownloadCheckNow => 'Check now';
@@ -11226,7 +11227,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get autoDownloadNoSubscriptions =>
-      'Open a series and choose \"Auto-download new episodes\" from the download button';
+      'Open a series and choose \"Auto-download new episodes\" from its download menu';
 
   @override
   String get autoDownloadRemove => 'Stop following';
