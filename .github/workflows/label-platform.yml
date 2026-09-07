@@ -122,9 +122,11 @@ jobs:
             const platformLines = section(body, /^platform(\(s\))?\b/i);
             if (platformLines) {
               const items = selected(platformLines);
-              // "All / Shared code" means no single platform owns it, so clear
-              // the labels instead of applying all nine.
+              // "All / Shared code" gets its own label rather than all eight,
+              // and rather than nothing, which looked the same as an empty form.
+              managed.add('All');
               const isAll = items.some(i => /^all\b/i.test(i));
+              if (isAll) wanted.add('All');
               apply(PLATFORMS, isAll ? [] : items);
             }
 
