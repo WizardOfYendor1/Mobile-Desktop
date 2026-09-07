@@ -10834,6 +10834,11 @@ class AppLocalizationsTh extends AppLocalizations {
   }
 
   @override
+  String dateCreatedFormat(Object date) {
+    return 'Date Added: $date';
+  }
+
+  @override
   String showAllAudioTracks(int count) {
     return 'แสดงแทร็กเสียงทั้งหมด ($count)';
   }
