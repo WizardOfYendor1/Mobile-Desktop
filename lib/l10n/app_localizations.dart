@@ -20626,6 +20626,16 @@ abstract class AppLocalizations {
   /// **'{name} — {percent}%'**
   String downloadNotificationProgress(String name, int percent);
 
+  /// System notification body for a transfer the native engine reports on. The engine fills in progress (a percentage such as 42%) and timeRemaining (mm:ss) itself.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} — {progress} · {timeRemaining}'**
+  String downloadNotificationTransfer(
+    String name,
+    String progress,
+    String timeRemaining,
+  );
+
   /// System notification body before the size of a download is known
   ///
   /// In en, this message translates to:

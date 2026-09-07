@@ -10474,6 +10474,21 @@
       }
     }
   },
+  "downloadNotificationTransfer": "{name} — {progress} · {timeRemaining}",
+  "@downloadNotificationTransfer": {
+    "description": "System notification body for a transfer the native engine reports on. The engine fills in progress (a percentage such as 42%) and timeRemaining (mm:ss) itself.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "progress": {
+        "type": "String"
+      },
+      "timeRemaining": {
+        "type": "String"
+      }
+    }
+  },
   "downloadNotificationStarting": "{name}...",
   "@downloadNotificationStarting": {
     "description": "System notification body before the size of a download is known",

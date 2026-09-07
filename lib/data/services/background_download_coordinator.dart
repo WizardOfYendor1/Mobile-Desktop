@@ -146,15 +146,28 @@ class BackgroundDownloadCoordinator {
       mediaGroup,
       running: TaskNotification(
         l10n.downloadNotificationRunning,
-        '{displayName}',
+        // The plugin replaces its own tokens when it posts the notification.
+        // iOS posts one banner when the transfer starts and never updates
+        // it, and fills the progress tokens with blanks, so it only gets
+        // the name.
+        PlatformDetection.isIOS
+            ? '{displayName}'
+            : l10n.downloadNotificationTransfer(
+                '{displayName}',
+                '{progress}',
+                '{timeRemaining}',
+              ),
       ),
       complete: null,
       error: TaskNotification(
         l10n.downloadNotificationFailedTitle,
         '{displayName}',
       ),
+      // One notification per running transfer, capped by the concurrency
+      // limit. A group notification would be a single card, but the plugin
+      // only refreshes it on status changes and its bar counts finished
+      // tasks rather than bytes, so a lone episode sits at 0% until done.
       progressBar: true,
-      groupNotificationId: 'moonfinMediaDownloads',
     );
 
     FileDownloader().updates.listen(_route);
