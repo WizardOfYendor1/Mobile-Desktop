@@ -5042,6 +5042,7 @@ class _ModernDetailContentState extends State<ModernDetailContent> {
     return QuickReturnWrapper(
       scrollController: _scrollController,
       topFocusNode: widget.initialFocusNode,
+      hideNavbar: true,
       child: layout,
     );
   }
