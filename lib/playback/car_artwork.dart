@@ -3,16 +3,23 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:server_core/server_core.dart' show MediaServerClient;
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Appends the access token as api_key so the URL authenticates itself. Car
-/// hosts and the artwork provider fetch images without the app's Authorization
-/// header; Emby URLs already carry api_key, Jellyfin's do not.
+/// Appends the access token query parameter so the URL authenticates itself.
+/// Car hosts and the artwork provider fetch images without the app's
+/// Authorization header. Emby URLs already carry api_key while Jellyfin's
+/// don't, and Jellyfin 12 only reads the ApiKey spelling, so the name comes
+/// from the server type.
 String? carAuthedImageUrl(MediaServerClient client, String? url) {
   if (url == null) return null;
   final token = client.accessToken;
   if (token == null || token.isEmpty) return url;
-  if (url.contains('api_key=') || url.contains('X-Emby-Token=')) return url;
+  final lower = url.toLowerCase();
+  if (lower.contains('api_key=') ||
+      lower.contains('apikey=') ||
+      lower.contains('x-emby-token=')) {
+    return url;
+  }
   final sep = url.contains('?') ? '&' : '?';
-  return '$url${sep}api_key=${Uri.encodeQueryComponent(token)}';
+  return '$url$sep${client.serverType.tokenQueryParam}=${Uri.encodeQueryComponent(token)}';
 }
 
 /// Rewrites remote artwork URLs into content:// URIs backed by the native
