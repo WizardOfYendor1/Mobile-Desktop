@@ -2,11 +2,9 @@ package org.moonfin.nativevideo
 
 import android.app.ActivityManager
 import android.app.Activity
-import android.app.UiModeManager
 import android.content.Context
 import android.content.Intent
 import android.content.ContextWrapper
-import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
 import android.media.AudioDeviceCallback
@@ -94,6 +92,7 @@ import io.github.peerless2012.ass.media.parser.AssSubtitleParserFactory
 import io.github.peerless2012.ass.media.type.AssRenderType
 import java.io.File
 import java.nio.ByteBuffer
+import java.util.Locale
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalApi::class)
@@ -817,6 +816,8 @@ class Media3VideoView(
     private var activePreferredDisplayModeId: Int? = null
     private var detectedFrameRate: Float? = null
     private var sourceFrameRateHint: Float? = null
+    private var sourceVideoWidthHint = 0
+    private var sourceVideoHeightHint = 0
     private var audioOffloadDisabled = false
     private var audioOffloadRetryAttemptedForCurrentSource = false
     private var sessionTunnelingDisabled = Media3Bridge.sessionTunnelingDisabledEnabled()
@@ -1093,7 +1094,9 @@ class Media3VideoView(
             videoPixelRatio = videoSize.pixelWidthHeightRatio
             applyVideoLayout()
             resolveSelectedVideoFrameRate()?.let { frameRate ->
-                if (detectedFrameRate != frameRate) {
+                // detectedFrameRate holds the normalized rate, so compare like
+                // with like or every callback re-runs the whole switch.
+                if (detectedFrameRate != normalizeFrameRate(frameRate)) {
                     maybeApplyFrameRateSwitching(frameRate)
                 }
             }
@@ -1153,7 +1156,7 @@ class Media3VideoView(
                 ),
             )
             resolveSelectedVideoFrameRate()?.let { frameRate ->
-                if (detectedFrameRate != frameRate) {
+                if (detectedFrameRate != normalizeFrameRate(frameRate)) {
                     maybeApplyFrameRateSwitching(frameRate)
                 }
             }
@@ -2244,6 +2247,10 @@ class Media3VideoView(
         sourceFrameRateHint = (args["videoFrameRate"] as? Number)
             ?.toFloat()
             ?.takeIf { it.isFinite() && it > 0f }
+        // Lets a resolution change respect the video's own size before the
+        // decoder has reported one.
+        sourceVideoWidthHint = (args["videoWidth"] as? Number)?.toInt() ?: 0
+        sourceVideoHeightHint = (args["videoHeight"] as? Number)?.toInt() ?: 0
 
         val nextMediaType = args["mediaType"]?.toString()?.lowercase() ?: "video"
         val isAudio = nextMediaType == "audio"
@@ -2397,15 +2404,12 @@ class Media3VideoView(
         return null
     }
 
-    private fun isTelevisionDevice(): Boolean {
-        val manager = context.getSystemService<UiModeManager>()
-        return manager?.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
-    }
-
+    // Both options switch and differ only in whether the resolution may change.
+    // Gating scale on TV behind the system television UI mode meant it never
+    // ran on Fire TV, which doesn't report that mode reliably.
     private fun isFrameRateSwitchingEnabled(): Boolean {
         return when (frameRateSwitchingBehavior) {
-            "scaleondevice" -> true
-            "scaleontv" -> isTelevisionDevice()
+            "scaleondevice", "scaleontv" -> true
             else -> false
         }
     }
@@ -2433,55 +2437,50 @@ class Media3VideoView(
         return rounded >= 1f && kotlin.math.abs(ratio - rounded) <= 0.02f
     }
 
+    // Only a refresh rate that is a whole multiple of the content rate
+    // qualifies. There is no closest rate fallback on purpose, because moving
+    // a 60Hz screen to 50Hz for 24fps content trades one cadence error for a
+    // worse one.
+    //
+    // Scale on device holds the display at its current resolution and lets the
+    // device scale the picture. Scale on TV can also change resolution, never
+    // below the video's own, and prefers the mode closest to the video so the
+    // television does the scaling. Some HDMI chains only offer 24Hz at the
+    // video's resolution and not at the one the UI runs at.
     private fun choosePreferredDisplayMode(display: Display, contentFrameRate: Float): Display.Mode? {
         val currentMode = display.mode
         val modes = display.supportedModes ?: return null
+        val allowResolutionChange = frameRateSwitchingBehavior == "scaleontv"
+        val videoWidth = if (sourceVideoWidthHint > 0) sourceVideoWidthHint else videoWidthPx
+        val videoHeight = if (sourceVideoHeightHint > 0) sourceVideoHeightHint else videoHeightPx
+        // Without known dimensions the distance below would rank the smallest
+        // mode first, so resolution stops being a tiebreak until they arrive.
+        val rankByResolution = allowResolutionChange && videoWidth > 0
 
-        val sameResolutionModes = modes.filter { mode ->
-            mode.physicalWidth == currentMode.physicalWidth &&
-                mode.physicalHeight == currentMode.physicalHeight
-        }
-        val candidates = if (sameResolutionModes.isNotEmpty()) sameResolutionModes else modes.toList()
-
-        var bestMultipleMode: Display.Mode? = null
-        var bestMultipleDelta = Float.MAX_VALUE
-        for (mode in candidates) {
-            val refreshRate = mode.refreshRate
-            if (!isRefreshRateMultiple(refreshRate, contentFrameRate)) {
-                continue
+        return modes
+            .filter { mode ->
+                val sameResolution = mode.physicalWidth == currentMode.physicalWidth &&
+                    mode.physicalHeight == currentMode.physicalHeight
+                val resolutionAllowed = sameResolution || (
+                    allowResolutionChange &&
+                        mode.physicalWidth >= 1280 && mode.physicalHeight >= 720 &&
+                        mode.physicalWidth >= videoWidth && mode.physicalHeight >= videoHeight
+                    )
+                resolutionAllowed && isRefreshRateMultiple(mode.refreshRate, contentFrameRate)
             }
-            val delta = kotlin.math.abs(refreshRate - contentFrameRate)
-            if (
-                bestMultipleMode == null ||
-                delta < bestMultipleDelta ||
-                (delta == bestMultipleDelta && refreshRate > (bestMultipleMode?.refreshRate ?: 0f))
-            ) {
-                bestMultipleMode = mode
-                bestMultipleDelta = delta
-            }
-        }
-
-        if (bestMultipleMode != null) {
-            return bestMultipleMode
-        }
-
-        var bestMode: Display.Mode? = null
-        var bestDelta = Float.MAX_VALUE
-        for (mode in candidates) {
-            val delta = kotlin.math.abs(mode.refreshRate - contentFrameRate)
-            if (
-                bestMode == null ||
-                delta < bestDelta ||
-                (delta == bestDelta && mode.refreshRate > (bestMode?.refreshRate ?: 0f))
-            ) {
-                bestMode = mode
-                bestDelta = delta
-            }
-        }
-        return bestMode
+            .minWithOrNull(
+                compareBy<Display.Mode> { kotlin.math.abs(it.refreshRate - contentFrameRate) }
+                    .thenBy { if (rankByResolution) kotlin.math.abs(it.physicalWidth - videoWidth) else 0 }
+                    .thenByDescending { it.refreshRate },
+            )
     }
 
     private fun maybeApplyFrameRateSwitching(rawFrameRate: Float) {
+        // Previews share the activity window, so a trailer must never
+        // renegotiate the display out from under the main player.
+        if (role != "main") {
+            return
+        }
         val normalizedFrameRate = normalizeFrameRate(rawFrameRate)
         detectedFrameRate = normalizedFrameRate
 
@@ -2510,7 +2509,19 @@ class Media3VideoView(
             originalPreferredDisplayModeId = window.attributes.preferredDisplayModeId
         }
 
-        val preferredMode = choosePreferredDisplayMode(display, normalizedFrameRate) ?: return
+        val preferredMode = choosePreferredDisplayMode(display, normalizedFrameRate)
+        if (preferredMode == null) {
+            // The display offering nothing usable is the one outcome that looks
+            // identical to the feature being off, so it reports what it saw.
+            emitFrameRateState(
+                detectedFrameRate = normalizedFrameRate,
+                appliedFrameRate = null,
+                appliedModeId = null,
+                enabled = true,
+                supportedModes = describeSupportedModes(display),
+            )
+            return
+        }
         val preferredModeId = preferredMode.modeId
         val currentModeId = window.attributes.preferredDisplayModeId
         if (currentModeId == preferredModeId || activePreferredDisplayModeId == preferredModeId) {
@@ -2520,6 +2531,8 @@ class Media3VideoView(
                 appliedFrameRate = preferredMode.refreshRate,
                 appliedModeId = preferredModeId,
                 enabled = true,
+                appliedWidth = preferredMode.physicalWidth,
+                appliedHeight = preferredMode.physicalHeight,
             )
             return
         }
@@ -2537,7 +2550,22 @@ class Media3VideoView(
             appliedFrameRate = preferredMode.refreshRate,
             appliedModeId = preferredModeId,
             enabled = true,
+            appliedWidth = preferredMode.physicalWidth,
+            appliedHeight = preferredMode.physicalHeight,
         )
+    }
+
+    private fun describeSupportedModes(display: Display): List<String> {
+        val modes = display.supportedModes ?: return emptyList()
+        return modes.map { mode ->
+            String.format(
+                Locale.US,
+                "%dx%d@%.3f",
+                mode.physicalWidth,
+                mode.physicalHeight,
+                mode.refreshRate,
+            )
+        }
     }
 
     private fun stopPlaybackAndRestoreDisplayMode() {
@@ -2556,6 +2584,11 @@ class Media3VideoView(
     private fun restorePreferredDisplayMode() {
         clearSurfaceFrameRateHint()
         endDisplayModeSwitchRecovery()
+        // A preview never applied a mode, so its idea of the original id is 0
+        // and restoring it here would undo the main player's switch.
+        if (role != "main") {
+            return
+        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             return
         }
@@ -2644,6 +2677,9 @@ class Media3VideoView(
         appliedFrameRate: Float?,
         appliedModeId: Int?,
         enabled: Boolean,
+        appliedWidth: Int? = null,
+        appliedHeight: Int? = null,
+        supportedModes: List<String>? = null,
     ) {
         Media3Bridge.emitEvent(
             mapOf(
@@ -2652,6 +2688,10 @@ class Media3VideoView(
                 "appliedFrameRate" to appliedFrameRate?.toDouble(),
                 "appliedDisplayModeId" to appliedModeId,
                 "enabled" to enabled,
+                "behavior" to frameRateSwitchingBehavior,
+                "appliedWidth" to appliedWidth,
+                "appliedHeight" to appliedHeight,
+                "supportedModes" to supportedModes,
             ),
         )
     }

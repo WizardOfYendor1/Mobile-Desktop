@@ -137,6 +137,7 @@ class Media3PlayerBackend extends PlayerBackend {
   int _bufferingSinceMs = 0;
   int _bufferingWarnedAtMs = 0;
   bool _bufferingFailed = false;
+  String? _lastFrameRateLine;
 
   final _positionStream = StreamController<Duration>.broadcast();
   final _durationStream = StreamController<Duration>.broadcast();
@@ -404,7 +405,44 @@ class Media3PlayerBackend extends PlayerBackend {
         _diag(
           'Media3: video size ${_toInt(map['width'])}x${_toInt(map['height'])}',
         );
+      case 'frameRate':
+        _onFrameRateEvent(map);
     }
+  }
+
+  void _onFrameRateEvent(Map<String, dynamic> map) {
+    final detected = (map['detectedFrameRate'] as num?)?.toDouble();
+    final applied = (map['appliedFrameRate'] as num?)?.toDouble();
+    final behavior = map['behavior']?.toString() ?? '';
+    final content = detected == null
+        ? 'content of unknown frame rate'
+        : '${detected.toStringAsFixed(3)}fps content';
+
+    final String line;
+    var level = LogLevel.debug;
+    if (map['enabled'] != true) {
+      line = 'Media3: refresh rate switching off for $content';
+    } else if (applied != null) {
+      line =
+          'Media3: refresh rate switch to '
+          '${_toInt(map['appliedWidth'])}x${_toInt(map['appliedHeight'])}'
+          '@${applied.toStringAsFixed(3)} for $content '
+          '($behavior, mode ${_toInt(map['appliedDisplayModeId'])})';
+    } else {
+      final modes = (map['supportedModes'] as List<dynamic>? ?? const [])
+          .join(', ');
+      line =
+          'Media3: no display mode fits $content ($behavior'
+          '${modes.isEmpty ? '' : ', display offers $modes'})';
+      level = LogLevel.warning;
+    }
+    // The native side re-decides on every decoder and size callback, so the
+    // same outcome would otherwise land several times per start.
+    if (line == _lastFrameRateLine) {
+      return;
+    }
+    _lastFrameRateLine = line;
+    _diag(line, level: level);
   }
 
   void _onAudioTrackInitialized(Map<String, dynamic> map) {
@@ -896,6 +934,7 @@ class Media3PlayerBackend extends PlayerBackend {
           .name,
       ...audioDecoderPreferencesPayload(_prefs),
     });
+    _lastFrameRateLine = null;
     await _invoke<void>('setSource', {
       'url': url,
       'headers': headers,
@@ -905,6 +944,8 @@ class Media3PlayerBackend extends PlayerBackend {
       'videoRangeType': videoRangeType,
       'mediaType': mediaType,
       'videoFrameRate': (payload['videoFrameRate'] as num?)?.toDouble(),
+      'videoWidth': (payload['videoWidth'] as num?)?.toInt(),
+      'videoHeight': (payload['videoHeight'] as num?)?.toInt(),
       'isLive': payload['isLive'] == true,
       'normalizationGainDb': normalizationGainDb,
       'skipSilenceEnabled': _skipSilenceEnabled,
