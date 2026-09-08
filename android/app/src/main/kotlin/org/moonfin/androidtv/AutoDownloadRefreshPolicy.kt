@@ -30,17 +30,18 @@ internal object AutoDownloadRefreshPolicy {
     fun networkTypeFor(wifiOnly: Boolean): NetworkType =
         if (wifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED
 
-    enum class Outcome { SUCCESS, RETRY, FAILURE }
+    enum class Outcome { SUCCESS, RETRY, GIVE_UP }
 
     /**
      * [ok] is Dart's answer, null when none came in time (handler not bound
      * yet, or the check overran). [permanent] is Dart saying retrying can't
-     * help (nobody signed in), so the run counts as done.
+     * help (nobody signed in), so the run counts as done. Past the cap the
+     * run gives up, which still leaves the schedule intact.
      */
     fun outcome(ok: Boolean?, permanent: Boolean, attempt: Int): Outcome = when {
         ok == true -> Outcome.SUCCESS
         permanent -> Outcome.SUCCESS
-        attempt >= MAX_RETRY_ATTEMPTS -> Outcome.FAILURE
+        attempt >= MAX_RETRY_ATTEMPTS -> Outcome.GIVE_UP
         else -> Outcome.RETRY
     }
 }

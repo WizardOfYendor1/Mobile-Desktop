@@ -162,10 +162,10 @@ void main() {
   });
 
   group('runAutoDownloadBackgroundRefresh', () {
-    test('answers false when no session can be restored', () async {
+    test('counts no session as a finished run, not a failure', () async {
       expect(
         await runAutoDownloadBackgroundRefresh(const Duration(seconds: 20)),
-        isFalse,
+        isTrue,
       );
     });
 

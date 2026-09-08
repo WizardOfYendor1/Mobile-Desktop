@@ -185,7 +185,9 @@ class AutoDownloadWorker(
         when (AutoDownloadRefreshPolicy.outcome(ok, permanent, runAttemptCount)) {
             Outcome.SUCCESS -> Result.success()
             Outcome.RETRY -> Result.retry()
-            Outcome.FAILURE -> Result.failure()
+            // Ends this run only. Result.failure() would retire the periodic
+            // request, leaving no next run to recover in.
+            Outcome.GIVE_UP -> Result.success()
         }
 
     companion object {

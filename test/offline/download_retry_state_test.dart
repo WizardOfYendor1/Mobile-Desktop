@@ -614,7 +614,8 @@ void main() {
 
     tearDown(() => batchService.dispose());
 
-    test('queueDownloads skips downloaded and in-flight items', () async {
+    test('queueDownloads skips in-flight and repeated items', () async {
+      await prefs.set(UserPreferences.downloadConcurrentCount, 3);
       repo.completedIds.add('done');
       final inFlight = batchService.downloadItem(movie('running'));
       await _waitForCalls(api, 1);
@@ -626,16 +627,58 @@ void main() {
         movie('fresh'),
       ]);
 
-      expect(batch.queued.map((i) => i.id), ['fresh']);
-      expect(batchService.totalQueued, 1);
-      expect(batchService.inFlightItemIds, {'running', 'fresh'});
+      // 'done' is already downloaded, but a manual batch is the user asking
+      // for it, so only the running transfer and the repeat are dropped.
+      expect(batch.queued.map((i) => i.id), ['done', 'fresh']);
+      expect(batchService.totalQueued, 2);
+      expect(batchService.inFlightItemIds, {'running', 'done', 'fresh'});
 
-      await _waitForCalls(api, 2);
+      await _waitForCalls(api, 3);
+      api.releaseNext();
       api.releaseNext();
       api.releaseNext();
       await inFlight.catchError((_) {});
       await batch.done;
       expect(batchService.totalQueued, 0);
+    });
+
+    test('an automatic batch leaves finished downloads alone', () async {
+      repo.completedIds.add('done');
+
+      final batch = await batchService.queueDownloads([
+        movie('done'),
+        movie('fresh'),
+      ], source: DownloadSource.auto);
+
+      expect(batch.queued.map((i) => i.id), ['fresh']);
+      expect(batchService.totalQueued, 1);
+
+      await _waitForCalls(api, 1);
+      api.releaseNext();
+      await batch.done;
+      expect(batchService.totalQueued, 0);
+    });
+
+    test('a batch starts its count from zero', () async {
+      // Every finished download bumps the counter, so leftovers from a
+      // one-off would push a later batch past its total early.
+      final single = batchService.downloadItem(movie('one-off'));
+      await _waitForCalls(api, 1);
+      api.releaseNext();
+      await single.catchError((_) {});
+
+      final batch = await batchService.queueDownloads([
+        movie('a'),
+        movie('b'),
+      ]);
+      expect(batchService.totalQueued, 2);
+      expect(batchService.completedCount, 0);
+      expect(batchService.isBatchDownloading, isTrue);
+
+      await _waitForCalls(api, 3);
+      api.releaseNext();
+      api.releaseNext();
+      await batch.done;
     });
 
     test(

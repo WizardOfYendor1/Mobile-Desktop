@@ -20,12 +20,23 @@ class MediaServerClientFactory {
 
   /// The server id [client] was created under, or its base URL for a client
   /// this factory did not create.
+  ///
+  /// Callers hold either the connectivity wrapper this factory stores or
+  /// the raw client inside it, so both sides are unwrapped before
+  /// comparing. Matching only the wrapper falls through to the base URL,
+  /// which changes whenever the server address is edited.
   String serverIdOf(MediaServerClient client) {
+    final target = _unwrapped(client);
     for (final entry in _clients.entries) {
-      if (identical(entry.value, client)) return entry.key;
+      if (identical(_unwrapped(entry.value), target)) return entry.key;
     }
     return client.baseUrl;
   }
+
+  static MediaServerClient _unwrapped(MediaServerClient client) =>
+      client is ConnectivityAwareMediaServerClient
+      ? client.onlineClient
+      : client;
 
   MediaServerClient getClient({
     required String serverId,

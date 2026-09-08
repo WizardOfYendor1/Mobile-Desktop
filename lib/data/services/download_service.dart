@@ -2719,12 +2719,21 @@ class DownloadService extends ChangeNotifier implements AutoDownloadDownloader {
         return DownloadBatch(queued: const [], done: Future.value());
       }
     }
-    final toQueue = await _withoutDownloadedOrInFlight(items);
+    final toQueue = await _withoutDownloadedOrInFlight(
+      items,
+      skipCompleted: source != DownloadSource.manual,
+    );
     if (toQueue.isEmpty) {
       return DownloadBatch(queued: const [], done: Future.value());
     }
 
     final generation = _batchGeneration;
+    // Single downloads count themselves too, so a batch opening on top of
+    // their leftovers would reach its total early and call itself finished
+    // while transfers are still running.
+    if (_openBatches == 0) {
+      _resetBatch();
+    }
     _openBatches++;
     _totalQueued += toQueue.length;
     notifyListeners();
@@ -2750,13 +2759,20 @@ class DownloadService extends ChangeNotifier implements AutoDownloadDownloader {
     return DownloadBatch(queued: toQueue, done: done);
   }
 
+  /// [skipCompleted] keeps the auto-downloader from re-queueing what it
+  /// already holds. Manual batches leave it off, where a downloaded item is
+  /// the user asking for another quality and dropping it would leave the
+  /// button doing nothing.
   Future<List<AggregatedItem>> _withoutDownloadedOrInFlight(
-    List<AggregatedItem> items,
-  ) async {
-    final completed = {
-      for (final ref in await _offlineRepo.getDownloadRefs())
-        if (ref.downloadStatus == 2) ref.itemId,
-    };
+    List<AggregatedItem> items, {
+    required bool skipCompleted,
+  }) async {
+    final completed = skipCompleted
+        ? {
+            for (final ref in await _offlineRepo.getDownloadRefs())
+              if (ref.downloadStatus == 2) ref.itemId,
+          }
+        : const <String>{};
     final inFlight = inFlightItemIds;
     final seen = <String>{};
     return [

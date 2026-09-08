@@ -289,8 +289,10 @@ class UserPreferences extends ChangeNotifier {
 
   static final Set<String> _scopedPreferenceKeys = {
     // Per account but never synced: the result of this device's last
-    // subscription check.
+    // subscription check, and whether that account has already been told
+    // the device is too full to keep downloading.
     'auto_download_last_run',
+    'auto_download_storage_notice_shown',
     // Newly synced settings. Anything that goes to the server profile has to be stored
     // per server and user, or one server's value is read back on the next.
     'all_genres_image_type',

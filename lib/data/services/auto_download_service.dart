@@ -293,10 +293,13 @@ class AutoDownloadService extends ChangeNotifier {
     }
     final inFlight = _inFlight;
     if (inFlight != null) {
-      final broader =
-          _inFlightScoped &&
-          (onlySeriesId == null || onlySeriesId != _inFlightSeriesId);
-      if (!broader) return inFlight;
+      // The running check only answers for this request when it covers the
+      // same ground. A full run doesn't cover a series followed after it
+      // read its subscriptions, so that one waits and runs again.
+      final covered = _inFlightScoped
+          ? onlySeriesId != null && onlySeriesId == _inFlightSeriesId
+          : onlySeriesId == null;
+      if (covered) return inFlight;
       return inFlight.then(
         (_) => runCheck(
           trigger: trigger,
@@ -470,9 +473,13 @@ class AutoDownloadService extends ChangeNotifier {
   /// back stay quiet, and a check that fits everything resets the memory.
   Future<void> _reportBlocked(List<BlockedEpisode> blocked) async {
     final shown = _prefs.get(UserPreferences.autoDownloadStorageNoticeShown);
-    if (blocked.isEmpty == !shown) return;
-    await _prefs.set(UserPreferences.autoDownloadStorageNoticeShown, !shown);
-    if (blocked.isNotEmpty) onStorageFull?.call(blocked);
+    final wantNotice = blocked.isNotEmpty;
+    if (wantNotice == shown) return;
+    await _prefs.set(
+      UserPreferences.autoDownloadStorageNoticeShown,
+      wantNotice,
+    );
+    if (wantNotice) onStorageFull?.call(blocked);
   }
 
   Future<_SeriesOutcome> _checkSeries(

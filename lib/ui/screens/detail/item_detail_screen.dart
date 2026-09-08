@@ -10468,7 +10468,14 @@ class _DownloadButtonState extends State<_DownloadButton> {
 
     // Set by the auto-download row before it closes the sheet.
     var autoChosen = false;
-    AutoDownloadSubscription? subscription;
+    // Read before the sheet opens so the row knows from its first frame
+    // whether the series is followed. On the stream alone it would offer to
+    // follow one already followed, and a tap that early would follow it
+    // again and move its start date forward.
+    AutoDownloadSubscription? subscription = autoDownloads == null
+        ? null
+        : await autoDownloads.getSubscription(item.id);
+    if (!context.mounted) return;
 
     final chosen =
         await showFocusRestoringModalBottomSheet<List<AggregatedItem>>(
@@ -10541,6 +10548,7 @@ class _DownloadButtonState extends State<_DownloadButton> {
                     _autoDownloadRow(
                       sheetContext,
                       autoDownloads,
+                      initial: subscription,
                       onSubscription: (current) => subscription = current,
                       onTap: () {
                         autoChosen = true;
@@ -10598,6 +10606,7 @@ class _DownloadButtonState extends State<_DownloadButton> {
   Widget _autoDownloadRow(
     BuildContext sheetContext,
     AutoDownloadService autoDownloads, {
+    required AutoDownloadSubscription? initial,
     required void Function(AutoDownloadSubscription?) onSubscription,
     required VoidCallback onTap,
   }) {
@@ -10607,6 +10616,7 @@ class _DownloadButtonState extends State<_DownloadButton> {
       UserPreferences.autoDownloadKeepUnwatched,
     );
     return StreamBuilder<AutoDownloadSubscription?>(
+      initialData: initial,
       stream: autoDownloads.watchSubscription(widget.item.id),
       builder: (_, snapshot) {
         final subscription = snapshot.data;

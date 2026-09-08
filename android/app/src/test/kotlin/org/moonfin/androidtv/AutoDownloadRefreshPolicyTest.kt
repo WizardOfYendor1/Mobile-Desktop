@@ -33,7 +33,7 @@ class AutoDownloadRefreshPolicyTest {
             )
             assertEquals(
                 "$ok",
-                Outcome.FAILURE,
+                Outcome.GIVE_UP,
                 AutoDownloadRefreshPolicy.outcome(ok, permanent = false, attempt = AutoDownloadRefreshPolicy.MAX_RETRY_ATTEMPTS),
             )
         }
