@@ -95,7 +95,7 @@
     "@savedServers": {
         "description": "Section heading for previously saved servers"
     },
-    "discoveredServers": "Löydetyt palvelimet",
+    "discoveredServers": "Löydetyt Palvelimet",
     "@discoveredServers": {
         "description": "Section heading for auto-discovered local servers"
     },
@@ -136,15 +136,15 @@
     "@remove": {
         "description": "Remove button label in confirmation dialogs"
     },
-    "connectToServer": "Yhdistä palvelimeen",
+    "connectToServer": "Yhdistä Palvelimeen",
     "@connectToServer": {
         "description": "Dialog title for adding a server by address"
     },
-    "serverAddress": "Palvelimen osoite",
+    "serverAddress": "Palvelimen Osoite",
     "@serverAddress": {
         "description": "Label for the server URL input field"
     },
-    "serverAddressHint": "https://your-server.example.com",
+    "serverAddressHint": "https://sinun-palvelimen.osoite.com",
     "@serverAddressHint": {
         "description": "Hint text for the server URL input field"
     },
@@ -152,7 +152,7 @@
     "@connect": {
         "description": "Button to initiate connection to a server"
     },
-    "secureStorageUnavailable": "Suojattu tallennustila ei ole käytettävissä",
+    "secureStorageUnavailable": "Suojattua Tallennustilaa ei ole Käytettävissä",
     "@secureStorageUnavailable": {
         "description": "Dialog title when system keyring is inaccessible"
     },
@@ -176,7 +176,7 @@
     "@themeMoonfin": {
         "description": "Display name for the Moonfin theme"
     },
-    "themeMoonfinSubtitle": "Alkuperäinen, siisti Moonfin-oletusasetus.",
+    "themeMoonfinSubtitle": "Alkuperäinen puhdas Moonfin oletusasetus.",
     "@themeMoonfinSubtitle": {
         "description": "Preview description for the Moonfin theme"
     },
@@ -1513,11 +1513,11 @@
             }
         }
     },
-    "perfectMatch": "Täydellinen ottelu",
+    "perfectMatch": "Täydellinen vastaavuus",
     "@perfectMatch": {
         "description": "Label for a subtitle that is a hash match"
     },
-    "channelsCount": "{count} ch",
+    "channelsCount": "{count} äänikanavat",
     "@channelsCount": {
         "description": "Audio channel count label",
         "placeholders": {
@@ -1576,7 +1576,7 @@
             }
         }
     },
-    "remoteSubtitleGenericError": "{action} etätekstitys epäonnistui.",
+    "remoteSubtitleGenericError": "Ei voitu {action} etätekstityksiä.",
     "@remoteSubtitleGenericError": {
         "description": "Generic error message for subtitle operation",
         "placeholders": {
@@ -1585,7 +1585,7 @@
             }
         }
     },
-    "deleteSeriesFiles": "kaikki ladatut jaksot \"{name}\"",
+    "deleteSeriesFiles": "kaikki ladatut jaksot sarjasta \"{name}\"",
     "@deleteSeriesFiles": {
         "description": "Type label for series file deletion",
         "placeholders": {
@@ -1602,11 +1602,11 @@
     "@stillWatching": {
         "description": "Title for the still watching screen"
     },
-    "unableToLoadTrailerStream": "Trailerivirtaa ei voi ladata.",
+    "unableToLoadTrailerStream": "Trailerstreamiä ei voi ladata.",
     "@unableToLoadTrailerStream": {
         "description": "Error when trailer stream cannot be loaded"
     },
-    "trailerTimedOut": "Traileri aikakatkaistiin latauksen aikana.",
+    "trailerTimedOut": "Trailerin lataaminen keskeytyi aikarajan umpeuduttua.",
     "@trailerTimedOut": {
         "description": "Error when trailer loading times out"
     },
@@ -2312,7 +2312,7 @@
     "@seerr": {
         "description": "Seerr brand name"
     },
-    "savedMedia": "Tallennettu media",
+    "savedMedia": "Lataukset",
     "@savedMedia": {
         "description": "Header title for saved/downloaded media screen"
     },
@@ -6269,7 +6269,7 @@
     "offlineNoInternet": "Olet offline-tilassa. Vain ladattu sisältö on saatavilla.",
     "offlineFileNotAvailable": "Tiedosto ei ole käytettävissä",
     "offlineSwitchServer": "Vaihda palvelinta",
-    "offlineSavedMedia": "Tallennettu media",
+    "offlineSavedMedia": "Lataukset",
     "castGoogleCast": "Google Cast",
     "castAirPlay": "AirPlay",
     "castDlna": "DLNA",
@@ -7341,7 +7341,7 @@
     "@detailScreenStyleModern": {
         "description": "Detail screen style option: the responsive cinematic layout"
     },
-    "expandedTabs": "Laajennetut välilehdet",
+    "expandedTabs": "Laajennetut Välilehdet",
     "@expandedTabs": {
         "description": "Label for the detail screen expanded tabs setting"
     },
@@ -7349,11 +7349,11 @@
     "@expandedTabsSubtitle": {
         "description": "Explanation under the expanded tabs setting"
     },
-    "showTechnicalDetails": "Näytetäänkö tekniset tiedot?",
+    "showTechnicalDetails": "Näytetäänkö Tekniset Tiedot?",
     "@showTechnicalDetails": {
         "description": "Label for the detail screen setting to show stream/codec technical details"
     },
-    "showTechnicalDetailsSubtitle": "Näytä koodekki-, tarkkuus- ja suoratoistotiedot bannerin yhteenvedossa",
+    "showTechnicalDetailsSubtitle": "Näytä kodekki , tarkkuus- ja streamin tiedot bannerissa yhteenvetona",
     "@showTechnicalDetailsSubtitle": {
         "description": "Explanation under the show technical details setting"
     },
@@ -7401,7 +7401,7 @@
     "@interfaceStyleMaterial": {
         "description": "Interface style option: Material look"
     },
-    "glassQuality": "Lasin laatu",
+    "glassQuality": "Lasin Laatuasetus",
     "@glassQuality": {
         "description": "Label for the glass rendering quality setting"
     },
@@ -7421,7 +7421,7 @@
     "@glassQualityReduced": {
         "description": "Glass quality option: lightweight zero-blur glass"
     },
-    "customThemeTitle": "Mukautettu teema",
+    "customThemeTitle": "Mukautettu Teema",
     "@customThemeTitle": {
         "description": "Title for the custom theme settings section"
     },
@@ -9001,11 +9001,11 @@
     "adminLibTrickplayDuringScan": "Pura Trickplay-kuvat kirjastoskannauksen aikana",
     "adminLibSaveTrickplayWithMedia": "Tallenna Trickplay-kuvat mediakansioihin",
     "adminBackupTrickplay": "Trickplay-kuvat",
-    "oledMode": "OLED-tila",
+    "oledMode": "OLED Tila",
     "@oledMode": {
         "description": "Label for the setting that deepens blacks and enriches artwork on OLED displays"
     },
-    "oledModeSubtitle": "Syventää mustia sävyjä ja tuo lisää syvyyttä. Toimii parhaiten OLED-näytöillä.",
+    "oledModeSubtitle": "Syventää mustia sävyjä ja tuo lisää syvyyttä. Toimii parhaiten OLED näytöillä.",
     "@oledModeSubtitle": {
         "description": "Explanation under the OLED Mode setting"
     },
@@ -9421,7 +9421,7 @@
     "@personalRatingSaveFailed": {
         "description": "Error shown when saving a personal rating fails."
     },
-    "interfaceLayout": "Käyttöliittymän ulkoasu",
+    "interfaceLayout": "Käyttöliittymän Ulkoasu",
     "@interfaceLayout": {
         "description": "Setting to override which UI layout the app uses"
     },
@@ -10100,7 +10100,7 @@
     "@controller": {
         "description": "Settings section header for game controller options"
     },
-    "gamepadNavigation": "Ohjainlaitteen avulla liikkuminen",
+    "gamepadNavigation": "Peliohjaimella liikkuminen",
     "@gamepadNavigation": {
         "description": "Settings label for the switch that lets a game controller move focus and select items"
     },
@@ -10116,11 +10116,11 @@
     "@downloadingSubtitle": {
         "description": "Shown while a chosen subtitle is downloaded and the server is picking it up"
     },
-    "aiTranslated": "Tekoälyn kääntämä",
+    "aiTranslated": "Tekoälyn Kääntämä",
     "@aiTranslated": {
         "description": "Label for a remote subtitle the provider marked as AI translated"
     },
-    "machineTranslated": "Koneellisesti käännetty",
+    "machineTranslated": "Koneellisesti Käännetty",
     "@machineTranslated": {
         "description": "Label for a remote subtitle the provider marked as machine translated"
     },
@@ -10476,5 +10476,94 @@
     "screensaverSourceLibrariesDefault": "Kaikki (Oletus)",
     "@screensaverSourceLibrariesDefault": {
         "description": "Subtitle when no source libraries are explicitly filtered in screensaver"
+    },
+    "queuedMoreCount": "{count, plural, =1{1 more queued} muu{{count} more queued}}",
+    "@queuedMoreCount": {
+        "description": "Row under the active downloads list standing in for queued items not shown individually",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "downloadScopeTitle": "Mitä ladataan",
+    "@downloadScopeTitle": {
+        "description": "Title of the sheet asking whether to download all or only unwatched items"
+    },
+    "downloadAllEpisodes": "Kaikki jaksot",
+    "@downloadAllEpisodes": {
+        "description": "Download scope option: every episode of a series or season"
+    },
+    "downloadUnwatchedEpisodes": "Kaikki katsomattomat jaksot",
+    "@downloadUnwatchedEpisodes": {
+        "description": "Download scope option: only episodes not yet marked as watched"
+    },
+    "downloadAllMovies": "Kaikki elokuvat",
+    "@downloadAllMovies": {
+        "description": "Download scope option: every movie in a collection"
+    },
+    "downloadUnwatchedMovies": "Kaikki katsomattomat elokuvat",
+    "@downloadUnwatchedMovies": {
+        "description": "Download scope option: only collection movies not yet marked as watched"
+    },
+    "downloadScopeLoading": "Ladataan kohteita...",
+    "@downloadScopeLoading": {
+        "description": "Subtitle shown in the download scope sheet while the item list is being fetched"
+    },
+    "downloadScopeLoadFailed": "Kohteita ei voitu ladata",
+    "@downloadScopeLoadFailed": {
+        "description": "Snackbar shown when the item list for a batch download could not be fetched"
+    },
+    "downloadEstimateTotal": "~{size} yhteensä",
+    "@downloadEstimateTotal": {
+        "description": "Estimated total download size for a batch, e.g. '~1.2 GB total'",
+        "placeholders": {
+            "size": {
+                "type": "String"
+            }
+        }
+    },
+    "downloadBytesOfTotal": "{received} of {total}",
+    "@downloadBytesOfTotal": {
+        "description": "Transfer status of a running download, e.g. '1.2 GB of 4.6 GB'",
+        "placeholders": {
+            "received": {
+                "type": "String"
+            },
+            "total": {
+                "type": "String"
+            }
+        }
+    },
+    "downloadSpeed": "{speed}/s",
+    "@downloadSpeed": {
+        "description": "Transfer rate of a running download, e.g. '25.3 MB/s'",
+        "placeholders": {
+            "speed": {
+                "type": "String"
+            }
+        }
+    },
+    "downloadSizeTotal": "{size} yhteensä",
+    "@downloadSizeTotal": {
+        "description": "Exact total file size of a batch of original files, e.g. '12.4 GB total'",
+        "placeholders": {
+            "size": {
+                "type": "String"
+            }
+        }
+    },
+    "downloadEstimateUnknownCount": "{count} tuntematon",
+    "@downloadEstimateUnknownCount": {
+        "description": "Appended to a batch size estimate when some items had no runtime to estimate from",
+        "placeholders": {
+            "count": {
+                "type": "int"
+            }
+        }
+    },
+    "showDownloadsButton": "Näytä latauspainike",
+    "@showDownloadsButton": {
+        "description": "Setting for showing downloads button"
     }
 }
