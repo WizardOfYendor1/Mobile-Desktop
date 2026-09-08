@@ -41,7 +41,7 @@ jobs:
             const isPR = !!(target.pull_request || context.payload.pull_request);
 
             const HEADING = /^\s{0,3}#{1,6}\s+(.*?)\s*#*\s*$/;
-            const CHECKBOX = /^\s*[-*]\s*\[([ xX])\]\s*(.*)$/;
+            const CHECKBOX = /^\s*(?:[-*+]\s*)?\[([ xX✓✔☑])\]\s*(.*)$/;
 
             function section(text, title) {
               const lines = text.split(/\r?\n/);
@@ -62,16 +62,15 @@ jobs:
               return out;
             }
 
-            // The PR template uses checkboxes, so only ticked ones count. Issue
-            // form dropdowns have none and print the answer as plain lines.
+            // Any checkbox at all means the section is a checkbox list, so an
+            // unticked box is a no rather than a line to fall back on. Issue form
+            // dropdowns have no boxes and print the answer as plain lines.
             function selected(lines) {
-              const hasCheckboxes = lines.some(l => CHECKBOX.test(l));
-              return hasCheckboxes
-                ? lines
-                    .map(l => l.match(CHECKBOX))
-                    .filter(m => m && m[1].toLowerCase() === 'x')
-                    .map(m => m[2].trim())
-                : lines.map(l => l.trim()).filter(Boolean);
+              const boxes = lines.map(l => l.match(CHECKBOX)).filter(Boolean);
+              if (boxes.length) {
+                return boxes.filter(m => m[1] !== ' ').map(m => m[2].trim());
+              }
+              return lines.map(l => l.trim()).filter(Boolean);
             }
 
             const PLATFORMS = [
