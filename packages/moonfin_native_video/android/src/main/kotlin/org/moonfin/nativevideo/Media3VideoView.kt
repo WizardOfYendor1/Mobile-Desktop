@@ -1096,7 +1096,7 @@ class Media3VideoView(
             resolveSelectedVideoFrameRate()?.let { frameRate ->
                 // detectedFrameRate holds the normalized rate, so compare like
                 // with like or every callback re-runs the whole switch.
-                if (detectedFrameRate != normalizeFrameRate(frameRate)) {
+                if (detectedFrameRate != DisplayModeChooser.normalizeFrameRate(frameRate)) {
                     maybeApplyFrameRateSwitching(frameRate)
                 }
             }
@@ -1156,7 +1156,7 @@ class Media3VideoView(
                 ),
             )
             resolveSelectedVideoFrameRate()?.let { frameRate ->
-                if (detectedFrameRate != normalizeFrameRate(frameRate)) {
+                if (detectedFrameRate != DisplayModeChooser.normalizeFrameRate(frameRate)) {
                     maybeApplyFrameRateSwitching(frameRate)
                 }
             }
@@ -2405,8 +2405,8 @@ class Media3VideoView(
     }
 
     // Both options switch and differ only in whether the resolution may change.
-    // Gating scale on TV behind the system television UI mode meant it never
-    // ran on Fire TV, which doesn't report that mode reliably.
+    // Neither consults the system television UI mode, which Fire TV doesn't
+    // report reliably, and the setting only appears on TV layouts anyway.
     private fun isFrameRateSwitchingEnabled(): Boolean {
         return when (frameRateSwitchingBehavior) {
             "scaleondevice", "scaleontv" -> true
@@ -2414,65 +2414,20 @@ class Media3VideoView(
         }
     }
 
-    private fun normalizeFrameRate(frameRate: Float): Float {
-        val standards = floatArrayOf(23.976f, 24f, 25f, 29.97f, 30f, 50f, 59.94f, 60f)
-        var closest = frameRate
-        var closestDelta = Float.MAX_VALUE
-        for (candidate in standards) {
-            val delta = kotlin.math.abs(candidate - frameRate)
-            if (delta < closestDelta) {
-                closest = candidate
-                closestDelta = delta
-            }
-        }
-        return if (closestDelta <= 0.08f) closest else frameRate
-    }
+    private fun Display.Mode.toOption(): DisplayModeOption =
+        DisplayModeOption(modeId, physicalWidth, physicalHeight, refreshRate)
 
-    private fun isRefreshRateMultiple(refreshRate: Float, contentFrameRate: Float): Boolean {
-        if (!refreshRate.isFinite() || refreshRate <= 0f || contentFrameRate <= 0f) {
-            return false
-        }
-        val ratio = refreshRate / contentFrameRate
-        val rounded = ratio.roundToInt().toFloat()
-        return rounded >= 1f && kotlin.math.abs(ratio - rounded) <= 0.02f
-    }
-
-    // Only a refresh rate that is a whole multiple of the content rate
-    // qualifies. There is no closest rate fallback on purpose, because moving
-    // a 60Hz screen to 50Hz for 24fps content trades one cadence error for a
-    // worse one.
-    //
-    // Scale on device holds the display at its current resolution and lets the
-    // device scale the picture. Scale on TV can also change resolution, never
-    // below the video's own, and prefers the mode closest to the video so the
-    // television does the scaling. Some HDMI chains only offer 24Hz at the
-    // video's resolution and not at the one the UI runs at.
     private fun choosePreferredDisplayMode(display: Display, contentFrameRate: Float): Display.Mode? {
-        val currentMode = display.mode
         val modes = display.supportedModes ?: return null
-        val allowResolutionChange = frameRateSwitchingBehavior == "scaleontv"
-        val videoWidth = if (sourceVideoWidthHint > 0) sourceVideoWidthHint else videoWidthPx
-        val videoHeight = if (sourceVideoHeightHint > 0) sourceVideoHeightHint else videoHeightPx
-        // Without known dimensions the distance below would rank the smallest
-        // mode first, so resolution stops being a tiebreak until they arrive.
-        val rankByResolution = allowResolutionChange && videoWidth > 0
-
-        return modes
-            .filter { mode ->
-                val sameResolution = mode.physicalWidth == currentMode.physicalWidth &&
-                    mode.physicalHeight == currentMode.physicalHeight
-                val resolutionAllowed = sameResolution || (
-                    allowResolutionChange &&
-                        mode.physicalWidth >= 1280 && mode.physicalHeight >= 720 &&
-                        mode.physicalWidth >= videoWidth && mode.physicalHeight >= videoHeight
-                    )
-                resolutionAllowed && isRefreshRateMultiple(mode.refreshRate, contentFrameRate)
-            }
-            .minWithOrNull(
-                compareBy<Display.Mode> { kotlin.math.abs(it.refreshRate - contentFrameRate) }
-                    .thenBy { if (rankByResolution) kotlin.math.abs(it.physicalWidth - videoWidth) else 0 }
-                    .thenByDescending { it.refreshRate },
-            )
+        val chosen = DisplayModeChooser.choose(
+            modes = modes.map { it.toOption() },
+            currentMode = display.mode.toOption(),
+            contentFrameRate = contentFrameRate,
+            allowResolutionChange = frameRateSwitchingBehavior == "scaleontv",
+            videoWidth = if (sourceVideoWidthHint > 0) sourceVideoWidthHint else videoWidthPx,
+            videoHeight = if (sourceVideoHeightHint > 0) sourceVideoHeightHint else videoHeightPx,
+        ) ?: return null
+        return modes.firstOrNull { it.modeId == chosen.modeId }
     }
 
     private fun maybeApplyFrameRateSwitching(rawFrameRate: Float) {
@@ -2481,7 +2436,7 @@ class Media3VideoView(
         if (role != "main") {
             return
         }
-        val normalizedFrameRate = normalizeFrameRate(rawFrameRate)
+        val normalizedFrameRate = DisplayModeChooser.normalizeFrameRate(rawFrameRate)
         detectedFrameRate = normalizedFrameRate
 
         if (!isFrameRateSwitchingEnabled()) {
