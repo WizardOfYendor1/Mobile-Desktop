@@ -35,6 +35,11 @@ class AggregatedItem {
   /// mini-player and when to keep the audio media session alive.
   bool get isAudioLike =>
       type == 'Audio' || type == 'AudioBook' || rawData['MediaType'] == 'Audio';
+
+  /// Whether the item is a container/folder on the server.
+  bool get isFolder =>
+      rawData['IsFolder'] == true || (rawData['ChildCount'] as num? ?? 0) > 0;
+
   bool get canDelete => rawData['CanDelete'] as bool? ?? false;
   String? get seriesName => rawData['SeriesName'] as String?;
   int? get productionYear => _toInt(rawData['ProductionYear']);
