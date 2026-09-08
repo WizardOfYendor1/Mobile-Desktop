@@ -8,6 +8,7 @@ import 'package:playback_core/playback_core.dart';
 import '../data/services/log_service.dart';
 import '../preference/preference_constants.dart';
 import '../preference/user_preferences.dart';
+import '../util/loggable_url.dart';
 import '../util/platform_detection.dart';
 
 import 'device_profile_builder.dart';
@@ -151,20 +152,22 @@ class AetherBackend implements PlayerBackend {
     _invoke<void>('setEngineLogForwarding', {'enabled': enabled});
   }
 
+  void _log(String message, {LogLevel level = LogLevel.debug, Object? error}) {
+    if (!GetIt.instance.isRegistered<LogService>()) return;
+    GetIt.instance<LogService>().playback(message, level: level, error: error);
+  }
+
   void _logEngineLine(dynamic line) {
     if (line is! String || line.isEmpty) return;
-    if (!GetIt.instance.isRegistered<LogService>()) return;
-    GetIt.instance<LogService>().playback(line);
+    _log(line);
   }
 
   /// A native failure never reaches the server, so without this the report
   /// from a user whose playback didn't start shows only browsing.
   void _logPlaybackError(Map<dynamic, dynamic> map) {
-    if (!GetIt.instance.isRegistered<LogService>()) return;
-    final kind = map['kind'] ?? 'unknown';
-    final recoverable = map['recoverable'];
-    GetIt.instance<LogService>().playback(
-      'Native player error kind=$kind recoverable=$recoverable',
+    _log(
+      'Native player error kind=${map['kind'] ?? 'unknown'} '
+      'recoverable=${map['recoverable']}',
       level: LogLevel.error,
       error: map['message'],
     );
@@ -441,6 +444,11 @@ class AetherBackend implements PlayerBackend {
     String? externalSubtitleUrl,
   }) async {
     _activeSubtitleTrackIndex = index;
+    _log(
+      'setSubtitleTrack index=$index external=$isExternalSubtitle '
+      'bitmap=$isBitmapSubtitle codec=${subtitleCodec ?? 'none'} '
+      'url=${externalSubtitleUrl == null ? 'none' : loggableUrl(externalSubtitleUrl)}',
+    );
     await _invoke<void>('setSubtitleTrack', {
       'index': index,
       'isBitmapSubtitle': isBitmapSubtitle,
@@ -453,6 +461,7 @@ class AetherBackend implements PlayerBackend {
   @override
   Future<void> disableSubtitleTrack() async {
     _activeSubtitleTrackIndex = -1;
+    _log('disableSubtitleTrack');
     await _invoke<void>('disableSubtitleTrack');
   }
 
@@ -477,14 +486,22 @@ class AetherBackend implements PlayerBackend {
 
   @override
   Future<void> waitForEmbeddedSubtitleCount(int count) async {
-    final deadline = DateTime.now().add(const Duration(seconds: 6));
+    final started = DateTime.now();
+    final deadline = started.add(const Duration(seconds: 6));
+    var satisfied = false;
     while (DateTime.now().isBefore(deadline)) {
       if (_textTrackCount >= count) {
-        return;
+        satisfied = true;
+        break;
       }
       await waitForTracksReady();
       await Future<void>.delayed(const Duration(milliseconds: 100));
     }
+    _log(
+      'waitForEmbeddedSubtitleCount want=$count have=$_textTrackCount '
+      'satisfied=$satisfied '
+      'waited=${DateTime.now().difference(started).inMilliseconds}ms',
+    );
   }
 
   @override
@@ -520,6 +537,10 @@ class AetherBackend implements PlayerBackend {
     String? language,
     String? codec,
   }) async {
+    _log(
+      'addExternalSubtitle ${loggableUrl(url)} title=${title ?? 'none'} '
+      'language=${language ?? 'none'} codec=${codec ?? 'none'}',
+    );
     await _invoke<void>('addExternalSubtitle', {
       'url': url,
       'title': title,
