@@ -10477,7 +10477,7 @@
     "@screensaverSourceLibrariesDefault": {
         "description": "Subtitle when no source libraries are explicitly filtered in screensaver"
     },
-    "queuedMoreCount": "{count, plural, =1{1 more queued} muu{{count} more queued}}",
+    "queuedMoreCount": "{count, plural, =1{1 more queued} other{{count} more queued}}",
     "@queuedMoreCount": {
         "description": "Row under the active downloads list standing in for queued items not shown individually",
         "placeholders": {
