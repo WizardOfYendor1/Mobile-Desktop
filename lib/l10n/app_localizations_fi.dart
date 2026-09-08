@@ -11209,6 +11209,9 @@ class AppLocalizationsFi extends AppLocalizations {
   String get mixedPlaylistsSection => 'Sekalaiset soittolistat';
 
   @override
+  String get currentTime => 'Current Time';
+
+  @override
   String get playbackTimeDisplay => 'Edistymispalkin aika';
 
   @override

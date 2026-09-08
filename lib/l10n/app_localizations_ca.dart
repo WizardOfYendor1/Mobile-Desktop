@@ -11354,6 +11354,9 @@ class AppLocalizationsCa extends AppLocalizations {
   String get mixedPlaylistsSection => 'Llistes de reproducció mixtes';
 
   @override
+  String get currentTime => 'Current Time';
+
+  @override
   String get playbackTimeDisplay => 'Temps a la barra de progrés';
 
   @override

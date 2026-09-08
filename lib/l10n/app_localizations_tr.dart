@@ -11187,6 +11187,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get mixedPlaylistsSection => 'Karışık Oynatma Listesi';
 
   @override
+  String get currentTime => 'Current Time';
+
+  @override
   String get playbackTimeDisplay => 'İlerleme Çubuğu Süresi';
 
   @override

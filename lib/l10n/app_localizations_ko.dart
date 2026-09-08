@@ -10835,6 +10835,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mixedPlaylistsSection => '혼합 재생목록';
 
   @override
+  String get currentTime => 'Current Time';
+
+  @override
   String get playbackTimeDisplay => '진행 바 시간';
 
   @override

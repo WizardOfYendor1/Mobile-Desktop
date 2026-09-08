@@ -9924,6 +9924,10 @@
   "@mixedPlaylistsSection": {
     "description": "Section header above mixed playlists when Group by Type is enabled"
   },
+  "currentTime": "Current Time",
+  "@currentTime": {
+    "description": "The current time as it appears on a clock"
+  },
   "playbackTimeDisplay": "Progress Bar Time",
   "@playbackTimeDisplay": {
     "description": "Setting title for what is shown next to the playback progress bar"

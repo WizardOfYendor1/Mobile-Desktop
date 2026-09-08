@@ -11187,6 +11187,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get mixedPlaylistsSection => 'Spellistor (blandat)';
 
   @override
+  String get currentTime => 'Current Time';
+
+  @override
   String get playbackTimeDisplay => 'Progress Bar Time';
 
   @override

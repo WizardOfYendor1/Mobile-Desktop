@@ -11100,6 +11100,9 @@ class AppLocalizationsTh extends AppLocalizations {
   String get mixedPlaylistsSection => 'Mixed Playlists';
 
   @override
+  String get currentTime => 'Current Time';
+
+  @override
   String get playbackTimeDisplay => 'Progress Bar Time';
 
   @override
