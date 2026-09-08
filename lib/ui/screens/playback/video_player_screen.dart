@@ -2598,6 +2598,9 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     });
   }
 
+  /// A viewer reaching for the remote has answered the prompt's question.
+  void _noteViewerActivity() => _consecutiveEpisodes = 0;
+
   /// Returns false when the viewer chose to stop, so the caller can drop the
   /// queue advance it was about to make.
   Future<bool> _checkStillWatching() async {
@@ -2622,6 +2625,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   }
 
   void _skipCurrentSegment() {
+    _noteViewerActivity();
     final replaceSkipOutroWithNextUp = _prefs.get(
       UserPreferences.replaceSkipOutroWithNextUp,
     );
@@ -2946,6 +2950,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   }
 
   void _seekRelative(int ms, {bool showControls = true}) {
+    _noteViewerActivity();
     _suppressSeekPrompts();
     final target = _state.position + Duration(milliseconds: ms);
     final clamped = Duration(
@@ -2962,6 +2967,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   }
 
   void _seekRelativeAccumulate(int ms) {
+    _noteViewerActivity();
     _suppressSeekPrompts();
     // While a released commit is still converging, the pending target is
     // already null but _state.position still reads pre-seek - basing a quick
@@ -3041,6 +3047,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   /// session. Called on Slider drag-end and on play during a paused D-pad
   /// scrub session - the actual "go" signals, not a timer guess.
   void _commitPendingScrub() {
+    _noteViewerActivity();
     _isPausedScrubActive = false;
     final pendingTarget = _pendingScrubSeekTarget;
     if (pendingTarget == null) return;
@@ -3119,6 +3126,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
   }
 
   void _togglePlayPause() {
+    _noteViewerActivity();
     if (_state.isPlaying) {
       _manager.pause();
       return;
