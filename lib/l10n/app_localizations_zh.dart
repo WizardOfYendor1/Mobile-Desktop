@@ -247,24 +247,23 @@ class AppLocalizationsZh extends AppLocalizations {
   String get glassQualityReduced => '简化';
 
   @override
-  String get performanceMode => 'Performance';
+  String get performanceMode => '性能模式';
 
   @override
   String get performanceModeSubtitle =>
-      'Auto measures this device and holds back on the ones short on memory, which keeps fewer images in memory and leaves trailers as still images. Takes full effect on the next launch.';
+      '自动检测设备性能，对内存不足设备进行性能限制，减少内存中缓存图片数量，预告片仅显示静态图片。设置将在下次启动完全生效。';
 
   @override
-  String get performanceModeAuto => 'Auto';
+  String get performanceModeAuto => '自动';
 
   @override
-  String get performanceModeStandard => 'Standard';
+  String get performanceModeStandard => '标准';
 
   @override
-  String get performanceModeReduced => 'Reduced';
+  String get performanceModeReduced => '降低';
 
   @override
-  String get trailerPreviewHeldBack =>
-      'Off because Performance is set to Reduced for this device';
+  String get trailerPreviewHeldBack => '已关闭：当前设备性能模式设置为降低';
 
   @override
   String get settingsAppearanceThemeSubtitle =>
@@ -283,14 +282,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get keyboardPreferSystemImeDescription => '文本输入默认使用设备输入法';
 
   @override
-  String get controller => 'Controller';
+  String get controller => '手柄控制器';
 
   @override
-  String get gamepadNavigation => 'Gamepad navigation';
+  String get gamepadNavigation => '手柄导航';
 
   @override
-  String get gamepadNavigationDescription =>
-      'Let a connected game controller move focus and select items';
+  String get gamepadNavigationDescription => '允许已连接游戏手柄移动焦点并选择项目';
 
   @override
   String get themeMoonfin => 'Moonfin';
@@ -1151,8 +1149,8 @@ class AppLocalizationsZh extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count more queued',
-      one: '1 more queued',
+      other: '还有$count项排队',
+      one: '还有 1 项排队',
     );
     return '$_temp0';
   }
@@ -1269,10 +1267,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get downloadSubtitles => '下载字幕';
 
   @override
-  String get searchingSubtitles => 'Searching for subtitles…';
+  String get searchingSubtitles => '正在搜索字幕…';
 
   @override
-  String get downloadingSubtitle => 'Downloading subtitle…';
+  String get downloadingSubtitle => '正在下载字幕…';
 
   @override
   String get selectedSubtitleInvalid => '所选的字幕无效。';
@@ -1315,49 +1313,49 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noEpisodesLoaded => '未加载剧集';
 
   @override
-  String get downloadScopeTitle => 'What to download';
+  String get downloadScopeTitle => '下载范围';
 
   @override
-  String get downloadAllEpisodes => 'All episodes';
+  String get downloadAllEpisodes => '全部剧集';
 
   @override
-  String get downloadUnwatchedEpisodes => 'All unwatched episodes';
+  String get downloadUnwatchedEpisodes => '全部未观看剧集';
 
   @override
-  String get downloadAllMovies => 'All movies';
+  String get downloadAllMovies => '全部电影';
 
   @override
-  String get downloadUnwatchedMovies => 'All unwatched movies';
+  String get downloadUnwatchedMovies => '全部未观看电影';
 
   @override
-  String get downloadScopeLoading => 'Loading items...';
+  String get downloadScopeLoading => '正在加载项目…';
 
   @override
-  String get downloadScopeLoadFailed => 'Could not load items to download';
+  String get downloadScopeLoadFailed => '无法加载待下载项目';
 
   @override
   String downloadEstimateTotal(String size) {
-    return '~$size total';
+    return '总计约 $size';
   }
 
   @override
   String downloadBytesOfTotal(String received, String total) {
-    return '$received of $total';
+    return '$received / $total';
   }
 
   @override
   String downloadSpeed(String speed) {
-    return '$speed/s';
+    return '$speed/秒';
   }
 
   @override
   String downloadSizeTotal(String size) {
-    return '$size total';
+    return '总计 $size';
   }
 
   @override
   String downloadEstimateUnknownCount(int count) {
-    return '$count unknown';
+    return '$count 项大小未知';
   }
 
   @override
@@ -1492,17 +1490,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get perfectMatch => '完全匹配';
 
   @override
-  String get aiTranslated => 'AI Translated';
+  String get aiTranslated => 'AI 翻译';
 
   @override
-  String get machineTranslated => 'Machine Translated';
+  String get machineTranslated => '机器翻译';
 
   @override
-  String get hearingImpaired => 'SDH';
+  String get hearingImpaired => '听障字幕';
 
   @override
   String framerateFps(String rate) {
-    return '$rate fps';
+    return '$rate 帧/秒';
   }
 
   @override
@@ -1674,10 +1672,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get playbackInformation => '播放信息';
 
   @override
-  String get showMpvStats => 'Show mpv Statistics (Shift+I)';
+  String get showMpvStats => '显示 mpv 统计信息（Shift+I）';
 
   @override
-  String get hideMpvStats => 'Hide mpv Statistics (Shift+I)';
+  String get hideMpvStats => '隐藏 mpv 统计信息（Shift+I）';
 
   @override
   String get playback => '播放';
@@ -1716,36 +1714,34 @@ class AppLocalizationsZh extends AppLocalizations {
   String get hdr => 'HDR';
 
   @override
-  String get hdrOutput => 'HDR output';
+  String get hdrOutput => 'HDR输出';
 
   @override
   String hdrOutputActive(String format) {
-    return 'Active — $format';
+    return '已启用 — $format';
   }
 
   @override
-  String get hdrOutputActiveTonemapped =>
-      'Active — tone-mapped to SDR for this display';
+  String get hdrOutputActiveTonemapped => '已启用 — 为当前显示器色调映射至 SDR';
 
   @override
-  String get hdrOutputDisplayNotHdr => 'Inactive — display is not in HDR mode';
+  String get hdrOutputDisplayNotHdr => '未启用 — 显示器未开启 HDR 模式';
 
   @override
-  String get hdrOutputContentSdr => 'Inactive — content is SDR';
+  String get hdrOutputContentSdr => '未启用 — 内容为 SDR';
 
   @override
-  String get hdrOutputDisabled => 'Inactive — turned off in settings';
+  String get hdrOutputDisabled => '未启用 — 设置中已关闭';
 
   @override
-  String get hdrOutputFailed =>
-      'Inactive — could not start, using the standard path';
+  String get hdrOutputFailed => '未启用 — 启动失败，使用标准输出模式';
 
   @override
-  String get nativeHdrOutput => 'Native HDR output';
+  String get nativeHdrOutput => '原生 HDR 输出';
 
   @override
   String get nativeHdrOutputDescription =>
-      'Sends HDR video to the display untouched instead of converting it to SDR. Used only when the display is already in HDR mode and the title is HDR.';
+      '直接向显示器输出原始 HDR 视频，不转换为 SDR。仅当显示器已开启 HDR 且播放内容为 HDR 时生效。';
 
   @override
   String get codec => '编解码器';
@@ -2123,7 +2119,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get localAccount => '本地';
 
   @override
-  String get savedMedia => '已保存媒体';
+  String get savedMedia => '下载';
 
   @override
   String get tvShows => '剧集';
@@ -2441,104 +2437,103 @@ class AppLocalizationsZh extends AppLocalizations {
   String get seasonalEffectsDescription => '视觉效果和节日装饰';
 
   @override
-  String get loadingAnimation => 'Loading Animation';
+  String get loadingAnimation => '加载动画';
 
   @override
-  String get loadingAnimationDescription =>
-      'Customize the loading animations used throughout Moonfin';
+  String get loadingAnimationDescription => '自定义 Moonfin 各处使用的加载动画';
 
   @override
-  String get loadingAnimationConfiguration => 'Loading Animation Configuration';
+  String get loadingAnimationConfiguration => '加载动画配置';
 
   @override
-  String get loadingAnimationImage => 'Image';
+  String get loadingAnimationImage => '图像';
 
   @override
-  String get loadingAnimationImageMoonfinLogo => 'Moonfin Logo';
+  String get loadingAnimationImageMoonfinLogo => 'Moonfin 徽标';
 
   @override
-  String get loadingAnimationImageSpinner => 'Spinner';
+  String get loadingAnimationImageSpinner => '旋转环';
 
   @override
-  String get loadingAnimationImageRunner => 'Runner';
+  String get loadingAnimationImageRunner => '奔跑者';
 
   @override
-  String get loadingAnimationImageMoonPhases => 'Moon Phases';
+  String get loadingAnimationImageMoonPhases => '月相';
 
   @override
-  String get loadingAnimationImageMoonfinPhases => 'Moonfin Phases';
+  String get loadingAnimationImageMoonfinPhases => 'Moonfin 月相';
 
   @override
-  String get loadingAnimationImageNeonfinPhases => 'Neonfin Phases';
+  String get loadingAnimationImageNeonfinPhases => '霓虹月相';
 
   @override
-  String get loadingAnimationSize => 'Animation Size';
+  String get loadingAnimationSize => '动画尺寸';
 
   @override
-  String get loadingAnimationSizeThumbnail => 'Thumbnail';
+  String get loadingAnimationSizeThumbnail => '微缩';
 
   @override
-  String get loadingAnimationSizeSmall => 'Small';
+  String get loadingAnimationSizeSmall => '小';
 
   @override
-  String get loadingAnimationSizeMedium => 'Medium';
+  String get loadingAnimationSizeMedium => '中';
 
   @override
-  String get loadingAnimationSizeLarge => 'Large';
+  String get loadingAnimationSizeLarge => '大';
 
   @override
-  String get loadingAnimationPosition => 'Animation Position';
+  String get loadingAnimationPosition => '动画位置';
 
   @override
-  String get loadingAnimationPositionTopLeft => 'Top-Left';
+  String get loadingAnimationPositionTopLeft => '左上角';
 
   @override
-  String get loadingAnimationPositionTopCenter => 'Top-Center';
+  String get loadingAnimationPositionTopCenter => '顶部居中';
 
   @override
-  String get loadingAnimationPositionTopRight => 'Top-Right';
+  String get loadingAnimationPositionTopRight => '右上角';
 
   @override
-  String get loadingAnimationPositionMiddleLeft => 'Middle-Left';
+  String get loadingAnimationPositionMiddleLeft => '左侧居中';
 
   @override
-  String get loadingAnimationPositionMiddle => 'Middle';
+  String get loadingAnimationPositionMiddle => '正中央';
 
   @override
-  String get loadingAnimationPositionMiddleRight => 'Middle-Right';
+  String get loadingAnimationPositionMiddleRight => '右侧居中';
 
   @override
-  String get loadingAnimationPositionBottomLeft => 'Bottom-Left';
+  String get loadingAnimationPositionBottomLeft => '左下角';
 
   @override
-  String get loadingAnimationPositionBottomCenter => 'Bottom-Center';
+  String get loadingAnimationPositionBottomCenter => '底部居中';
 
   @override
-  String get loadingAnimationPositionBottomRight => 'Bottom-Right';
+  String get loadingAnimationPositionBottomRight => '右下角';
 
   @override
-  String get loadingAnimationPositionBouncing => 'Bouncing';
+  String get loadingAnimationPositionBouncing => '弹跳（DVD 屏保）';
 
   @override
-  String get loadingAnimationSpeed => 'Animation Speed';
+  String get loadingAnimationSpeed => '动画速度';
 
   @override
-  String get loadingAnimationSpeedSlow => 'Slow';
+  String get loadingAnimationSpeedSlow => '慢';
 
   @override
-  String get loadingAnimationSpeedModerate => 'Moderate';
+  String get loadingAnimationSpeedModerate => '适中';
 
   @override
-  String get loadingAnimationSpeedFast => 'Fast';
+  String get loadingAnimationSpeedFast => '快';
 
   @override
-  String get loadingAnimationSpeedUltra => 'Ultra';
+  String get loadingAnimationSpeedUltra => '极速';
 
   @override
-  String get showLoadingAnimationText => 'Show Text?';
+  String get showLoadingAnimationText => '显示文字？';
 
   @override
-  String get loadingAnimationPreview => 'Preview';
+  String get loadingAnimationPreview => '预览';
 
   @override
   String get snow => '雪';
@@ -2656,30 +2651,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get showPreviewThumbnailsWhenSeeking => '拖动进度时显示预览缩略图';
 
   @override
-  String get trickplayDisplayStyleSingle => 'Single Thumbnail';
+  String get trickplayDisplayStyleSingle => '单张缩略图';
 
   @override
-  String get trickplayDisplayStyleStrip => 'Filmstrip';
+  String get trickplayDisplayStyleStrip => '胶片条';
 
   @override
-  String get trickplayModeFull => 'Full Screen';
+  String get trickplayModeFull => '全屏';
 
   @override
-  String get trickplaySettingsPreviewHint =>
-      'Drag the slider to preview scrubbing';
+  String get trickplaySettingsPreviewHint => '拖动滑块预览跳转效果';
 
   @override
-  String get trickplayPreviewScale => 'Preview Size';
+  String get trickplayPreviewScale => '预览尺寸';
 
   @override
-  String get trickplayVerticalOffset => 'Distance From Seekbar';
+  String get trickplayVerticalOffset => '距离进度条高度';
 
   @override
-  String get trickplayFollowScrubPosition => 'Follow Scrub Position';
+  String get trickplayFollowScrubPosition => '跟随跳转滑块';
 
   @override
-  String get trickplayFollowScrubPositionSubtitle =>
-      'Preview slides along the seekbar as you scrub, instead of staying centered';
+  String get trickplayFollowScrubPositionSubtitle => '预览画面跟随滑块沿进度条移动，而非固定居中';
 
   @override
   String get showDescriptionOnPause => '暂停时显示简介';
@@ -3437,7 +3430,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get showFavoritesButton => '显示收藏按钮';
 
   @override
-  String get showDownloadsButton => 'Show Downloads Button';
+  String get showDownloadsButton => '显示下载按钮';
 
   @override
   String get showLibrariesInToolbar => '在工具栏中显示媒体库';
@@ -3895,52 +3888,52 @@ class AppLocalizationsZh extends AppLocalizations {
   String get clockModeBouncing => '弹跳';
 
   @override
-  String get screensaverGeneralSettings => 'General Settings';
+  String get screensaverGeneralSettings => '常规设置';
 
   @override
-  String get screensaverVisualComponents => 'Visual Components';
+  String get screensaverVisualComponents => '视觉组件';
 
   @override
-  String get screensaverLibraryContent => 'Library Content';
+  String get screensaverLibraryContent => '媒体库内容';
 
   @override
-  String get screensaverBackdrop => 'Backdrop';
+  String get screensaverBackdrop => '背景';
 
   @override
-  String get screensaverBackdropBlack => 'Black';
+  String get screensaverBackdropBlack => '纯黑';
 
   @override
   String get screensaverBackdropMoonfin => 'Moonfin';
 
   @override
-  String get screensaverBackdropCalm => 'Calm';
+  String get screensaverBackdropCalm => '静谧';
 
   @override
-  String get screensaverBackdropNeonPulse => 'Neon Pulse';
+  String get screensaverBackdropNeonPulse => '霓虹脉动';
 
   @override
-  String get screensaverBackdropAurora => 'Aurora';
+  String get screensaverBackdropAurora => '极光';
 
   @override
-  String get screensaverAdditionalComponent => 'Additional Component';
+  String get screensaverAdditionalComponent => '附加组件';
 
   @override
-  String get screensaverComponentMoonfinLogo => 'Moonfin Logo';
+  String get screensaverComponentMoonfinLogo => 'Moonfin 徽标';
 
   @override
-  String get screensaverComponentRunner => 'Runner';
+  String get screensaverComponentRunner => '奔跑者';
 
   @override
-  String get screensaverComponentMovement => 'Component Movement';
+  String get screensaverComponentMovement => '组件运动';
 
   @override
-  String get screensaverComponentPosition => 'Component Position';
+  String get screensaverComponentPosition => '组件位置';
 
   @override
-  String get screensaverComponentSize => 'Component Size';
+  String get screensaverComponentSize => '组件大小';
 
   @override
-  String get screensaverSourceLibrariesDefault => 'All (Default)';
+  String get screensaverSourceLibrariesDefault => '全部（默认）';
 
   @override
   String get rottenTomatoesCritics => '烂番茄（评论家）';
@@ -4290,11 +4283,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get seerrRequestedStatus => '已请求';
 
   @override
-  String get seerrDownloading => 'Downloading';
+  String get seerrDownloading => '正在下载';
 
   @override
   String seerrDownloadingSize(String done, String total) {
-    return 'Downloading · $done / $total';
+    return '正在下载 · $done / $total';
   }
 
   @override
@@ -8336,7 +8329,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get offlineSwitchServer => '切换服务器';
 
   @override
-  String get offlineSavedMedia => '已保存媒体';
+  String get offlineSavedMedia => '下载';
 
   @override
   String get offlineBannerTitle => '当前离线状态';
@@ -10996,20 +10989,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get runSetupAgain => '重新运行设置';
 
   @override
-  String get serverMessages => 'Messages';
+  String get serverMessages => '服务器消息';
 
   @override
-  String get serverMessagesEmpty => 'No messages from your server yet';
+  String get serverMessagesEmpty => '暂未收到服务器消息';
 
   @override
-  String get serverMessagesMarkAllRead => 'Mark all as read';
+  String get serverMessagesMarkAllRead => '全部标为已读';
 
   @override
-  String get serverMessagesShowButton => 'Show messages button';
+  String get serverMessagesShowButton => '显示消息按钮';
 
   @override
-  String get serverMessagesShowButtonSubtitle =>
-      'Adds a button to the menu for messages sent by your server admin';
+  String get serverMessagesShowButtonSubtitle => '在菜单添加按钮，用于查看服务器管理员推送消息';
 
   @override
   String get autoDownloadNewEpisodes => 'Auto-download new episodes';

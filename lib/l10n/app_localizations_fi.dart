@@ -88,7 +88,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get savedServers => 'Tallennetut palvelimet';
 
   @override
-  String get discoveredServers => 'Löydetyt palvelimet';
+  String get discoveredServers => 'Löydetyt Palvelimet';
 
   @override
   String get noneFound => 'Ei löytynyt';
@@ -118,20 +118,20 @@ class AppLocalizationsFi extends AppLocalizations {
   String get remove => 'Poista';
 
   @override
-  String get connectToServer => 'Yhdistä palvelimeen';
+  String get connectToServer => 'Yhdistä Palvelimeen';
 
   @override
-  String get serverAddress => 'Palvelimen osoite';
+  String get serverAddress => 'Palvelimen Osoite';
 
   @override
-  String get serverAddressHint => 'https://your-server.example.com';
+  String get serverAddressHint => 'https://sinun-palvelimen.osoite.com';
 
   @override
   String get connect => 'Yhdistä';
 
   @override
   String get secureStorageUnavailable =>
-      'Suojattu tallennustila ei ole käytettävissä';
+      'Suojattua Tallennustilaa ei ole Käytettävissä';
 
   @override
   String get secureStorageUnavailableMessage =>
@@ -157,18 +157,18 @@ class AppLocalizationsFi extends AppLocalizations {
   String get detailScreenStyleModern => 'Moderni';
 
   @override
-  String get expandedTabs => 'Laajennetut välilehdet';
+  String get expandedTabs => 'Laajennetut Välilehdet';
 
   @override
   String get expandedTabsSubtitle =>
       'Näytä välilehden sisältö automaattisesti välilehtiä selatessasi. Poista käytöstä, jos haluat avata ja sulkea jokaisen välilehden itse.';
 
   @override
-  String get showTechnicalDetails => 'Näytetäänkö tekniset tiedot?';
+  String get showTechnicalDetails => 'Näytetäänkö Tekniset Tiedot?';
 
   @override
   String get showTechnicalDetailsSubtitle =>
-      'Näytä koodekki-, tarkkuus- ja suoratoistotiedot bannerin yhteenvedossa';
+      'Näytä kodekki , tarkkuus- ja streamin tiedot bannerissa yhteenvetona';
 
   @override
   String get recommendationSystem => 'Suositusjärjestelmä';
@@ -208,7 +208,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get interfaceStyleMaterial => 'Material';
 
   @override
-  String get interfaceLayout => 'Käyttöliittymän ulkoasu';
+  String get interfaceLayout => 'Käyttöliittymän Ulkoasu';
 
   @override
   String get interfaceLayoutSubtitle =>
@@ -227,14 +227,14 @@ class AppLocalizationsFi extends AppLocalizations {
   String get interfaceLayoutPhone => 'Puhelin';
 
   @override
-  String get glassQuality => 'Lasin laatu';
+  String get glassQuality => 'Lasin Laatuasetus';
 
   @override
-  String get oledMode => 'OLED-tila';
+  String get oledMode => 'OLED Tila';
 
   @override
   String get oledModeSubtitle =>
-      'Syventää mustia sävyjä ja tuo lisää syvyyttä. Toimii parhaiten OLED-näytöillä.';
+      'Syventää mustia sävyjä ja tuo lisää syvyyttä. Toimii parhaiten OLED näytöillä.';
 
   @override
   String get oledModeSubtle => 'Hienovarainen';
@@ -280,7 +280,7 @@ class AppLocalizationsFi extends AppLocalizations {
       'Ota käyttöön täysin mukautettu teema ja vaihda Apple- tai Material-tyylisen käyttöliittymän välillä.';
 
   @override
-  String get customThemeTitle => 'Mukautettu teema';
+  String get customThemeTitle => 'Mukautettu Teema';
 
   @override
   String get customThemeSubtitle =>
@@ -297,7 +297,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get controller => 'Ohjain';
 
   @override
-  String get gamepadNavigation => 'Ohjainlaitteen avulla liikkuminen';
+  String get gamepadNavigation => 'Peliohjaimella liikkuminen';
 
   @override
   String get gamepadNavigationDescription =>
@@ -308,7 +308,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String get themeMoonfinSubtitle =>
-      'Alkuperäinen, siisti Moonfin-oletusasetus.';
+      'Alkuperäinen puhdas Moonfin oletusasetus.';
 
   @override
   String get themeNeonPulse => 'Neon pulssi';
@@ -1362,29 +1362,29 @@ class AppLocalizationsFi extends AppLocalizations {
   String get noEpisodesLoaded => 'Ei ladattuja jaksoja';
 
   @override
-  String get downloadScopeTitle => 'What to download';
+  String get downloadScopeTitle => 'Mitä ladataan';
 
   @override
-  String get downloadAllEpisodes => 'All episodes';
+  String get downloadAllEpisodes => 'Kaikki jaksot';
 
   @override
-  String get downloadUnwatchedEpisodes => 'All unwatched episodes';
+  String get downloadUnwatchedEpisodes => 'Kaikki katsomattomat jaksot';
 
   @override
-  String get downloadAllMovies => 'All movies';
+  String get downloadAllMovies => 'Kaikki elokuvat';
 
   @override
-  String get downloadUnwatchedMovies => 'All unwatched movies';
+  String get downloadUnwatchedMovies => 'Kaikki katsomattomat elokuvat';
 
   @override
-  String get downloadScopeLoading => 'Loading items...';
+  String get downloadScopeLoading => 'Ladataan kohteita...';
 
   @override
-  String get downloadScopeLoadFailed => 'Could not load items to download';
+  String get downloadScopeLoadFailed => 'Kohteita ei voitu ladata';
 
   @override
   String downloadEstimateTotal(String size) {
-    return '~$size total';
+    return '~$size yhteensä';
   }
 
   @override
@@ -1399,12 +1399,12 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String downloadSizeTotal(String size) {
-    return '$size total';
+    return '$size yhteensä';
   }
 
   @override
   String downloadEstimateUnknownCount(int count) {
-    return '$count unknown';
+    return '$count tuntematon';
   }
 
   @override
@@ -1536,13 +1536,13 @@ class AppLocalizationsFi extends AppLocalizations {
   }
 
   @override
-  String get perfectMatch => 'Täydellinen ottelu';
+  String get perfectMatch => 'Täydellinen vastaavuus';
 
   @override
-  String get aiTranslated => 'Tekoälyn kääntämä';
+  String get aiTranslated => 'Tekoälyn Kääntämä';
 
   @override
-  String get machineTranslated => 'Koneellisesti käännetty';
+  String get machineTranslated => 'Koneellisesti Käännetty';
 
   @override
   String get hearingImpaired => 'SDH';
@@ -1554,7 +1554,7 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String channelsCount(int count) {
-    return '$count ch';
+    return '$count äänikanavat';
   }
 
   @override
@@ -1585,12 +1585,12 @@ class AppLocalizationsFi extends AppLocalizations {
 
   @override
   String remoteSubtitleGenericError(String action) {
-    return '$action etätekstitys epäonnistui.';
+    return 'Ei voitu $action etätekstityksiä.';
   }
 
   @override
   String deleteSeriesFiles(String name) {
-    return 'kaikki ladatut jaksot \"$name\"';
+    return 'kaikki ladatut jaksot sarjasta \"$name\"';
   }
 
   @override
@@ -1600,10 +1600,11 @@ class AppLocalizationsFi extends AppLocalizations {
   String get stillWatching => 'Katsotko edelleen?';
 
   @override
-  String get unableToLoadTrailerStream => 'Trailerivirtaa ei voi ladata.';
+  String get unableToLoadTrailerStream => 'Trailerstreamiä ei voi ladata.';
 
   @override
-  String get trailerTimedOut => 'Traileri aikakatkaistiin latauksen aikana.';
+  String get trailerTimedOut =>
+      'Trailerin lataaminen keskeytyi aikarajan umpeuduttua.';
 
   @override
   String get playbackFailedForTrailer => 'Tämän trailerin toisto epäonnistui.';
@@ -2182,7 +2183,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get localAccount => 'Paikallinen';
 
   @override
-  String get savedMedia => 'Tallennettu media';
+  String get savedMedia => 'Lataukset';
 
   @override
   String get tvShows => 'TV-ohjelmat';
@@ -3561,7 +3562,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get showFavoritesButton => 'Näytä suosikit-painike';
 
   @override
-  String get showDownloadsButton => 'Show Downloads Button';
+  String get showDownloadsButton => 'Näytä latauspainike';
 
   @override
   String get showLibrariesInToolbar => 'Näytä kirjastot työkalupalkissa';
@@ -8668,7 +8669,7 @@ class AppLocalizationsFi extends AppLocalizations {
   String get offlineSwitchServer => 'Vaihda palvelinta';
 
   @override
-  String get offlineSavedMedia => 'Tallennettu media';
+  String get offlineSavedMedia => 'Lataukset';
 
   @override
   String get offlineBannerTitle => 'Olet offline-tilassa';

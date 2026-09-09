@@ -207,39 +207,39 @@ class AppLocalizationsEt extends AppLocalizations {
   String get interfaceStyleMaterial => 'Material';
 
   @override
-  String get interfaceLayout => 'Interface Layout';
+  String get interfaceLayout => 'Kasutajaliidese Paigutus';
 
   @override
   String get interfaceLayoutSubtitle =>
       'Override the detected layout when this device is read wrong. Restart Moonfin for changes to take effect.';
 
   @override
-  String get interfaceLayoutAutomatic => 'Automatic';
+  String get interfaceLayoutAutomatic => 'Automaatne';
 
   @override
   String get interfaceLayoutTv => 'TV';
 
   @override
-  String get interfaceLayoutDesktop => 'Desktop';
+  String get interfaceLayoutDesktop => 'Töölaud';
 
   @override
-  String get interfaceLayoutPhone => 'Phone';
+  String get interfaceLayoutPhone => 'Telefon';
 
   @override
   String get glassQuality => 'Klaasi kvaliteet';
 
   @override
-  String get oledMode => 'OLED Mode';
+  String get oledMode => 'OLED režiim';
 
   @override
   String get oledModeSubtitle =>
-      'Deepen blacks and enrich artwork. Best on OLED displays.';
+      'Teeb mustad toonid sügavamaks ja rikastab värve. Parim OLED ekraanidel.';
 
   @override
-  String get oledModeSubtle => 'Subtle';
+  String get oledModeSubtle => 'Tagasihoidlik';
 
   @override
-  String get oledModeVivid => 'Vivid';
+  String get oledModeVivid => 'Ergas';
 
   @override
   String get glassQualitySubtitle =>
@@ -255,7 +255,7 @@ class AppLocalizationsEt extends AppLocalizations {
   String get glassQualityReduced => 'Vähendatud';
 
   @override
-  String get performanceMode => 'Performance';
+  String get performanceMode => 'Jõudlus';
 
   @override
   String get performanceModeSubtitle =>
@@ -265,14 +265,14 @@ class AppLocalizationsEt extends AppLocalizations {
   String get performanceModeAuto => 'Auto';
 
   @override
-  String get performanceModeStandard => 'Standard';
+  String get performanceModeStandard => 'Tavaline';
 
   @override
-  String get performanceModeReduced => 'Reduced';
+  String get performanceModeReduced => 'Vähendatud';
 
   @override
   String get trailerPreviewHeldBack =>
-      'Off because Performance is set to Reduced for this device';
+      'Välja lülitatud kuna Jõudlus on sellel seadmel seadistatud Vähendatuks';
 
   @override
   String get settingsAppearanceThemeSubtitle =>
@@ -293,14 +293,14 @@ class AppLocalizationsEt extends AppLocalizations {
       'Kasutage teksti sisestamiseks vaikimisi seadme sisestusmeetodit';
 
   @override
-  String get controller => 'Controller';
+  String get controller => 'Mängupult';
 
   @override
-  String get gamepadNavigation => 'Gamepad navigation';
+  String get gamepadNavigation => 'Mängupuldiga navigeerimine';
 
   @override
   String get gamepadNavigationDescription =>
-      'Let a connected game controller move focus and select items';
+      'Luba ühendatud mängupuldil liigutada fookust ning valida asju';
 
   @override
   String get themeMoonfin => 'Moonfin';
@@ -557,13 +557,13 @@ class AppLocalizationsEt extends AppLocalizations {
   String get extraLarge => 'Eriti suur';
 
   @override
-  String get scrollDirection => 'Scroll Direction';
+  String get scrollDirection => 'Kerimise Suund';
 
   @override
-  String get scrollDirectionVertical => 'Vertical';
+  String get scrollDirectionVertical => 'Vertikaalne';
 
   @override
-  String get scrollDirectionHorizontal => 'Horizontal';
+  String get scrollDirectionHorizontal => 'Horisontaalne';
 
   @override
   String libraryGenresTitle(String name) {
@@ -661,7 +661,7 @@ class AppLocalizationsEt extends AppLocalizations {
   String get scrollRight => 'Kerige paremale';
 
   @override
-  String get scrollToTop => 'Scroll to top';
+  String get scrollToTop => 'Keri tippu';
 
   @override
   String get couldNotLoadGenre => 'Seda žanrit ei saanud praegu laadida.';
@@ -1162,7 +1162,7 @@ class AppLocalizationsEt extends AppLocalizations {
   String get cast => 'Cast';
 
   @override
-  String get castMembers => 'Cast';
+  String get castMembers => 'Osatäitjad';
 
   @override
   String get trailer => 'Treiler';
@@ -1183,18 +1183,18 @@ class AppLocalizationsEt extends AppLocalizations {
   String get downloaded => 'Alla laaditud';
 
   @override
-  String get finalizingDownload => 'Finalizing…';
+  String get finalizingDownload => 'Lõpetan…';
 
   @override
-  String get queuedDownload => 'Queued';
+  String get queuedDownload => 'Järjekorras';
 
   @override
   String queuedMoreCount(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count more queued',
-      one: '1 more queued',
+      other: '$count veel järjekorras',
+      one: '1 veel järjekorras',
     );
     return '$_temp0';
   }
@@ -1241,7 +1241,7 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String failedToDeleteItemWithError(String error) {
-    return 'Deletion operation failed with the following error: $error';
+    return 'Kustutamine ebaõnnestus järgmise veateatega: $error';
   }
 
   @override
@@ -1314,10 +1314,10 @@ class AppLocalizationsEt extends AppLocalizations {
   String get downloadSubtitles => 'Laadige alla subtiitrid';
 
   @override
-  String get searchingSubtitles => 'Searching for subtitles…';
+  String get searchingSubtitles => 'Otsin subtiitreid…';
 
   @override
-  String get downloadingSubtitle => 'Downloading subtitle…';
+  String get downloadingSubtitle => 'Laen subtiitreid…';
 
   @override
   String get selectedSubtitleInvalid => 'Valitud alapealkiri on kehtetu.';
@@ -1362,34 +1362,34 @@ class AppLocalizationsEt extends AppLocalizations {
   String get noEpisodesLoaded => 'Ühtegi episoodi pole laaditud';
 
   @override
-  String get downloadScopeTitle => 'What to download';
+  String get downloadScopeTitle => 'Mida alla laadida';
 
   @override
-  String get downloadAllEpisodes => 'All episodes';
+  String get downloadAllEpisodes => 'Kõik episoodid';
 
   @override
-  String get downloadUnwatchedEpisodes => 'All unwatched episodes';
+  String get downloadUnwatchedEpisodes => 'Kõik vaatamata episoodid';
 
   @override
-  String get downloadAllMovies => 'All movies';
+  String get downloadAllMovies => 'Kõik filmid';
 
   @override
-  String get downloadUnwatchedMovies => 'All unwatched movies';
+  String get downloadUnwatchedMovies => 'Kõik vaatamata filmid';
 
   @override
-  String get downloadScopeLoading => 'Loading items...';
+  String get downloadScopeLoading => 'Laen sisu...';
 
   @override
   String get downloadScopeLoadFailed => 'Could not load items to download';
 
   @override
   String downloadEstimateTotal(String size) {
-    return '~$size total';
+    return 'kokku ~$size';
   }
 
   @override
   String downloadBytesOfTotal(String received, String total) {
-    return '$received of $total';
+    return '$received $total-st';
   }
 
   @override
@@ -1399,12 +1399,12 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String downloadSizeTotal(String size) {
-    return '$size total';
+    return 'kokku $size';
   }
 
   @override
   String downloadEstimateUnknownCount(int count) {
-    return '$count unknown';
+    return '$count tundmatut';
   }
 
   @override
@@ -1433,7 +1433,7 @@ class AppLocalizationsEt extends AppLocalizations {
   String get director => 'DIREKTOR';
 
   @override
-  String get starring => 'STARRING';
+  String get starring => 'PEAOSADES';
 
   @override
   String get directors => 'REŽISSÖÖRID';
@@ -1539,17 +1539,17 @@ class AppLocalizationsEt extends AppLocalizations {
   String get perfectMatch => 'Ideaalne sobivus';
 
   @override
-  String get aiTranslated => 'AI Translated';
+  String get aiTranslated => 'Tehisaru tõlgitud';
 
   @override
-  String get machineTranslated => 'Machine Translated';
+  String get machineTranslated => 'Masintõlgitud';
 
   @override
-  String get hearingImpaired => 'SDH';
+  String get hearingImpaired => 'Kuulmisvaeguste jaoks';
 
   @override
   String framerateFps(String rate) {
-    return '$rate fps';
+    return '$rate kaadrit/sek';
   }
 
   @override
@@ -1723,10 +1723,10 @@ class AppLocalizationsEt extends AppLocalizations {
   String get playbackInformation => 'Taasesituse teave';
 
   @override
-  String get showMpvStats => 'Show mpv Statistics (Shift+I)';
+  String get showMpvStats => 'Näita mpv Statistikat (Shift+I)';
 
   @override
-  String get hideMpvStats => 'Hide mpv Statistics (Shift+I)';
+  String get hideMpvStats => 'Peida mpv Statistika (Shift+I)';
 
   @override
   String get playback => 'Taasesitus';
@@ -1765,25 +1765,26 @@ class AppLocalizationsEt extends AppLocalizations {
   String get hdr => 'HDR';
 
   @override
-  String get hdrOutput => 'HDR output';
+  String get hdrOutput => 'HDR väljund';
 
   @override
   String hdrOutputActive(String format) {
-    return 'Active — $format';
+    return 'Aktiivne — $format';
   }
 
   @override
   String get hdrOutputActiveTonemapped =>
-      'Active — tone-mapped to SDR for this display';
+      'Aktiivne — toonid kaardistatud SDR-ile selle ekraani jaoks';
 
   @override
-  String get hdrOutputDisplayNotHdr => 'Inactive — display is not in HDR mode';
+  String get hdrOutputDisplayNotHdr =>
+      'Mitteaktiivne — ekraan ei ole HDR režiimis';
 
   @override
-  String get hdrOutputContentSdr => 'Inactive — content is SDR';
+  String get hdrOutputContentSdr => 'Mitteaktiivne — sisu on SDR';
 
   @override
-  String get hdrOutputDisabled => 'Inactive — turned off in settings';
+  String get hdrOutputDisabled => 'Mitteaktiivne — seadistuses välja lülitatud';
 
   @override
   String get hdrOutputFailed =>
@@ -2435,7 +2436,7 @@ class AppLocalizationsEt extends AppLocalizations {
 
   @override
   String optionsCount(int count) {
-    return '$count valikud';
+    return '$count valikut';
   }
 
   @override
@@ -4206,7 +4207,7 @@ class AppLocalizationsEt extends AppLocalizations {
   String get upcomingMovies => 'Tulevased filmid';
 
   @override
-  String get studios => 'Stuudiokorterid';
+  String get studios => 'Stuudiod';
 
   @override
   String get popularSeries => 'Populaarne sari';
@@ -4221,10 +4222,10 @@ class AppLocalizationsEt extends AppLocalizations {
   String get networks => 'Võrgud';
 
   @override
-  String get tags => 'Tags';
+  String get tags => 'Sildid';
 
   @override
-  String get genresAndTags => 'Genres and Tags';
+  String get genresAndTags => 'Žanrid ja Sildid';
 
   @override
   String get seerrDiscoveryRows => 'Seerri avastamisread';
