@@ -2891,6 +2891,11 @@ class _HomeSectionTileState extends State<_HomeSectionTile> {
             child: Material(
               type: MaterialType.transparency,
               child: ListTile(
+                // The select key handled this alone, so a pointer could reach
+                // a row but never turn it on.
+                onTap: widget.isEmpty
+                    ? null
+                    : () => widget.onToggle(!widget.enabled),
                 focusColor: Colors.transparent,
                 hoverColor: Colors.transparent,
                 contentPadding: _kHomeSectionTileContentPadding,
