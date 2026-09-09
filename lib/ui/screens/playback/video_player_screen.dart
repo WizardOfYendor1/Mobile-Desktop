@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -62,6 +63,7 @@ import '../../../util/focus/dpad_keys.dart';
 import '../../../util/play_method_label.dart';
 import '../../../util/platform_detection.dart';
 import '../../../util/playback_time_label.dart';
+import '../../../util/server_url.dart';
 import '../../navigation/destinations.dart';
 import '../../widgets/adaptive/sf_symbol.dart';
 import '../../widgets/subtitle_preview.dart';
@@ -5239,24 +5241,29 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     required MediaServerClient client,
     TrickplayTileResolution? resolution,
   }) {
+    final String? url;
     if (!info.usesIndividualFrames) {
-      return client.imageApi.getTrickplayTileImageUrl(
+      url = client.imageApi.getTrickplayTileImageUrl(
         itemId,
         width: info.width,
         index: imageIndex,
         mediaSourceId: _trickplayMediaSourceId,
       );
+    } else if (imageIndex < 0 || imageIndex >= info.frames.length) {
+      return null;
+    } else {
+      final frame = info.frames[imageIndex];
+      url = client.trickplayApi?.getFrameImageUrl(
+        itemId,
+        width: info.width,
+        positionTicks: resolution?.positionTicks ?? frame.positionTicks,
+        imageTag: resolution?.imageTag ?? frame.imageTag,
+        mediaSourceId: _trickplayMediaSourceId,
+      );
     }
-
-    if (imageIndex < 0 || imageIndex >= info.frames.length) return null;
-    final frame = info.frames[imageIndex];
-    return client.trickplayApi?.getFrameImageUrl(
-      itemId,
-      width: info.width,
-      positionTicks: resolution?.positionTicks ?? frame.positionTicks,
-      imageTag: resolution?.imageTag ?? frame.imageTag,
-      mediaSourceId: _trickplayMediaSourceId,
-    );
+    // The browser loads these through an element that leaves our headers
+    // behind, and the server guards them, so the token travels in the url.
+    return kIsWeb ? tokenAuthedUrl(client, url) : url;
   }
 
   Widget _buildTvTransportRow() {
