@@ -2160,6 +2160,7 @@ static void *run_loop(void *arg) {
   struct lh_host *h = (struct lh_host *)arg;
   const uint64_t frame_ns =
       (uint64_t)(1000000000.0 / (h->av.fps > 0 ? h->av.fps : 60.0));
+  // Seconds of audio to keep queued.
   const double pace_seconds = 0.05;
   uint64_t next = now_ns();
 
