@@ -110,6 +110,31 @@ void main() {
     await GetIt.instance.reset();
   });
 
+  testWidgets('the bar reports the room it takes at the bottom', (
+    tester,
+  ) async {
+    Future<double> heightWithInset(double bottom) async {
+      late double height;
+      await tester.pumpWidget(
+        MediaQuery(
+          data: MediaQueryData(padding: EdgeInsets.only(bottom: bottom)),
+          child: Builder(
+            builder: (context) {
+              height = MobileBottomNavBar.heightFor(context);
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      return height;
+    }
+
+    // The bar pads the system inset underneath itself and falls back to its
+    // own float gap where there is none.
+    expect(await heightWithInset(48), 54.0 + 48.0);
+    expect(await heightWithInset(0), 54.0 + 14.0);
+  });
+
   testWidgets('the navbar keeps the screen edge while music is playing', (
     tester,
   ) async {

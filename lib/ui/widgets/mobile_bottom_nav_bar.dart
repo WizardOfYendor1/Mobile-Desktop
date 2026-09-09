@@ -36,6 +36,13 @@ const double _kIconSize = 24.0;
 const double _kFloatingInset = 14.0;
 const double _kFloatingRadius = 22.0;
 class MobileBottomNavBar extends StatefulWidget {
+  /// Room the bar takes along the bottom of the screen, including the system
+  /// inset it pads underneath itself.
+  static double heightFor(BuildContext context) {
+    final inset = MediaQuery.of(context).padding.bottom;
+    return _kBarHeight + (inset > 0 ? inset : _kFloatingInset);
+  }
+
   final String? activeRoute;
 
   const MobileBottomNavBar({super.key, this.activeRoute});

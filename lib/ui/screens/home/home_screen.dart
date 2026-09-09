@@ -62,6 +62,7 @@ import '../../widgets/library_row.dart';
 import '../../widgets/media_bar.dart';
 import '../../widgets/mediabar/banner_media_bar.dart';
 import '../../widgets/media_card.dart';
+import '../../widgets/mobile_bottom_nav_bar.dart';
 import '../../widgets/navigation_layout.dart';
 import '../../widgets/responsive_layout.dart';
 import '../../widgets/seasonal_effects.dart';
@@ -930,6 +931,15 @@ class _ContentRowsState extends State<_ContentRows>
     final desktopScale = _desktopUiScaleFactor();
     final topPeekSpacing = PlatformDetection.isTV ? (32.0 * desktopScale) : 8.0;
     return (safeTop + navbarHeight + topPeekSpacing).clamp(0.0, viewportHeight * 0.85);
+  }
+
+  /// Height of the navbar the rows scroll behind, or zero when it is not
+  /// along the bottom.
+  double _bottomNavbarInset() {
+    if (!NavigationLayout.allowBottomNavbar) return 0.0;
+    final position = widget.prefs.get(UserPreferences.navbarPosition);
+    if (position != NavbarPosition.bottom) return 0.0;
+    return MobileBottomNavBar.heightFor(context);
   }
 
   List<double> _rowTargetOffsetsForScroll({required bool fullScreenRows}) {
@@ -4017,16 +4027,25 @@ class _ContentRowsState extends State<_ContentRows>
     final rowExtents = _rowExtents;
     final headerCount = (includeMediaBar ? 1 : 0) + 1;
 
-    // Ensure the last row can be scrolled so its top sits just below the info
-    // overlay; otherwise scroll targets clamp to maxScrollExtent and rows drift
-    // higher in the viewport as the user navigates downward.
-    final viewportHeight = MediaQuery.of(context).size.height;
-    final lastRowExtent = rowExtents.isEmpty ? 0.0 : rowExtents.last;
-    final neededBottomPadding =
-        (viewportHeight -
-                (overlayBottom + (_isHomeRowsStyleV2() ? 4.0 : 8.0)) -
-                lastRowExtent)
-            .clamp(_isHomeRowsStyleV2() ? 24.0 : 32.0, double.infinity);
+    final minBottomPadding = _isHomeRowsStyleV2() ? 24.0 : 32.0;
+    final double neededBottomPadding;
+    if (PlatformDetection.useMobileUi) {
+      // Touch moves the list rather than a row at a time, so the room kept
+      // below for that reads as blank space here. It only needs to clear the
+      // navbar the rows scroll behind.
+      neededBottomPadding = minBottomPadding + _bottomNavbarInset();
+    } else {
+      // Ensure the last row can be scrolled so its top sits just below the
+      // info overlay, otherwise scroll targets clamp to maxScrollExtent and
+      // rows drift higher in the viewport as the user navigates downward.
+      final viewportHeight = MediaQuery.of(context).size.height;
+      final lastRowExtent = rowExtents.isEmpty ? 0.0 : rowExtents.last;
+      neededBottomPadding =
+          (viewportHeight -
+                  (overlayBottom + (_isHomeRowsStyleV2() ? 4.0 : 8.0)) -
+                  lastRowExtent)
+              .clamp(minBottomPadding, double.infinity);
+    }
 
     _ensureInitialHomeFocus(rows);
 
